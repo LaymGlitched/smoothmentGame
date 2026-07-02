@@ -1,0 +1,18 @@
+{
+    "name": "GameCode.PlayerScripts",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3893c36bbfeab6744bf8098a677f3a9e",
+        "GUID:1d0d9034387857c47ae74436f8206965",
+        "GUID:d835f5c88f33479488865cad87421831"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

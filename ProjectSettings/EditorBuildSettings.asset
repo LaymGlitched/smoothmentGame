@@ -9,4 +9,5 @@ EditorBuildSettings:
     path: Assets/Samples/Dying Movement/1.0.0/Basic Demo/DyingMovementDemo.unity
     guid: 5142b91c307771f47ace11754f809f2c
   m_configObjects:
-    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
+    com.unity.input.settings: {fileID: 11400000, guid: 92c47e76b022b5b4d97096854d0b8aa3, type: 2}
+    com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}

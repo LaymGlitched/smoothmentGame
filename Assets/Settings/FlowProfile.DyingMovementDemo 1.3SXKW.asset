@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 208a3c14a53357c49b24e31e635262dd, type: 3}
+  m_Name: FlowProfile.DyingMovementDemo 1.3SXKW
+  m_EditorClassIdentifier: KWS::KWS.FlowingScriptableData
+  AreaSize: 1053
+  AreaPosition: {x: 555.92, y: 36.5, z: 1381.07}
+  FlowmapResolution: 4096
+  FlowmapTexture: {fileID: 233624389463065012, guid: 42760f1333aff1e4596588174cfa5e5c, type: 3}
+  FluidsMaskTexture: {fileID: 0}
+  FluidsPrebakedTexture: {fileID: 0}

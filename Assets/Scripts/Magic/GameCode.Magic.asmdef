@@ -1,0 +1,20 @@
+{
+    "name": "GameCode.Magic",
+    "rootNamespace": "",
+    "references": [
+        "GUID:3893c36bbfeab6744bf8098a677f3a9e",
+        "GUID:1d0d9034387857c47ae74436f8206965",
+        "GUID:75469ad4d38634e559750d17036d5f7c",
+        "GUID:d835f5c88f33479488865cad87421831",
+        "GUID:43b4fba25204c094bbe032fee351f242"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

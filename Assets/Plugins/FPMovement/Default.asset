@@ -1,0 +1,85 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8004e04188f2d3c45b4236960653de71, type: 3}
+  m_Name: Default
+  m_EditorClassIdentifier: FPMovement::FPMovement.FPMovementSettings
+  walkSpeed: 5
+  sprintSpeed: 12
+  crouchSpeed: 3.5
+  maxAirSpeed: 10
+  groundAccelerate: 18
+  airAccelerate: 2.5
+  groundFriction: 12
+  jumpForce: 7.5
+  gravityMultiplier: 2.5
+  coyoteTime: 0.12
+  jumpBufferTime: 0.12
+  crouchHeightMultiplier: 0.55
+  crouchTransitionSpeed: 10
+  groundCheckDistance: 0.25
+  groundMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  slopeLimit: 25
+  maxStamina: 100
+  staminaDrainPerSecond: 18
+  staminaRegenPerSecond: 12
+  staminaRegenDelay: 1
+  minStaminaToSprint: 5
+  mouseSensitivity: 22
+  lookSmoothTime: 0.05
+  minPitch: -89
+  maxPitch: 89
+  baseFov: 100
+  sprintFovAdd: 10
+  fovLerpSpeed: 2
+  bobFrequencyWalk: 6
+  bobFrequencySprint: 12
+  bobAmplitude: 0.3
+  bobSmoothSpeed: 10
+  bobHorizontalRatio: 0.5
+  landingBobAmplitude: 0.5
+  landingBobSettleSpeed: 4
+  landingBobMinSpeed: 3
+  landingBobMaxSpeed: 25
+  slideSpeed: 20
+  slideDeceleration: 20
+  slideMinSpeed: 8
+  slideFovAdd: -5
+  slideHeightOffset: 0.5
+  slideHeightTransitionSpeed: 15
+  wallMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  wallCheckDistance: 0.7
+  wallRunSpeed: 10
+  wallRunGravityScale: 0.95
+  maxWallRunDuration: 1.75
+  wallRunMinForwardInput: 0.3
+  wallJumpUpForce: 5
+  wallJumpAwayForce: 6
+  wallReattachCooldown: 0.4
+  wallRunCameraTilt: 8
+  cameraRollLerpSpeed: 12
+  ledgeCheckDistance: 0.8
+  vaultMaxHeight: 1
+  mantleMaxHeight: 1.6
+  climbMaxHeight: 4
+  vaultClearanceDistance: 1
+  ledgeLandingOffset: 0.5
+  vaultDuration: 0.2
+  mantleDuration: 0.1
+  wallClimbSpeed: 6
+  wallClimbStaminaPerSecond: 10
+  ledgeTraversalCooldown: 0.25
+  preserveMomentumAfterWallClimb: 1
+  wallClimbExitSpeedMultiplier: 1

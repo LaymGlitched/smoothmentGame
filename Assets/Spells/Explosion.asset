@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6034516003b91954093a81c51378b893, type: 3}
+  m_Name: Explosion
+  m_EditorClassIdentifier: GameCode.Magic::Spell
+  Name: Explosion
+  Shape: {fileID: 11400000, guid: 0810968f3be443d4993751fa7f3116ab, type: 2}
+  Affinity: {fileID: 11400000, guid: 3a99602527755c24cbfa925264c0bef9, type: 2}
+  Modifiers:
+  - {fileID: 11400000, guid: 0feedb7ecc63f584f8a7acbb83e0b7da, type: 2}
+  Stats:
+    Power: 20
+    Speed: 30
+    Radius: 1
+    Lifetime: 5
+    ManaCost: 40
+    Cooldown: 1.5

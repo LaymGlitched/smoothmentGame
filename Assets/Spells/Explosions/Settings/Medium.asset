@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f8ddced5e8538b4cb1150e1f1ca80b2, type: 3}
+  m_Name: Medium
+  m_EditorClassIdentifier: Nanodogs.Tooklit::Nanodogs.API.Explosion.ExplosionSettings
+  radius: 163
+  forceMode: 0
+  force: 3000
+  upwardsModifier: 1
+  useGravity: 1
+  damage: 40
+  explosionEffectPrefab: {fileID: 2417492179012752419, guid: 8fbd8baf3c7d3b04b8479b5b26f7e465, type: 3}
+  explosionSFX: {fileID: 8300000, guid: 27d2b559c4e7fae4e8296ac7d0a9ef7c, type: 3}
