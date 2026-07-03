@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.antigravity.ide": "https://github.com/humza-13/Antigravity-Unity.git",
     "com.dgreenheck.openfracture": "https://github.com/dgreenheck/OpenFracture.git",
     "com.nanodogs.toolkit": "https://github.com/NanoDogs-Studios/Nanodogs-Toolkit.git",
     "com.unity.ai.navigation": "2.0.12",

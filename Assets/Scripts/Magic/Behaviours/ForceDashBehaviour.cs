@@ -65,6 +65,11 @@ namespace GameCode.Magic
             // This prevents double-triggering
         }
 
+        public override void OnDestroy(GameObject projectile)
+        {
+            // Clean up if needed
+        }
+
         private Vector3 GetDashDirection()
         {
             if (cachedCaster == null)
@@ -73,7 +78,6 @@ namespace GameCode.Magic
             switch (DirectionMode)
             {
                 case ForceAffinity.WindBlastDirection.Forward:
-                    // Use the camera/caster's forward direction
                     return cachedCaster.transform.forward;
 
                 case ForceAffinity.WindBlastDirection.Upward:
@@ -83,7 +87,6 @@ namespace GameCode.Magic
                     return Vector3.down;
 
                 case ForceAffinity.WindBlastDirection.Radial:
-                    // For dash, radial means the caster's forward direction
                     return cachedCaster.transform.forward;
 
                 case ForceAffinity.WindBlastDirection.Custom:
@@ -132,14 +135,12 @@ namespace GameCode.Magic
 
             if (DashEffectPrefab != null)
             {
-                // Use the provided prefab
                 GameObject effect = Object.Instantiate(
                     DashEffectPrefab,
                     effectPosition,
                     Quaternion.LookRotation(effectDirection)
                 );
 
-                // Set color
                 var renderers = effect.GetComponentsInChildren<Renderer>();
                 foreach (var renderer in renderers)
                 {
@@ -154,12 +155,10 @@ namespace GameCode.Magic
             }
             else
             {
-                // Create particle effect
                 CreateParticleDashEffect(effectPosition, effectDirection);
                 Debug.Log($"Created dash particle effect at {effectPosition}");
             }
 
-            // Create a ring effect at the starting position
             CreateRingEffect(effectPosition, effectDirection);
         }
 
@@ -179,19 +178,16 @@ namespace GameCode.Magic
             main.startColor = DashColor;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
 
-            // Cone shape pointing in the dash direction (backwards for a trail effect)
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Cone;
             shape.radius = 1f;
             shape.angle = 30f;
             shape.length = 2f;
-            shape.position = new Vector3(0, 0, -2f); // Behind the caster
+            shape.position = new Vector3(0, 0, -2f);
 
-            // Emission burst
             var emission = ps.emission;
             emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 50) });
 
-            // Force in the dash direction
             var force = ps.forceOverLifetime;
             force.enabled = true;
             force.x = new ParticleSystem.MinMaxCurve(0f, direction.x * -20f);
@@ -225,7 +221,6 @@ namespace GameCode.Magic
             main.maxParticles = 30;
             main.startColor = DashColor;
 
-            // Circle ring
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Circle;
             shape.radius = 1.5f;

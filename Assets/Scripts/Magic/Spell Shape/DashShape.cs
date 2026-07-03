@@ -36,11 +36,14 @@ public class DashShape : ShapeDefinition
 
         // Add SpellProjectile component
         SpellProjectile projectile = tempProjectile.AddComponent<SpellProjectile>();
+
+        // Set properties directly (now public)
         projectile.Spell = context.Spell;
         projectile.Caster = caster;
         projectile.Direction = GetDashDirection(caster);
         projectile.Speed = 0f; // No movement needed
         projectile.Lifetime = 0.1f; // Short lifetime
+        projectile.Damage = 0f;
 
         context.Projectile = projectile;
 
