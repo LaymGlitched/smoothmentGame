@@ -51,6 +51,9 @@ namespace GameCode.Magic
         private float currentCooldown;
         private float chargeTime = 0f;
         private bool isCharging = false;
+        
+        private string activeOverrideName = "";
+        private float overrideDisplayTimer = 0f;
 
         private void Awake()
         {
@@ -164,6 +167,11 @@ namespace GameCode.Magic
                 if (ShowDebugInfo && chargeTime % 0.5f < Time.deltaTime)
                     Debug.Log($"Charging: {chargeTime:F1}s");
             }
+            
+            if (overrideDisplayTimer > 0)
+            {
+                overrideDisplayTimer -= Time.deltaTime;
+            }
 
             // DEBUG: Visualize aim direction in real-time
             if (ShowDebugInfo)
@@ -275,14 +283,16 @@ namespace GameCode.Magic
                 ManaUsed = currentSpell.Stats.ManaCost,
             };
 
+            EvaluateMovementOverrides(context);
+
             // Deduct mana
             if (manaSystem != null)
                 manaSystem.TakeMana(currentSpell.Stats.ManaCost);
 
             // Cast the spell
-            if (currentSpell.Shape != null)
+            if (context.ActiveShape != null)
             {
-                currentSpell.Shape.Cast(context);
+                context.ActiveShape.Cast(context);
                 Nanoshake.Shake(false, null, 0.5f, 0.3f, 0.5f);
             }
             else
@@ -336,14 +346,16 @@ namespace GameCode.Magic
                 ManaUsed = chargedManaCost,
             };
 
+            EvaluateMovementOverrides(context);
+
             // Deduct mana
             if (manaSystem != null)
                 manaSystem.TakeMana(chargedManaCost);
 
             // Cast the charged spell
-            if (currentSpell.Shape != null)
+            if (context.ActiveShape != null)
             {
-                currentSpell.Shape.Cast(context);
+                context.ActiveShape.Cast(context);
                 Nanoshake.Shake(false, null, 1f, 0.4f, 1f);
             }
             else
@@ -359,6 +371,39 @@ namespace GameCode.Magic
                 Debug.Log($"Cast charged spell: {context.ChargeAmount:P0}");
 
             chargeTime = 0f;
+        }
+
+        private void EvaluateMovementOverrides(SpellContext context)
+        {
+            context.ActiveShape = context.Spell.Shape;
+            context.ActiveModifiers.AddRange(context.Spell.Modifiers);
+
+            if (controller != null && context.Spell.MovementOverrides != null)
+            {
+                foreach (var overrideDef in context.Spell.MovementOverrides)
+                {
+                    if (overrideDef.IsConditionMet(controller))
+                    {
+                        if (overrideDef.OverrideShape != null)
+                        {
+                            context.ActiveShape = overrideDef.OverrideShape;
+                        }
+                        if (overrideDef.AdditionalModifiers != null)
+                        {
+                            context.ActiveModifiers.AddRange(overrideDef.AdditionalModifiers);
+                        }
+                        
+                        activeOverrideName = overrideDef.name;
+                        overrideDisplayTimer = 2f;
+                        
+                        if (ShowDebugInfo)
+                        {
+                            Debug.Log($"Applied Movement Override for {context.Spell.Name}");
+                        }
+                        break; // Apply only the first matching override
+                    }
+                }
+            }
         }
 
         private Vector3 GetAimDirection()
@@ -460,6 +505,13 @@ namespace GameCode.Magic
                 new Rect(0, 150, 200, 50),
                 $"health: {Math.Round(health.CurrentHealth, 2)} / {Math.Round(health.MaxHealth, 2)}"
             );
+            
+            if (overrideDisplayTimer > 0)
+            {
+                GUI.color = Color.yellow;
+                GUI.Label(new Rect(0, 200, 300, 50), $"OVERRIDE ACTIVE: {activeOverrideName}");
+                GUI.color = Color.white;
+            }
         }
 
         public Spell CurrentSpell => currentSpell;

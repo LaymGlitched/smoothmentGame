@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 26aa4005bd8db774cbdb4e56d1b26592, type: 3}
+  m_Name: Fire Slide
+  m_EditorClassIdentifier: GameCode.Magic::GameCode.Magic.MovementSpellOverride
+  RequiresSliding: 1
+  RequiresSprinting: 0
+  RequiresCrouching: 0
+  RequiresAirborne: 0
+  RequiresGrounded: 0
+  OverrideShape: {fileID: 11400000, guid: 0810968f3be443d4993751fa7f3116ab, type: 2}
+  AdditionalModifiers: []

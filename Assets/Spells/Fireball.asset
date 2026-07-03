@@ -17,6 +17,8 @@ MonoBehaviour:
   Affinity: {fileID: 11400000, guid: d4e908f944d442e46a9c1fec430063ce, type: 2}
   Modifiers:
   - {fileID: 11400000, guid: e53648627b5d2144f806cacff9a58f28, type: 2}
+  MovementOverrides:
+  - {fileID: 11400000, guid: 94434883a787da341863de4fba52577e, type: 2}
   Stats:
     Power: 20
     Speed: 30

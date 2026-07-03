@@ -25,6 +25,10 @@ public class SpellContext
     // The object currently being built
     public SpellProjectile Projectile;
 
+    // Evaluated overrides
+    public ShapeDefinition ActiveShape;
+    public List<SpellModifierDefinition> ActiveModifiers = new();
+
     // Temporary runtime values
     public Dictionary<string, object> Data = new();
 }

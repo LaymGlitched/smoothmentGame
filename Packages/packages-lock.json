@@ -1,11 +1,11 @@
 {
   "dependencies": {
     "com.antigravity.ide": {
-      "version": "https://github.com/humza-13/Antigravity-Unity.git",
+      "version": "https://github.com/billythekidz/UnityAntigravityIDE.git",
       "depth": 0,
       "source": "git",
       "dependencies": {},
-      "hash": "13327399eddb1eeb33cbf52d67363ad78324120b"
+      "hash": "3520075082911bf236ade261e544078a3f9bed65"
     },
     "com.dgreenheck.openfracture": {
       "version": "https://github.com/dgreenheck/OpenFracture.git",
@@ -53,9 +53,20 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.animation.rigging": {
+      "version": "1.4.1",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.burst": "1.4.1",
+        "com.unity.test-framework": "1.1.24",
+        "com.unity.modules.animation": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
     "com.unity.burst": {
       "version": "1.8.29",
-      "depth": 2,
+      "depth": 1,
       "source": "registry",
       "dependencies": {
         "com.unity.mathematics": "1.2.1",
@@ -116,7 +127,7 @@
     },
     "com.unity.mathematics": {
       "version": "1.4.0",
-      "depth": 3,
+      "depth": 2,
       "source": "builtin",
       "dependencies": {}
     },

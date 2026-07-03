@@ -21,10 +21,19 @@ public class SphereShape : ShapeDefinition
             Quaternion.identity
         );
 
-        Physics.IgnoreCollision(
-            projectileObj.GetComponent<Collider>(),
-            context.Caster.GetComponent<Collider>()
-        );
+        Collider[] playerColliders = context.Caster.GetComponentsInChildren<Collider>();
+        Collider[] projectileColliders = projectileObj.GetComponentsInChildren<Collider>();
+
+        foreach (var pCol in playerColliders)
+        {
+            foreach (var projCol in projectileColliders)
+            {
+                if (pCol != null && projCol != null)
+                {
+                    Physics.IgnoreCollision(projCol, pCol);
+                }
+            }
+        }
 
         // Get or add SpellProjectile component
         SpellProjectile projectile = projectileObj.GetComponent<SpellProjectile>();
@@ -44,7 +53,7 @@ public class SphereShape : ShapeDefinition
         }
 
         // Apply all modifiers
-        foreach (var modifier in context.Spell.Modifiers)
+        foreach (var modifier in context.ActiveModifiers)
         {
             modifier.Apply(context);
         }

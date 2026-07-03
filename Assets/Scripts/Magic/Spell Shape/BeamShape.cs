@@ -37,7 +37,7 @@ public class BeamShape : ShapeDefinition
             context.Spell.Affinity.Apply(context);
         }
 
-        foreach (var modifier in context.Spell.Modifiers)
+        foreach (var modifier in context.ActiveModifiers)
         {
             modifier.Apply(context);
         }
