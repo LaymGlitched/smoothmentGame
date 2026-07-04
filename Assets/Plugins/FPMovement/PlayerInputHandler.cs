@@ -31,6 +31,9 @@ namespace FPMovement
         [SerializeField]
         private InputActionReference crouchAction;
 
+        [SerializeField]
+        private InputActionReference kickAction;
+
         public Vector2 MoveInput { get; private set; }
         public Vector2 LookInput { get; private set; }
         public bool SprintHeld { get; private set; }
@@ -39,17 +42,27 @@ namespace FPMovement
         /// <summary>Fired the frame Jump is pressed. Controller buffers this itself.</summary>
         public event Action OnJumpPressed;
 
+        /// <summary>Fired the frame Kick is pressed.</summary>
+        public event Action OnKickPressed;
+
         private void OnEnable()
         {
             Enable(moveAction);
             Enable(lookAction);
             Enable(sprintAction);
             Enable(crouchAction);
+            Enable(kickAction);
 
             if (jumpAction != null && jumpAction.action != null)
             {
                 jumpAction.action.Enable();
                 jumpAction.action.performed += HandleJumpPerformed;
+            }
+
+            if (kickAction != null && kickAction.action != null)
+            {
+                kickAction.action.Enable();
+                kickAction.action.performed += HandleKickPerformed;
             }
         }
 
@@ -59,11 +72,18 @@ namespace FPMovement
             Disable(lookAction);
             Disable(sprintAction);
             Disable(crouchAction);
+            Disable(kickAction);
 
             if (jumpAction != null && jumpAction.action != null)
             {
                 jumpAction.action.performed -= HandleJumpPerformed;
                 jumpAction.action.Disable();
+            }
+
+            if (kickAction != null && kickAction.action != null)
+            {
+                kickAction.action.performed -= HandleKickPerformed;
+                kickAction.action.Disable();
             }
         }
 
@@ -91,6 +111,9 @@ namespace FPMovement
 
         private void HandleJumpPerformed(InputAction.CallbackContext ctx) =>
             OnJumpPressed?.Invoke();
+
+        private void HandleKickPerformed(InputAction.CallbackContext ctx) =>
+            OnKickPressed?.Invoke();
 
         private static void Enable(InputActionReference reference) => reference?.action?.Enable();
 

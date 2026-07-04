@@ -113,6 +113,7 @@ namespace FPMovement
             + Vector3.up * (capsule != null ? capsule.height * 0.5f * 0.85f : 0.5f);
 
         public event Action Jumped;
+        public event Action Kicked;
         public event Action<Vector3> Landed; // passes landing velocity
         public event Action<bool> SprintStateChanged;
         public event Action<bool> CrouchStateChanged;
@@ -174,19 +175,30 @@ namespace FPMovement
         private void OnEnable()
         {
             if (input != null)
+            {
                 input.OnJumpPressed += HandleJumpPressed;
+                input.OnKickPressed += HandleKickPressed;
+            }
         }
 
         private void OnDisable()
         {
             if (input != null)
+            {
                 input.OnJumpPressed -= HandleJumpPressed;
+                input.OnKickPressed -= HandleKickPressed;
+            }
         }
 
         private void HandleJumpPressed()
         {
             lastJumpPressedTime = Time.time;
             jumpConsumedThisPress = false;
+        }
+
+        private void HandleKickPressed()
+        {
+            Kicked?.Invoke();
         }
 
         private void FixedUpdate()

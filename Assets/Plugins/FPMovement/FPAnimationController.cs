@@ -16,8 +16,11 @@ namespace FPMovement
         public Animator animator;
 
         [Header("Animation Rigging (IK)")]
-        [Tooltip("Drag Animation Rigging 'Rig' components here. Their weights will be blended down during extreme movements like Wallrunning or Sliding to let full-body animations take over.")]
-        public MonoBehaviour[] ikRigs;
+        [Tooltip("Upper body IK rigs (arms/hands).")]
+        public MonoBehaviour[] upperIkRigs;
+        
+        [Tooltip("Lower body IK rigs (legs/feet). Disabled during Kicking.")]
+        public MonoBehaviour[] lowerIkRigs;
         
         [Tooltip("Speed at which IK weights blend in and out.")]
         public float ikBlendSpeed = 5f;
@@ -45,6 +48,7 @@ namespace FPMovement
         public string climbLargeTriggerParam = "ClimbLarge";
         public string mantleTriggerParam = "Mantle";
         public string isTraversingParam = "IsTraversing";
+        public string kickTriggerParam = "Kick";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
@@ -64,9 +68,13 @@ namespace FPMovement
         private int climbLargeHash;
         private int mantleHash;
         private int isTraversingHash;
+        private int kickHash;
 
-        private float targetIkWeight = 1f;
-        private float currentIkWeight = 1f;
+        private float targetUpperIkWeight = 1f;
+        private float currentUpperIkWeight = 1f;
+        
+        private float targetLowerIkWeight = 1f;
+        private float currentLowerIkWeight = 1f;
 
         private bool wasGrounded;
 
@@ -90,6 +98,7 @@ namespace FPMovement
             climbLargeHash = Animator.StringToHash(climbLargeTriggerParam);
             mantleHash = Animator.StringToHash(mantleTriggerParam);
             isTraversingHash = Animator.StringToHash(isTraversingParam);
+            kickHash = Animator.StringToHash(kickTriggerParam);
         }
 
         private void OnEnable()
@@ -97,6 +106,7 @@ namespace FPMovement
             if (controller != null)
             {
                 controller.Jumped += OnJumped;
+                controller.Kicked += OnKicked;
             }
             if (wallRunController != null)
             {
@@ -117,6 +127,7 @@ namespace FPMovement
             if (controller != null)
             {
                 controller.Jumped -= OnJumped;
+                controller.Kicked -= OnKicked;
             }
             if (wallRunController != null)
             {
@@ -137,6 +148,14 @@ namespace FPMovement
             if (animator != null && animator.gameObject.activeInHierarchy)
             {
                 animator.SetTrigger(jumpHash);
+            }
+        }
+
+        private void OnKicked()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(kickHash);
             }
         }
 
@@ -257,33 +276,57 @@ namespace FPMovement
 
         private void UpdateIKWeights()
         {
-            if (ikRigs == null || ikRigs.Length == 0) return;
-
             bool isSliding = controller.IsSliding;
             bool isWallRunning = wallRunController != null && wallRunController.IsWallRunning;
             bool isTraversing = traversalController != null && traversalController.IsTraversing;
 
+            // Check if ANY layer is currently playing the Kick animation
+            bool isKicking = false;
+            if (animator != null)
+            {
+                for (int i = 0; i < animator.layerCount; i++)
+                {
+                    if (animator.GetCurrentAnimatorStateInfo(i).IsTag("Kick") || 
+                        animator.GetNextAnimatorStateInfo(i).IsTag("Kick"))
+                    {
+                        isKicking = true;
+                        break;
+                    }
+                }
+            }
+
             // Determine if IK should be overridden by a full body animation
-            bool disableIk = (isSliding && disableIkDuringSlide) || 
+            bool disableAllIk = (isSliding && disableIkDuringSlide) || 
                              (isWallRunning && disableIkDuringWallRun) ||
                              (isTraversing && disableIkDuringTraversal);
 
-            targetIkWeight = disableIk ? 0f : 1f;
+            targetUpperIkWeight = disableAllIk ? 0f : 1f;
+            targetLowerIkWeight = (disableAllIk || isKicking) ? 0f : 1f;
 
-            if (Mathf.Abs(currentIkWeight - targetIkWeight) > 0.01f)
+            if (Mathf.Abs(currentUpperIkWeight - targetUpperIkWeight) > 0.01f)
             {
-                currentIkWeight = Mathf.Lerp(currentIkWeight, targetIkWeight, Time.deltaTime * ikBlendSpeed);
-                
-                // Use reflection to set weight so we don't need a hard dependency on the Animation Rigging package asmdef
-                foreach (var rig in ikRigs)
+                currentUpperIkWeight = Mathf.Lerp(currentUpperIkWeight, targetUpperIkWeight, Time.deltaTime * ikBlendSpeed);
+                SetRigWeights(upperIkRigs, currentUpperIkWeight);
+            }
+
+            if (Mathf.Abs(currentLowerIkWeight - targetLowerIkWeight) > 0.01f)
+            {
+                currentLowerIkWeight = Mathf.Lerp(currentLowerIkWeight, targetLowerIkWeight, Time.deltaTime * ikBlendSpeed);
+                SetRigWeights(lowerIkRigs, currentLowerIkWeight);
+            }
+        }
+
+        private void SetRigWeights(MonoBehaviour[] rigs, float weight)
+        {
+            if (rigs == null || rigs.Length == 0) return;
+            foreach (var rig in rigs)
+            {
+                if (rig != null)
                 {
-                    if (rig != null)
+                    var prop = rig.GetType().GetProperty("weight", BindingFlags.Public | BindingFlags.Instance);
+                    if (prop != null && prop.PropertyType == typeof(float))
                     {
-                        var prop = rig.GetType().GetProperty("weight", BindingFlags.Public | BindingFlags.Instance);
-                        if (prop != null && prop.PropertyType == typeof(float))
-                        {
-                            prop.SetValue(rig, currentIkWeight);
-                        }
+                        prop.SetValue(rig, weight);
                     }
                 }
             }
