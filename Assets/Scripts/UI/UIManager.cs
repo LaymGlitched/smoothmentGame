@@ -1,10 +1,10 @@
 using System.Collections;
+using GameCode.Magic;
+using GameCode.PlayerScripts;
+using GameCode.Shared;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using GameCode.PlayerScripts;
-using GameCode.Magic;
-using GameCode.Shared;
 
 namespace GameCode.UI
 {
@@ -16,65 +16,138 @@ namespace GameCode.UI
     {
         [Header("Target References")]
         [Tooltip("The player's Health component. Auto-assigns on Start if left blank.")]
-        [SerializeField] private Health healthComponent;
+        [SerializeField]
+        private Health healthComponent;
 
         [Tooltip("The player's Mana component. Auto-assigns on Start if left blank.")]
-        [SerializeField] private Mana manaComponent;
+        [SerializeField]
+        private Mana manaComponent;
 
         [Tooltip("The player's SpellCaster component. Auto-assigns on Start if left blank.")]
-        [SerializeField] private SpellCaster spellCaster;
+        [SerializeField]
+        private SpellCaster spellCaster;
 
         [Header("Health UI Settings")]
-        [SerializeField] private Slider healthSlider;
-        [SerializeField] private Image healthFillImage;
-        [SerializeField] private TMP_Text healthText;
-        [SerializeField] private Color healthNormalColor = Color.green;
-        [SerializeField] private Color healthLowColor = Color.red;
-        [Range(0f, 1f)] [SerializeField] private float healthLowThreshold = 0.3f;
-        [SerializeField] private bool pulseHealthBarWhenLow = true;
+        [SerializeField]
+        private Slider healthSlider;
+
+        [SerializeField]
+        private Image healthFillImage;
+
+        [SerializeField]
+        private TMP_Text healthText;
+
+        [SerializeField]
+        private Color healthNormalColor = Color.green;
+
+        [SerializeField]
+        private Color healthLowColor = Color.red;
+
+        [Range(0f, 1f)]
+        [SerializeField]
+        private float healthLowThreshold = 0.3f;
+
+        [SerializeField]
+        private bool pulseHealthBarWhenLow = true;
 
         [Header("Mana UI Settings")]
-        [SerializeField] private Slider manaSlider;
-        [SerializeField] private Image manaFillImage;
-        [SerializeField] private TMP_Text manaText;
-        [SerializeField] private Color manaNormalColor = Color.blue;
-        [SerializeField] private Color manaLowColor = new Color(0.5f, 0.7f, 1f); // Lighter blue
+        [SerializeField]
+        private Slider manaSlider;
+
+        [SerializeField]
+        private Image manaFillImage;
+
+        [SerializeField]
+        private TMP_Text manaText;
+
+        [SerializeField]
+        private Color manaNormalColor = Color.blue;
+
+        [SerializeField]
+        private Color manaLowColor = new Color(0.5f, 0.7f, 1f); // Lighter blue
 
         [Header("Damage Vignette Settings")]
-        [SerializeField] private Image damageVignetteImage;
-        [SerializeField] private Color flashColor = new Color(0.8f, 0f, 0f, 0.6f);
-        [SerializeField] private float flashDuration = 0.35f;
-        [SerializeField] private AnimationCurve flashCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
-        [SerializeField] private float lowHealthVignetteThreshold = 0.3f;
-        [SerializeField] private Color lowHealthVignetteColor = new Color(0.6f, 0f, 0f, 0.4f);
-        [SerializeField] private bool pulseVignetteAtLowHealth = true;
-        [SerializeField] private float vignettePulseSpeed = 2f;
-        [SerializeField] private float vignetteMinPulseAlpha = 0.15f;
-        [SerializeField] private float vignetteMaxPulseAlpha = 0.5f;
+        [SerializeField]
+        private Image damageVignetteImage;
+
+        [SerializeField]
+        private Color flashColor = new Color(0.8f, 0f, 0f, 0.6f);
+
+        [SerializeField]
+        private float flashDuration = 0.35f;
+
+        [SerializeField]
+        private AnimationCurve flashCurve = AnimationCurve.EaseInOut(0, 1, 1, 0);
+
+        [SerializeField]
+        private float lowHealthVignetteThreshold = 0.3f;
+
+        [SerializeField]
+        private Color lowHealthVignetteColor = new Color(0.6f, 0f, 0f, 0.4f);
+
+        [SerializeField]
+        private bool pulseVignetteAtLowHealth = true;
+
+        [SerializeField]
+        private float vignettePulseSpeed = 2f;
+
+        [SerializeField]
+        private float vignetteMinPulseAlpha = 0.15f;
+
+        [SerializeField]
+        private float vignetteMaxPulseAlpha = 0.5f;
 
         [Header("Spell UI Settings")]
-        [SerializeField] private TMP_Text currentSpellNameText;
-        [SerializeField] private Image spellIconImage;
-        [SerializeField] private Image spellCooldownOverlay;
-        [SerializeField] private TMP_Text spellCooldownText;
-        [SerializeField] private bool hideCooldownWhenReady = true;
+        [SerializeField]
+        private TMP_Text currentSpellNameText;
+
+        [SerializeField]
+        private Image spellIconImage;
+
+        [SerializeField]
+        private Image spellCooldownOverlay;
+
+        [SerializeField]
+        private TMP_Text spellCooldownText;
+
+        [SerializeField]
+        private bool hideCooldownWhenReady = true;
 
         [Header("Spell Charging UI")]
-        [SerializeField] private GameObject chargeContainer;
-        [SerializeField] private Slider chargeSlider;
-        [SerializeField] private Image chargeFillImage;
-        [SerializeField] private TMP_Text chargeText;
-        [SerializeField] private Color chargeColorNormal = Color.cyan;
-        [SerializeField] private Color chargeColorFull = Color.yellow;
+        [SerializeField]
+        private GameObject chargeContainer;
+
+        [SerializeField]
+        private Slider chargeSlider;
+
+        [SerializeField]
+        private Image chargeFillImage;
+
+        [SerializeField]
+        private TMP_Text chargeText;
+
+        [SerializeField]
+        private Color chargeColorNormal = Color.cyan;
+
+        [SerializeField]
+        private Color chargeColorFull = Color.yellow;
 
         [Header("Hotbar Slots")]
-        [Tooltip("The outlines or highlights corresponding to available spells in the SpellCaster's AvailableSpells array.")]
-        [SerializeField] private GameObject[] spellSlotHighlights;
+        [Tooltip(
+            "The outlines or highlights corresponding to available spells in the SpellCaster's AvailableSpells array."
+        )]
+        [SerializeField]
+        private GameObject[] spellSlotHighlights;
 
         [Header("UI Polishing")]
-        [SerializeField] private float barSmoothSpeed = 10f;
-        [SerializeField] private float activeSpellIconScalePulse = 1.25f;
-        [SerializeField] private float iconPulseDuration = 0.15f;
+        [SerializeField]
+        private float barSmoothSpeed = 10f;
+
+        [SerializeField]
+        private float activeSpellIconScalePulse = 1.25f;
+
+        [SerializeField]
+        private float iconPulseDuration = 0.15f;
 
         // Internal values for smooth interpolation
         private float healthTargetFill = 1f;
@@ -92,20 +165,20 @@ namespace GameCode.UI
         {
             // Auto-assign components on player if not set
             if (healthComponent == null)
-                healthComponent = FindObjectOfType<Health>();
+                healthComponent = FindAnyObjectByType<Health>();
 
             if (manaComponent == null)
-                manaComponent = FindObjectOfType<Mana>();
+                manaComponent = FindAnyObjectByType<Mana>();
 
             if (spellCaster == null)
-                spellCaster = FindObjectOfType<SpellCaster>();
+                spellCaster = FindAnyObjectByType<SpellCaster>();
 
             // Subscribe to Health events
             if (healthComponent != null)
             {
                 healthComponent.OnHealthChanged.AddListener(OnHealthChanged);
                 healthComponent.OnDamaged.AddListener(OnPlayerDamaged);
-                
+
                 // Initialize health values
                 OnHealthChanged(healthComponent.CurrentHealth, healthComponent.MaxHealth);
             }
@@ -114,7 +187,7 @@ namespace GameCode.UI
             if (manaComponent != null)
             {
                 manaComponent.OnManaChanged.AddListener(OnManaChanged);
-                
+
                 // Initialize mana values
                 OnManaChanged(manaComponent.CurrentMana, manaComponent.MaxMana);
             }
@@ -157,7 +230,7 @@ namespace GameCode.UI
         private void OnHealthChanged(float current, float max)
         {
             healthTargetFill = max > 0 ? Mathf.Clamp01(current / max) : 0f;
-            
+
             // If smooth speed is zero, update immediately
             if (barSmoothSpeed <= 0f)
             {
@@ -170,7 +243,7 @@ namespace GameCode.UI
         private void OnManaChanged(float current, float max)
         {
             manaTargetFill = max > 0 ? Mathf.Clamp01(current / max) : 0f;
-            
+
             // If smooth speed is zero, update immediately
             if (barSmoothSpeed <= 0f)
             {
@@ -216,7 +289,11 @@ namespace GameCode.UI
             // Health Bar
             if (barSmoothSpeed > 0f)
             {
-                healthCurrentFill = Mathf.Lerp(healthCurrentFill, healthTargetFill, Time.deltaTime * barSmoothSpeed);
+                healthCurrentFill = Mathf.Lerp(
+                    healthCurrentFill,
+                    healthTargetFill,
+                    Time.deltaTime * barSmoothSpeed
+                );
                 if (Mathf.Abs(healthCurrentFill - healthTargetFill) < 0.001f)
                     healthCurrentFill = healthTargetFill;
             }
@@ -242,7 +319,11 @@ namespace GameCode.UI
                     if (pulseHealthBarWhenLow)
                     {
                         float pulse = (Mathf.Sin(Time.time * 6f) + 1f) * 0.5f;
-                        healthFillImage.color = Color.Lerp(healthLowColor * 0.7f, healthLowColor, pulse);
+                        healthFillImage.color = Color.Lerp(
+                            healthLowColor * 0.7f,
+                            healthLowColor,
+                            pulse
+                        );
                     }
                     else
                     {
@@ -258,7 +339,11 @@ namespace GameCode.UI
             // Mana Bar
             if (barSmoothSpeed > 0f)
             {
-                manaCurrentFill = Mathf.Lerp(manaCurrentFill, manaTargetFill, Time.deltaTime * barSmoothSpeed);
+                manaCurrentFill = Mathf.Lerp(
+                    manaCurrentFill,
+                    manaTargetFill,
+                    Time.deltaTime * barSmoothSpeed
+                );
                 if (Mathf.Abs(manaCurrentFill - manaTargetFill) < 0.001f)
                     manaCurrentFill = manaTargetFill;
             }
@@ -284,7 +369,8 @@ namespace GameCode.UI
 
         private void UpdateVignetteOverlay()
         {
-            if (damageVignetteImage == null) return;
+            if (damageVignetteImage == null)
+                return;
 
             float lowHealthVignetteAlpha = 0f;
             if (healthComponent != null && !healthComponent.IsDead)
@@ -295,7 +381,11 @@ namespace GameCode.UI
                     float severity = 1f - (hpPercent / lowHealthVignetteThreshold);
                     if (pulseVignetteAtLowHealth)
                     {
-                        float pulse = Mathf.Lerp(vignetteMinPulseAlpha, vignetteMaxPulseAlpha, (Mathf.Sin(Time.time * vignettePulseSpeed * Mathf.PI) + 1f) * 0.5f);
+                        float pulse = Mathf.Lerp(
+                            vignetteMinPulseAlpha,
+                            vignetteMaxPulseAlpha,
+                            (Mathf.Sin(Time.time * vignettePulseSpeed * Mathf.PI) + 1f) * 0.5f
+                        );
                         lowHealthVignetteAlpha = pulse * severity;
                     }
                     else
@@ -318,12 +408,18 @@ namespace GameCode.UI
                 finalVignetteColor = lowHealthVignetteColor;
             }
 
-            damageVignetteImage.color = new Color(finalVignetteColor.r, finalVignetteColor.g, finalVignetteColor.b, finalAlpha);
+            damageVignetteImage.color = new Color(
+                finalVignetteColor.r,
+                finalVignetteColor.g,
+                finalVignetteColor.b,
+                finalAlpha
+            );
         }
 
         private void UpdateSpellSystemUI()
         {
-            if (spellCaster == null) return;
+            if (spellCaster == null)
+                return;
 
             Spell currentSpell = spellCaster.CurrentSpell;
 
@@ -344,7 +440,8 @@ namespace GameCode.UI
                 {
                     if (spellCooldownOverlay != null)
                     {
-                        spellCooldownOverlay.fillAmount = maxCd > 0f ? Mathf.Clamp01(cd / maxCd) : 0f;
+                        spellCooldownOverlay.fillAmount =
+                            maxCd > 0f ? Mathf.Clamp01(cd / maxCd) : 0f;
                         spellCooldownOverlay.enabled = true;
                     }
 
@@ -368,8 +465,10 @@ namespace GameCode.UI
             }
             else
             {
-                if (spellCooldownOverlay != null) spellCooldownOverlay.fillAmount = 0f;
-                if (spellCooldownText != null) spellCooldownText.text = "";
+                if (spellCooldownOverlay != null)
+                    spellCooldownOverlay.fillAmount = 0f;
+                if (spellCooldownText != null)
+                    spellCooldownText.text = "";
             }
 
             // Update Charging UI
@@ -393,7 +492,11 @@ namespace GameCode.UI
 
                 if (chargeFillImage != null)
                 {
-                    chargeFillImage.color = Color.Lerp(chargeColorNormal, chargeColorFull, chargeAmt);
+                    chargeFillImage.color = Color.Lerp(
+                        chargeColorNormal,
+                        chargeColorFull,
+                        chargeAmt
+                    );
                 }
 
                 if (chargeText != null)
@@ -449,7 +552,11 @@ namespace GameCode.UI
             }
 
             // Update Hotbar Slot Highlights
-            if (spellSlotHighlights != null && spellCaster != null && spellCaster.AvailableSpells != null)
+            if (
+                spellSlotHighlights != null
+                && spellCaster != null
+                && spellCaster.AvailableSpells != null
+            )
             {
                 Spell[] spells = spellCaster.AvailableSpells;
                 for (int i = 0; i < spellSlotHighlights.Length; i++)
@@ -469,7 +576,8 @@ namespace GameCode.UI
 
         private IEnumerator DoIconEquipPulse()
         {
-            if (spellIconImage == null) yield break;
+            if (spellIconImage == null)
+                yield break;
 
             float halfDuration = iconPulseDuration * 0.5f;
 
@@ -479,7 +587,11 @@ namespace GameCode.UI
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / halfDuration;
-                spellIconImage.rectTransform.localScale = Vector3.Lerp(originalIconScale, originalIconScale * activeSpellIconScalePulse, t);
+                spellIconImage.rectTransform.localScale = Vector3.Lerp(
+                    originalIconScale,
+                    originalIconScale * activeSpellIconScalePulse,
+                    t
+                );
                 yield return null;
             }
 
@@ -489,7 +601,11 @@ namespace GameCode.UI
             {
                 elapsed += Time.deltaTime;
                 float t = elapsed / halfDuration;
-                spellIconImage.rectTransform.localScale = Vector3.Lerp(originalIconScale * activeSpellIconScalePulse, originalIconScale, t);
+                spellIconImage.rectTransform.localScale = Vector3.Lerp(
+                    originalIconScale * activeSpellIconScalePulse,
+                    originalIconScale,
+                    t
+                );
                 yield return null;
             }
 

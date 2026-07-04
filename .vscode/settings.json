@@ -1,5 +1,5 @@
 {
-    "dotnet.defaultSolution": "smoothmentGame.sln",
+    "dotnet.defaultSolution": "smoothmentGame.slnx",
     "dotnet.dotnetPath": "C:/Program Files/dotnet/dotnet.exe",
     "dotrush.roslyn.dotnetSdkDirectory": "C:/Program Files/dotnet/sdk/10.0.301",
     "dotrush.msbuildProperties": {

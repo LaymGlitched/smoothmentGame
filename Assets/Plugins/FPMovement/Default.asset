@@ -39,7 +39,7 @@ MonoBehaviour:
   lookSmoothTime: 0.05
   minPitch: -89
   maxPitch: 89
-  baseFov: 100
+  baseFov: 90
   sprintFovAdd: 10
   fovLerpSpeed: 2
   bobFrequencyWalk: 6

@@ -32,9 +32,10 @@ namespace FPMovement
 
         public bool IsTraversing { get; private set; }
 
-        public event Action VaultStarted;
+        public event Action ClimbSmallStarted;
+        public event Action ClimbMediumStarted;
+        public event Action ClimbLargeStarted;
         public event Action MantleStarted;
-        public event Action WallClimbStarted;
         public event Action TraversalEnded;
 
         private FPMovementSettings settings;
@@ -198,14 +199,22 @@ namespace FPMovement
         private IEnumerator DoVault(ObstacleInfo obstacle)
         {
             IsTraversing = true;
-            VaultStarted?.Invoke();
+            ClimbSmallStarted?.Invoke();
             controller.BeginExternalControl();
 
-            Vector3 start = controller.Body.position;
-            Vector3 end = LandingPosition(obstacle);
-            float apexY = Mathf.Max(start.y, end.y) + 0.35f;
+            Rigidbody rb = controller.Body;
+            Vector3 start = rb.position;
+            
+            // Phase 1: Vertical Climb (Small)
+            float climbDuration = settings.vaultDuration * 0.4f;
+            Vector3 climbEnd = new Vector3(start.x, obstacle.TopY + controller.ColliderHeight * 0.5f - 0.2f, start.z);
+            yield return MoveLinear(start, climbEnd, climbDuration);
 
-            yield return MoveArc(start, end, apexY, settings.vaultDuration);
+            // Phase 2: Mantle
+            MantleStarted?.Invoke();
+            Vector3 end = LandingPosition(obstacle);
+            float apexY = Mathf.Max(rb.position.y, end.y) + 0.2f;
+            yield return MoveArc(rb.position, end, apexY, settings.vaultDuration * 0.6f);
 
             FinishTraversal();
         }
@@ -216,14 +225,22 @@ namespace FPMovement
         private IEnumerator DoMantle(ObstacleInfo obstacle)
         {
             IsTraversing = true;
-            MantleStarted?.Invoke();
+            ClimbMediumStarted?.Invoke();
             controller.BeginExternalControl();
 
-            Vector3 start = controller.Body.position;
+            Rigidbody rb = controller.Body;
+            Vector3 start = rb.position;
+            
+            // Phase 1: Vertical Climb (Medium)
+            float climbDuration = settings.mantleDuration * 0.4f;
+            Vector3 climbEnd = new Vector3(start.x, obstacle.TopY + controller.ColliderHeight * 0.5f - 0.2f, start.z);
+            yield return MoveLinear(start, climbEnd, climbDuration);
+
+            // Phase 2: Mantle
+            MantleStarted?.Invoke();
             Vector3 end = LandingPosition(obstacle);
             float apexY = end.y + 0.1f;
-
-            yield return MoveArc(start, end, apexY, settings.mantleDuration);
+            yield return MoveArc(rb.position, end, apexY, settings.mantleDuration * 0.6f);
 
             FinishTraversal();
         }
@@ -235,7 +252,7 @@ namespace FPMovement
         private IEnumerator DoWallClimb(ObstacleInfo obstacle)
         {
             IsTraversing = true;
-            WallClimbStarted?.Invoke();
+            ClimbLargeStarted?.Invoke();
 
             float entrySpeed = controller.HorizontalVelocity.magnitude;
             controller.BeginExternalControl();
@@ -276,6 +293,7 @@ namespace FPMovement
             }
 
             // final push up onto the ledge
+            MantleStarted?.Invoke();
             Vector3 start = rb.position;
             Vector3 end = LandingPosition(obstacle);
             yield return MoveArc(start, end, end.y + 0.1f, settings.mantleDuration);
@@ -309,6 +327,24 @@ namespace FPMovement
                 pos.y = Mathf.Lerp(start.y, end.y, eased) + Mathf.Max(0f, arc);
 
                 rb.MovePosition(pos);
+                yield return new WaitForFixedUpdate();
+            }
+
+            rb.MovePosition(end);
+        }
+
+        private IEnumerator MoveLinear(Vector3 start, Vector3 end, float duration)
+        {
+            Rigidbody rb = controller.Body;
+            float t = 0f;
+
+            while (t < duration)
+            {
+                t += Time.fixedDeltaTime;
+                float p = Mathf.Clamp01(t / duration);
+                float eased = p * p * (3f - 2f * p);
+
+                rb.MovePosition(Vector3.Lerp(start, end, eased));
                 yield return new WaitForFixedUpdate();
             }
 

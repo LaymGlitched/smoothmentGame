@@ -27,6 +27,9 @@ namespace FPMovement
         
         [Tooltip("Enable this to completely disable IK during a slide.")]
         public bool disableIkDuringSlide = true;
+        
+        [Tooltip("Enable this to completely disable IK during traversal (vault, mantle, climb).")]
+        public bool disableIkDuringTraversal = true;
 
         [Header("Parameter Names")]
         public string speedParam = "Speed";
@@ -37,9 +40,15 @@ namespace FPMovement
         public string isWallRunningParam = "IsWallRunning";
         public string wallRunSideParam = "WallRunSide"; // 1 for right, -1 for left
         public string jumpTriggerParam = "Jump";
+        public string climbSmallTriggerParam = "ClimbSmall";
+        public string climbMediumTriggerParam = "ClimbMedium";
+        public string climbLargeTriggerParam = "ClimbLarge";
+        public string mantleTriggerParam = "Mantle";
+        public string isTraversingParam = "IsTraversing";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
+        private LedgeTraversalController traversalController;
         
         // Parameter hashes for performance
         private int speedHash;
@@ -50,6 +59,11 @@ namespace FPMovement
         private int isWallRunningHash;
         private int wallRunSideHash;
         private int jumpHash;
+        private int climbSmallHash;
+        private int climbMediumHash;
+        private int climbLargeHash;
+        private int mantleHash;
+        private int isTraversingHash;
 
         private float targetIkWeight = 1f;
         private float currentIkWeight = 1f;
@@ -60,6 +74,7 @@ namespace FPMovement
         {
             controller = GetComponent<RigidbodyFPController>();
             wallRunController = GetComponent<WallRunController>(); // Might be null, that's okay
+            traversalController = GetComponent<LedgeTraversalController>(); // Might be null
 
             // Cache parameter hashes
             speedHash = Animator.StringToHash(speedParam);
@@ -70,6 +85,11 @@ namespace FPMovement
             isWallRunningHash = Animator.StringToHash(isWallRunningParam);
             wallRunSideHash = Animator.StringToHash(wallRunSideParam);
             jumpHash = Animator.StringToHash(jumpTriggerParam);
+            climbSmallHash = Animator.StringToHash(climbSmallTriggerParam);
+            climbMediumHash = Animator.StringToHash(climbMediumTriggerParam);
+            climbLargeHash = Animator.StringToHash(climbLargeTriggerParam);
+            mantleHash = Animator.StringToHash(mantleTriggerParam);
+            isTraversingHash = Animator.StringToHash(isTraversingParam);
         }
 
         private void OnEnable()
@@ -82,6 +102,14 @@ namespace FPMovement
             {
                 wallRunController.WallRunStateChanged += OnWallRunStateChanged;
             }
+            if (traversalController != null)
+            {
+                traversalController.ClimbSmallStarted += OnClimbSmallStarted;
+                traversalController.ClimbMediumStarted += OnClimbMediumStarted;
+                traversalController.ClimbLargeStarted += OnClimbLargeStarted;
+                traversalController.MantleStarted += OnMantleStarted;
+                traversalController.TraversalEnded += OnTraversalEnded;
+            }
         }
 
         private void OnDisable()
@@ -93,6 +121,14 @@ namespace FPMovement
             if (wallRunController != null)
             {
                 wallRunController.WallRunStateChanged -= OnWallRunStateChanged;
+            }
+            if (traversalController != null)
+            {
+                traversalController.ClimbSmallStarted -= OnClimbSmallStarted;
+                traversalController.ClimbMediumStarted -= OnClimbMediumStarted;
+                traversalController.ClimbLargeStarted -= OnClimbLargeStarted;
+                traversalController.MantleStarted -= OnMantleStarted;
+                traversalController.TraversalEnded -= OnTraversalEnded;
             }
         }
 
@@ -109,6 +145,49 @@ namespace FPMovement
             if (animator != null && animator.gameObject.activeInHierarchy && wallRunController.IsWallRunning)
             {
                 animator.SetFloat(wallRunSideHash, isRightWall ? 1f : -1f);
+            }
+        }
+        
+        private void OnClimbSmallStarted()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(climbSmallHash);
+            }
+        }
+
+        private void OnClimbMediumStarted()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(climbMediumHash);
+            }
+        }
+
+        private void OnClimbLargeStarted()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(climbLargeHash);
+            }
+        }
+
+        private void OnMantleStarted()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(mantleHash);
+            }
+        }
+
+        private void OnTraversalEnded()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.ResetTrigger(climbSmallHash);
+                animator.ResetTrigger(climbMediumHash);
+                animator.ResetTrigger(climbLargeHash);
+                animator.ResetTrigger(mantleHash);
             }
         }
 
@@ -170,6 +249,10 @@ namespace FPMovement
             // 6. Wall Running
             bool isWallRunning = wallRunController != null && wallRunController.IsWallRunning;
             animator.SetBool(isWallRunningHash, isWallRunning);
+            
+            // 7. Traversal
+            bool isTraversing = traversalController != null && traversalController.IsTraversing;
+            animator.SetBool(isTraversingHash, isTraversing);
         }
 
         private void UpdateIKWeights()
@@ -178,9 +261,12 @@ namespace FPMovement
 
             bool isSliding = controller.IsSliding;
             bool isWallRunning = wallRunController != null && wallRunController.IsWallRunning;
+            bool isTraversing = traversalController != null && traversalController.IsTraversing;
 
             // Determine if IK should be overridden by a full body animation
-            bool disableIk = (isSliding && disableIkDuringSlide) || (isWallRunning && disableIkDuringWallRun);
+            bool disableIk = (isSliding && disableIkDuringSlide) || 
+                             (isWallRunning && disableIkDuringWallRun) ||
+                             (isTraversing && disableIkDuringTraversal);
 
             targetIkWeight = disableIk ? 0f : 1f;
 
