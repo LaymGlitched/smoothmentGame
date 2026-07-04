@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using Nanodogs.API.Nanoshake;
 
 namespace FPMovement
 {
@@ -199,6 +200,7 @@ namespace FPMovement
         private void HandleKickPressed()
         {
             Kicked?.Invoke();
+            Nanoshake.Shake(false, null, 0.5f, 0.5f, 1f);
         }
 
         private void FixedUpdate()
