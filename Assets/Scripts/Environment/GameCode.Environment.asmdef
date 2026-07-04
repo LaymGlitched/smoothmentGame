@@ -1,0 +1,19 @@
+{
+    "name": "GameCode.Environment",
+    "rootNamespace": "",
+    "references": [
+        "GUID:7fad5e067e7e43442a82077e73d76385",
+        "GUID:3893c36bbfeab6744bf8098a677f3a9e",
+        "GUID:43b4fba25204c094bbe032fee351f242",
+        "GUID:1d0d9034387857c47ae74436f8206965"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

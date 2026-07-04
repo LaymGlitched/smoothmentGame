@@ -851,7 +851,7 @@ PlayerSettings:
   webWasm2023: 1
   webEnableSubmoduleStrippingCompatibility: 0
   scriptingDefineSymbols:
-    Standalone: VLB_URP
+    Standalone: VLB_URP;MAGICACLOTH2
   additionalCompilerArguments: {}
   platformArchitecture: {}
   scriptingBackend:

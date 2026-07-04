@@ -24544,8 +24544,8 @@ GameObject:
   m_Component:
   - component: {fileID: 965478586}
   - component: {fileID: 965478585}
-  - component: {fileID: 965478588}
   - component: {fileID: 965478587}
+  - component: {fileID: 965478588}
   m_Layer: 0
   m_Name: Volumetric Light Beam HD
   m_TagString: Untagged
@@ -24600,10 +24600,10 @@ MonoBehaviour:
     m_NumColorKeys: 2
     m_NumAlphaKeys: 2
   m_BlendingMode: 1
-  m_Intensity: 0.2
+  m_Intensity: 0.04
   m_IntensityMultiplier: 1
   m_HDRPExposureWeight: 0
-  m_SpotAngle: 108.7
+  m_SpotAngle: 176.7
   m_SpotAngleMultiplier: 1
   m_ConeRadiusStart: 19
   m_Scalable: 1
@@ -24612,7 +24612,7 @@ MonoBehaviour:
   m_FallOffEndMultiplier: 1
   m_AttenuationEquation: 1
   m_SideSoftness: 0.0001
-  m_RaymarchingQualityID: 2
+  m_RaymarchingQualityID: 1
   m_JitteringFactor: 1
   m_JitteringFrameRate: 60
   m_JitteringLerpRange:
@@ -24621,7 +24621,7 @@ MonoBehaviour:
   m_NoiseMode: 1
   m_NoiseIntensity: 1
   m_NoiseScaleUseGlobal: 0
-  m_NoiseScaleLocal: 0.152
+  m_NoiseScaleLocal: 0.01
   m_NoiseVelocityUseGlobal: 1
   m_NoiseVelocityLocal: {x: 0.07, y: 0.18, z: 0.05}
 --- !u!4 &965478586
@@ -24633,14 +24633,14 @@ Transform:
   m_GameObject: {fileID: 965478584}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: -0, z: -0, w: 0.7071068}
-  m_LocalPosition: {x: 0.98, y: 4.9, z: 2.19}
+  m_LocalPosition: {x: -0.26999998, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 1871250502}
+  m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
---- !u!64 &965478587
-MeshCollider:
+--- !u!65 &965478587
+BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -24654,13 +24654,12 @@ MeshCollider:
     serializedVersion: 2
     m_Bits: 0
   m_LayerOverridePriority: 0
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 5
-  m_Convex: 1
-  m_CookingOptions: 30
-  m_Mesh: {fileID: 4420345512956033526, guid: 1dbf28c1bb322474d981b2dc555e28b0, type: 3}
+  serializedVersion: 3
+  m_Size: {x: 1000, y: 1000, z: 24}
+  m_Center: {x: 0, y: 0, z: 15.68}
 --- !u!114 &965478588
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -24670,11 +24669,23 @@ MonoBehaviour:
   m_GameObject: {fileID: 965478584}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5b5217c9f8723a447824a7530d14c03d, type: 3}
+  m_Script: {fileID: 11500000, guid: f1970ea57587d834a938e7051317aabb, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::VLB.TriggerZone
-  setIsTrigger: 1
-  rangeMultiplier: 1
+  m_EditorClassIdentifier: '::'
+  onTriggerEnter:
+    m_PersistentCalls:
+      m_Calls: []
+  onTriggerExit:
+    m_PersistentCalls:
+      m_Calls: []
+  onTriggerStay:
+    m_PersistentCalls:
+      m_Calls: []
+  DoDamageInstead: 0
+  Damage: 0
+  damageType: 7
+  WorldSpaceMistYLevel: 0
+  Player: {fileID: 1871250497}
 --- !u!1 &974385224
 GameObject:
   m_ObjectHideFlags: 0
@@ -49145,7 +49156,6 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 758626940}
-  - {fileID: 965478586}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1871250503
@@ -62895,3 +62905,4 @@ SceneRoots:
   - {fileID: 1798352273}
   - {fileID: 70159198}
   - {fileID: 829559197}
+  - {fileID: 965478586}
