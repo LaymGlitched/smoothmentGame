@@ -42,6 +42,9 @@ namespace FPMovement
         /// <summary>Fired the frame Jump is pressed. Controller buffers this itself.</summary>
         public event Action OnJumpPressed;
 
+        /// <summary>Fired the frame Sprint is pressed. Useful for actions like Air Dash.</summary>
+        public event Action OnSprintPressed;
+
         /// <summary>Fired the frame Kick is pressed.</summary>
         public event Action OnKickPressed;
 
@@ -49,9 +52,14 @@ namespace FPMovement
         {
             Enable(moveAction);
             Enable(lookAction);
-            Enable(sprintAction);
             Enable(crouchAction);
             Enable(kickAction);
+
+            if (sprintAction != null && sprintAction.action != null)
+            {
+                sprintAction.action.Enable();
+                sprintAction.action.performed += HandleSprintPerformed;
+            }
 
             if (jumpAction != null && jumpAction.action != null)
             {
@@ -70,9 +78,14 @@ namespace FPMovement
         {
             Disable(moveAction);
             Disable(lookAction);
-            Disable(sprintAction);
             Disable(crouchAction);
             Disable(kickAction);
+
+            if (sprintAction != null && sprintAction.action != null)
+            {
+                sprintAction.action.performed -= HandleSprintPerformed;
+                sprintAction.action.Disable();
+            }
 
             if (jumpAction != null && jumpAction.action != null)
             {
@@ -111,6 +124,9 @@ namespace FPMovement
 
         private void HandleJumpPerformed(InputAction.CallbackContext ctx) =>
             OnJumpPressed?.Invoke();
+
+        private void HandleSprintPerformed(InputAction.CallbackContext ctx) =>
+            OnSprintPressed?.Invoke();
 
         private void HandleKickPerformed(InputAction.CallbackContext ctx) =>
             OnKickPressed?.Invoke();

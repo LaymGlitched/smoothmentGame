@@ -113,6 +113,22 @@ namespace FPMovement
         [Tooltip("How fast the camera transitions to/from slide height.")]
         public float slideHeightTransitionSpeed = 15f;
 
+        [Header("Air Dash")]
+        [Tooltip("Forward force applied when air dashing.")]
+        public float airDashForce = 15f;
+
+        [Tooltip("Slight upward force to fight gravity and give a 'hop' feel.")]
+        public float airDashUpwardForce = 2f;
+
+        [Tooltip("Cooldown in seconds before you can dash again.")]
+        public float airDashCooldown = 1.2f;
+
+        [Tooltip("Maximum amount of FOV added during the dash.")]
+        public float airDashFovAdd = 8f;
+
+        [Tooltip("How fast the FOV kicks in and recovers.")]
+        public float airDashFovTransitionSpeed = 12f;
+
         [Header("Wall Run")]
         public LayerMask wallMask = ~0;
 
