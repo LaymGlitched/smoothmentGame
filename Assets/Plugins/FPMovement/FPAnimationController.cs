@@ -303,15 +303,18 @@ namespace FPMovement
             targetUpperIkWeight = disableAllIk ? 0f : 1f;
             targetLowerIkWeight = (disableAllIk || isKicking) ? 0f : 1f;
 
+            float upperIkSpeed = disableAllIk ? ikBlendSpeed : ikBlendSpeed * 3f;
+            float lowerIkSpeed = (disableAllIk || isKicking) ? ikBlendSpeed : ikBlendSpeed * 3f;
+
             if (Mathf.Abs(currentUpperIkWeight - targetUpperIkWeight) > 0.01f)
             {
-                currentUpperIkWeight = Mathf.Lerp(currentUpperIkWeight, targetUpperIkWeight, Time.deltaTime * ikBlendSpeed);
+                currentUpperIkWeight = Mathf.Lerp(currentUpperIkWeight, targetUpperIkWeight, Time.deltaTime * upperIkSpeed);
                 SetRigWeights(upperIkRigs, currentUpperIkWeight);
             }
 
             if (Mathf.Abs(currentLowerIkWeight - targetLowerIkWeight) > 0.01f)
             {
-                currentLowerIkWeight = Mathf.Lerp(currentLowerIkWeight, targetLowerIkWeight, Time.deltaTime * ikBlendSpeed);
+                currentLowerIkWeight = Mathf.Lerp(currentLowerIkWeight, targetLowerIkWeight, Time.deltaTime * lowerIkSpeed);
                 SetRigWeights(lowerIkRigs, currentLowerIkWeight);
             }
         }
