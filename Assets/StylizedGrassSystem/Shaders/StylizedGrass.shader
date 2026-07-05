@@ -19,7 +19,7 @@ Shader "Stylized/ProceduralGrass"
         _WindDirection("Wind Direction", Vector) = (1, 0, 1, 0)
         
         [Header(Interaction)]
-        _BendStrength("Bend Strength", Float) = 1.5
+        _BendStrength("Bend Strength", Float) = 3.0
     }
 
     SubShader

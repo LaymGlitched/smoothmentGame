@@ -51,25 +51,29 @@ Shader "Stylized/GrassInteraction"
 
             fixed4 frag (v2f i) : SV_Target
             {
-                // Simple radial gradient based on UV (assuming a quad centered at 0.5,0.5)
+                // Radial gradient from center of quad
                 float2 centeredUV = i.uv * 2.0 - 1.0;
                 float dist = length(centeredUV);
                 
                 if (dist > 1.0) discard;
                 
-                float falloff = 1.0 - dist;
-                falloff = smoothstep(0.0, 1.0, falloff); // Smooth edges
+                // Gentler falloff — stronger near center, smooth at edges
+                float falloff = saturate(1.0 - dist);
+                falloff = pow(falloff, 0.6); // < 1 exponent = gentler falloff = stronger overall
                 
-                // Direction is outwards from center
+                // Direction is outwards from center (normalized)
                 float2 dir = normalize(centeredUV);
                 
-                // R, G: Direction vector (mapped 0-1) * strength
-                // B: Trail intensity
-                // Map direction (-1 to 1) to (0 to 1)
-                float2 mappedDir = dir * 0.5 + 0.5;
+                // Output RAW direction scaled by strength.
+                // The RT is cleared to (0.5, 0.5, 0, 0) as neutral, and we use
+                // additive blending (Blend One One), so the grass shader sees:
+                //   final.rg = 0.5 + (dir * falloff * strength)
+                // which correctly maps to [-1,+1] via (rg * 2 - 1).
+                // Previously this was double-biased (dir * 0.5 + 0.5) PLUS the 0.5 clear.
+                float2 scaledDir = dir * falloff * _BendStrength;
                 
-                return fixed4(mappedDir.x * falloff * _BendStrength, 
-                              mappedDir.y * falloff * _BendStrength, 
+                return fixed4(scaledDir.x, 
+                              scaledDir.y, 
                               falloff * _TrailIntensity, 
                               1.0);
             }
