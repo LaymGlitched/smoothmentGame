@@ -64,13 +64,13 @@ Shader "Stylized/GrassInteraction"
                 // Direction is outwards from center (normalized)
                 float2 dir = normalize(centeredUV);
                 
-                // Output RAW direction scaled by strength.
-                // The RT is cleared to (0.5, 0.5, 0, 0) as neutral, and we use
-                // additive blending (Blend One One), so the grass shader sees:
-                //   final.rg = 0.5 + (dir * falloff * strength)
-                // which correctly maps to [-1,+1] via (rg * 2 - 1).
-                // Previously this was double-biased (dir * 0.5 + 0.5) PLUS the 0.5 clear.
-                float2 scaledDir = dir * falloff * _BendStrength;
+                // Output direction scaled to fit within the encodable range.
+                // The RT is cleared to (0.5, 0.5, 0, 0) and we use additive blending,
+                // so the final RT value is: 0.5 + output. To avoid clamping at [0,1]
+                // (which causes angle-dependent distortion / bean shape), we halve the
+                // direction output. The grass shader's decode (rg * 2 - 1) automatically
+                // compensates, giving the correct final magnitude at all angles.
+                float2 scaledDir = dir * falloff * _BendStrength * 0.5;
                 
                 return fixed4(scaledDir.x, 
                               scaledDir.y, 
