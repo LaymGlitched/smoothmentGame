@@ -54907,10 +54907,10 @@ MonoBehaviour:
   - {fileID: 1960194123}
   lowerIkRigs:
   - {fileID: 1475325464}
-  ikBlendSpeed: 5
+  ikBlendSpeed: 1
   disableIkDuringWallRun: 0
-  disableIkDuringSlide: 1
-  disableIkDuringTraversal: 1
+  disableIkDuringSlide: 0
+  disableIkDuringTraversal: 0
   disableIkDuringKick: 0
   speedParam: Speed
   verticalVelocityParam: VerticalVelocity
@@ -54954,10 +54954,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e52bc6ef455fb4aa32f593c1e30fc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StylizedGrassSystem.GrassInteractor
-  radius: 0.4
+  radius: 0.45
   bendStrength: 1
   trailIntensity: 1
-  positionOffset: {x: 0, y: -0.2}
+  positionOffset: {x: 0, y: -0.1}
   maxInteractionHeight: 3
   groundMask:
     serializedVersion: 2
@@ -66897,8 +66897,8 @@ Transform:
   m_GameObject: {fileID: 919132147485533529}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.752, z: -0.215}
-  m_LocalScale: {x: 0.67414325, y: 0.67414325, z: 0.67414325}
+  m_LocalPosition: {x: 0, y: -0.752, z: -0.231}
+  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8160277321559147508}
@@ -67863,7 +67863,7 @@ Transform:
   - {fileID: 3646396693407616372}
   - {fileID: 2114801096846291808}
   m_Father: {fileID: 8160277321559147508}
-  m_LocalEulerAnglesHint: {x: 121.203, y: -13.21698, z: -9.688995}
+  m_LocalEulerAnglesHint: {x: 121.203, y: 0, z: 0}
 --- !u!4 &5677910731161003835
 Transform:
   m_ObjectHideFlags: 0
