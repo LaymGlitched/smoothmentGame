@@ -40,6 +40,7 @@ namespace FPMovement
         private float currentSlideHeightOffset;
         private bool wasCrouching;
         private bool canStartSlideThisCrouch;
+        private float lastGroundedDuringSlide = -999f;
 
         // Cached values
         private float slideSpeed;
@@ -265,6 +266,7 @@ namespace FPMovement
             IsSliding = true;
             slideTimer = 0f;
             canStartSlideThisCrouch = false;
+            lastGroundedDuringSlide = Time.time;
 
             try
             {
@@ -275,31 +277,33 @@ namespace FPMovement
                 Debug.LogError($"SlideController: Error in SlideStateChanged event: {e.Message}");
             }
 
-            // Apply initial slide velocity in the direction we're facing
-            if (controller.Orientation != null)
+            // Use the player's current momentum direction for the slide, not the
+            // camera's forward. This means a diagonal sprint naturally becomes a
+            // diagonal slide instead of snapping to wherever the player is looking.
+            // Fall back to camera forward only when horizontal speed is near-zero.
+            Vector3 horizontalVel = controller.HorizontalVelocity;
+            Vector3 slideDir;
+            if (horizontalVel.sqrMagnitude > 0.25f) // > 0.5 m/s
             {
-                Vector3 slideDir = controller.Orientation.forward;
-                float speed = Mathf.Max(cachedCurrentSpeed, slideSpeed);
-                rb.linearVelocity = new Vector3(
-                    slideDir.x * speed,
-                    rb.linearVelocity.y,
-                    slideDir.z * speed
-                );
+                slideDir = horizontalVel.normalized;
             }
             else
             {
-                // Fallback: use current velocity direction
-                Vector3 horizontalVel = controller.HorizontalVelocity;
-                if (horizontalVel.magnitude > 0.1f)
-                {
-                    float speed = Mathf.Max(horizontalVel.magnitude, slideSpeed);
-                    rb.linearVelocity = new Vector3(
-                        horizontalVel.normalized.x * speed,
-                        rb.linearVelocity.y,
-                        horizontalVel.normalized.z * speed
-                    );
-                }
+                // Near-zero speed fallback: use camera forward (rare edge case —
+                // e.g. ForceSlide from an ability while standing nearly still).
+                slideDir = controller.Orientation != null
+                    ? controller.Orientation.forward
+                    : Vector3.forward;
+                slideDir.y = 0f;
+                slideDir.Normalize();
             }
+
+            float speed = Mathf.Max(cachedCurrentSpeed, slideSpeed);
+            rb.linearVelocity = new Vector3(
+                slideDir.x * speed,
+                rb.linearVelocity.y,
+                slideDir.z * speed
+            );
         }
 
         private void UpdateSlide()
@@ -312,22 +316,29 @@ namespace FPMovement
 
             slideTimer += Time.fixedDeltaTime;
 
-            // Decelerate during slide
+            // Track grounded state for airborne grace period
+            if (controller.IsGrounded)
+                lastGroundedDuringSlide = Time.time;
+
+            // --- Proportional drag deceleration ---
+            // Instead of subtracting a constant each frame (linear), multiply by
+            // a drag factor. This means high-speed slides decelerate faster in
+            // absolute terms but the speed curve is exponential — the slide
+            // starts energetic and coasts out naturally rather than dying at a
+            // constant rate.
             float currentSpeed = cachedCurrentSpeed;
-
-            if (currentSpeed > 0.01f)
+            if (currentSpeed > 0.01f && cachedHorizontalVelocity.sqrMagnitude > 0.0001f)
             {
-                float decelAmount = slideDeceleration * Time.fixedDeltaTime;
-                float newSpeed = Mathf.Max(0f, currentSpeed - decelAmount);
+                float dragMult = settings != null ? settings.slideDragFactor : slideDeceleration * 0.1f;
+                float retention = 1f - (dragMult * Time.fixedDeltaTime);
+                retention = Mathf.Max(retention, 0f);
+                float newSpeed = currentSpeed * retention;
 
-                if (cachedHorizontalVelocity.magnitude > 0.01f)
-                {
-                    Vector3 newVel = cachedHorizontalVelocity.normalized * newSpeed;
-                    rb.linearVelocity = new Vector3(newVel.x, rb.linearVelocity.y, newVel.z);
-                }
+                Vector3 newVel = cachedHorizontalVelocity.normalized * newSpeed;
+                rb.linearVelocity = new Vector3(newVel.x, rb.linearVelocity.y, newVel.z);
             }
 
-            // Stop sliding if conditions aren't met
+            // --- Stop conditions ---
             bool shouldStop = false;
 
             // Stop if speed drops too low
@@ -342,9 +353,15 @@ namespace FPMovement
             if (!wasCrouching)
                 shouldStop = true;
 
-            // Optional: Stop if not grounded
-            // if (!controller.IsGrounded)
-            //     shouldStop = true;
+            // Airborne grace: small bumps and uneven terrain shouldn't instantly
+            // kill the slide. Only stop if we've been airborne longer than the
+            // grace period.
+            if (!controller.IsGrounded)
+            {
+                float airborneGrace = settings != null ? settings.slideAirborneGrace : 0.15f;
+                if (Time.time - lastGroundedDuringSlide > airborneGrace)
+                    shouldStop = true;
+            }
 
             if (shouldStop)
                 StopSlide();

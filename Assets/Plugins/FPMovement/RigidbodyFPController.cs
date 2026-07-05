@@ -338,9 +338,14 @@ namespace FPMovement
             if (rb == null || settings == null)
                 return;
 
-            // Don't apply normal movement during slide - slide handles its own velocity
+            // During a slide, apply reduced steering instead of full movement.
+            // This gives the player subtle directional influence without overriding
+            // the slide's own velocity management.
             if (IsSliding)
+            {
+                ApplySlideSteering();
                 return;
+            }
 
             Vector2 rawInput = input != null ? input.MoveInput : Vector2.zero;
             Vector3 wishDir = (orientation.forward * rawInput.y + orientation.right * rawInput.x);
@@ -373,6 +378,41 @@ namespace FPMovement
             }
 
             rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
+        }
+
+        /// <summary>Applies gentle camera-relative steering during slides.
+        /// Only strafe input is used (not forward/back) so the player can nudge
+        /// the slide trajectory without fully overriding the slide direction.</summary>
+        private void ApplySlideSteering()
+        {
+            if (settings.slideSteeringInfluence <= 0f)
+                return;
+
+            Vector2 rawInput = input != null ? input.MoveInput : Vector2.zero;
+            // Only use strafe (left/right) for steering — forward/back is ignored
+            // so the slide's own velocity management stays in control.
+            float strafeInput = rawInput.x;
+            if (Mathf.Abs(strafeInput) < 0.05f)
+                return;
+
+            Vector3 strafeDir = orientation.right * strafeInput;
+            strafeDir.y = 0f;
+            strafeDir.Normalize();
+
+            Vector3 horizontalVel = HorizontalVelocity;
+            float speed = horizontalVel.magnitude;
+            if (speed < 0.1f)
+                return;
+
+            // Blend a small steering force into the current velocity direction.
+            // The force is proportional to current speed so steering feels consistent
+            // at different velocities rather than overpowering slow slides.
+            float steerForce = speed * settings.slideSteeringInfluence * Time.fixedDeltaTime;
+            Vector3 steered = horizontalVel + strafeDir * steerForce;
+
+            // Preserve speed — steering redirects, it doesn't add or remove energy.
+            steered = steered.normalized * speed;
+            rb.linearVelocity = new Vector3(steered.x, rb.linearVelocity.y, steered.z);
         }
 
         private Vector3 ApplyFriction(Vector3 velocity)
@@ -501,14 +541,20 @@ namespace FPMovement
 
                 Vector3 v = rb.linearVelocity;
                 
-                if (IsSliding && slideController != null && slideController.SlideDuration >= settings.slideJumpMinDuration)
+                if (IsSliding && slideController != null && slideController.SlideDuration > 0f)
                 {
+                    // Gradual ramp: boost scales linearly from 0% at t=0 to 100%
+                    // at slideJumpMinDuration. Early jumps get partial benefit;
+                    // committing to the full slide earns the full reward.
+                    float slideT = Mathf.Clamp01(slideController.SlideDuration / Mathf.Max(0.01f, settings.slideJumpMinDuration));
+                    float boost = settings.slideJumpBoost * slideT;
+
                     Vector3 flatVel = new Vector3(v.x, 0f, v.z);
                     Vector3 forwardDir = orientation.forward;
                     forwardDir.y = 0f;
                     forwardDir.Normalize();
                     
-                    flatVel += forwardDir * settings.slideJumpBoost;
+                    flatVel += forwardDir * boost;
                     if (flatVel.magnitude > settings.slideJumpMaxSpeed)
                     {
                         flatVel = flatVel.normalized * settings.slideJumpMaxSpeed;

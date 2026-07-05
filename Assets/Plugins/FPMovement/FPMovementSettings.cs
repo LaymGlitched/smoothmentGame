@@ -130,6 +130,16 @@ namespace FPMovement
         [Tooltip("How fast the camera transitions to/from slide height.")]
         public float slideHeightTransitionSpeed = 15f;
 
+        [Tooltip("How much camera-relative strafe input steers the slide direction (0 = locked, 1 = full control).")]
+        [Range(0f, 1f)]
+        public float slideSteeringInfluence = 0.15f;
+
+        [Tooltip("Proportional drag coefficient for slides. Higher = faster deceleration. Drag is speed-proportional so high-speed slides feel fast and low-speed slides coast out.")]
+        public float slideDragFactor = 2f;
+
+        [Tooltip("How long (seconds) the slide survives after briefly leaving the ground (e.g. small bumps, uneven terrain).")]
+        public float slideAirborneGrace = 0.15f;
+
         [Header("Air Dash")]
         [Tooltip("Forward force applied when air dashing.")]
         public float airDashForce = 15f;
