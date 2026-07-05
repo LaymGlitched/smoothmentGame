@@ -222,7 +222,20 @@ namespace FPMovement
         private void HandleKickPressed()
         {
             Kicked?.Invoke();
-            Nanoshake.Shake(false, null, 0.5f, 0.5f, 1f);
+            
+            // Retuned for a sharp, punchy kick rather than a drawn-out rumble
+            // (intensity: 0.6f, duration: 0.15f, roughness/vibrato: 1f)
+            Nanoshake.Shake(false, null, 0.6f, 0.15f, 1f);
+
+            // Simple physical kick hit detection
+            if (Physics.SphereCast(EyePosition, 0.4f, orientation.forward, out RaycastHit hit, 2.5f))
+            {
+                if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
+                {
+                    // Add explosive force forward and slightly upward
+                    hit.rigidbody.AddForce(orientation.forward * 15f + Vector3.up * 4f, ForceMode.Impulse);
+                }
+            }
         }
 
         private void Update()
