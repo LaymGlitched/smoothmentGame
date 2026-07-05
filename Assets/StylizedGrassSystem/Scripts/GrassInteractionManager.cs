@@ -132,6 +132,10 @@ namespace StylizedGrassSystem
             {
                 if (interactor == null || !interactor.isActiveAndEnabled) continue;
 
+                // Skip interactors that are too high above ground
+                float heightAtten = interactor.HeightAttenuation;
+                if (heightAtten < 0.01f) continue;
+
                 Vector3 pos = interactor.EffectPosition;
                 
                 // Check if inside bounds
@@ -144,11 +148,28 @@ namespace StylizedGrassSystem
                 float pixelY = (pos.z - centerPos.z + mapSize) * worldToLocal;
                 float pixelRadius = interactor.radius * worldToLocal;
 
+                // Shift interaction center in movement direction for natural directional bending
+                Vector3 vel = interactor.Velocity;
+                float xzSpeed = Mathf.Sqrt(vel.x * vel.x + vel.z * vel.z);
+                if (xzSpeed > 0.5f && interactor.velocityInfluence > 0f)
+                {
+                    // Normalize XZ velocity and scale the offset
+                    float invSpeed = 1f / xzSpeed;
+                    float velDirX = vel.x * invSpeed;
+                    float velDirZ = vel.z * invSpeed;
+
+                    // Offset scales with speed but caps at half the radius to keep it grounded
+                    float shiftAmount = Mathf.Min(xzSpeed * 0.08f, interactor.radius * 0.5f) * interactor.velocityInfluence;
+                    pixelX += velDirX * shiftAmount * worldToLocal;
+                    pixelY += velDirZ * shiftAmount * worldToLocal;
+                }
+
                 // Draw quad
                 Rect rect = new Rect(pixelX - pixelRadius, pixelY - pixelRadius, pixelRadius * 2f, pixelRadius * 2f);
                 
-                interactionMaterial.SetFloat("_BendStrength", interactor.bendStrength);
-                interactionMaterial.SetFloat("_TrailIntensity", interactor.trailIntensity);
+                // Apply height attenuation to bend strength and trail intensity
+                interactionMaterial.SetFloat("_BendStrength", interactor.bendStrength * heightAtten);
+                interactionMaterial.SetFloat("_TrailIntensity", interactor.trailIntensity * heightAtten);
                 interactionMaterial.SetPass(0);
                 
                 DrawRect(rect);
