@@ -124,14 +124,33 @@ namespace FPMovement
                 dashDir = (controller.Orientation.forward * input.MoveInput.y + controller.Orientation.right * input.MoveInput.x).normalized;
             }
 
-            // Zero out current velocity in the dash direction to prevent compounding speeds inconsistently,
-            // or just set the velocity directly for a snappy feel.
-            // We'll set the horizontal velocity and apply a slight vertical bump.
-            Vector3 newVelocity = dashDir * settings.airDashForce;
-            
-            // Apply upward force
-            newVelocity.y = rb.linearVelocity.y > 0 ? rb.linearVelocity.y : 0f; // Keep upward momentum if already going up, otherwise reset fall speed
-            newVelocity.y += settings.airDashUpwardForce;
+            // Momentum-preserving dash: add dash force to current velocity instead of replacing it
+            Vector3 hv = controller.HorizontalVelocity;
+            float currentSpeed = hv.magnitude;
+
+            Vector3 addedVelocity = dashDir * settings.airDashForce;
+            Vector3 newVelocity = hv + addedVelocity;
+            float newSpeed = newVelocity.magnitude;
+
+            // Soft cap: If we are already going fast, don't let the dash stack speed infinitely.
+            // But if we are already above the cap (e.g. from a fast slide-jump), don't slow us down either.
+            float maxSpeed = settings.airDashForce * 1.5f; // Sensible soft cap based on dash force
+            if (newSpeed > maxSpeed)
+            {
+                float cap = Mathf.Max(currentSpeed, maxSpeed);
+                newVelocity = newVelocity.normalized * cap;
+            }
+
+            // Preserve 50% of downward velocity instead of zeroing it completely
+            float currentY = rb.linearVelocity.y;
+            if (currentY < 0)
+            {
+                newVelocity.y = (currentY * 0.5f) + settings.airDashUpwardForce;
+            }
+            else
+            {
+                newVelocity.y = currentY + settings.airDashUpwardForce;
+            }
 
             rb.linearVelocity = newVelocity;
 

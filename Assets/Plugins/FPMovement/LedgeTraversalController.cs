@@ -240,6 +240,8 @@ namespace FPMovement
         {
             IsTraversing = true;
             ClimbSmallStarted?.Invoke();
+            
+            float entrySpeed = controller.HorizontalVelocity.magnitude;
             controller.BeginExternalControl();
 
             Rigidbody rb = controller.Body;
@@ -256,6 +258,11 @@ namespace FPMovement
             float apexY = Mathf.Max(rb.position.y, end.y) + 0.2f;
             yield return MoveArc(rb.position, end, apexY, settings.vaultDuration * 0.6f);
 
+            if (entrySpeed > 0.01f)
+            {
+                rb.linearVelocity = controller.Orientation.forward * entrySpeed;
+            }
+
             FinishTraversal();
         }
 
@@ -266,6 +273,8 @@ namespace FPMovement
         {
             IsTraversing = true;
             ClimbMediumStarted?.Invoke();
+            
+            float entrySpeed = controller.HorizontalVelocity.magnitude;
             controller.BeginExternalControl();
 
             Rigidbody rb = controller.Body;
@@ -281,6 +290,12 @@ namespace FPMovement
             Vector3 end = LandingPosition(obstacle);
             float apexY = end.y + 0.1f;
             yield return MoveArc(rb.position, end, apexY, settings.mantleDuration * 0.6f);
+
+            // Mantle is harder than vault, preserve 80% of momentum
+            if (entrySpeed > 0.01f)
+            {
+                rb.linearVelocity = controller.Orientation.forward * (entrySpeed * 0.8f);
+            }
 
             FinishTraversal();
         }
