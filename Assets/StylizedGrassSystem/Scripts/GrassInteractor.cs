@@ -14,6 +14,23 @@ namespace StylizedGrassSystem
         [Tooltip("How much the grass is pushed down (flattened)")]
         [Range(0f, 1f)]
         public float trailIntensity = 0.5f;
+        
+        [Tooltip("XZ offset from the transform position (useful for aligning to feet, etc.)")]
+        public Vector2 positionOffset = Vector2.zero;
+
+        /// <summary>
+        /// World-space position with the XZ offset applied.
+        /// </summary>
+        public Vector3 EffectPosition
+        {
+            get
+            {
+                Vector3 pos = transform.position;
+                pos.x += positionOffset.x;
+                pos.z += positionOffset.y;
+                return pos;
+            }
+        }
 
         private void OnEnable()
         {
@@ -42,10 +59,11 @@ namespace StylizedGrassSystem
 
         private void OnDrawGizmosSelected()
         {
+            Vector3 pos = EffectPosition;
             Gizmos.color = new Color(0.2f, 1.0f, 0.2f, 0.3f);
-            Gizmos.DrawSphere(transform.position, radius);
+            Gizmos.DrawSphere(pos, radius);
             Gizmos.color = new Color(0.2f, 1.0f, 0.2f, 1.0f);
-            Gizmos.DrawWireSphere(transform.position, radius);
+            Gizmos.DrawWireSphere(pos, radius);
         }
     }
 }

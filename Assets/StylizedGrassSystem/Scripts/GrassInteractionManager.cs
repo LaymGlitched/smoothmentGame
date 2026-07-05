@@ -132,7 +132,7 @@ namespace StylizedGrassSystem
             {
                 if (interactor == null || !interactor.isActiveAndEnabled) continue;
 
-                Vector3 pos = interactor.transform.position;
+                Vector3 pos = interactor.EffectPosition;
                 
                 // Check if inside bounds
                 if (Mathf.Abs(pos.x - centerPos.x) > mapSize + interactor.radius ||
