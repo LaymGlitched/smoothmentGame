@@ -320,19 +320,21 @@ namespace FPMovement
             if (controller.IsGrounded)
                 lastGroundedDuringSlide = Time.time;
 
-            // --- Proportional drag deceleration ---
-            // Instead of subtracting a constant each frame (linear), multiply by
-            // a drag factor. This means high-speed slides decelerate faster in
-            // absolute terms but the speed curve is exponential — the slide
-            // starts energetic and coasts out naturally rather than dying at a
-            // constant rate.
+            // --- Proportional + Linear drag deceleration ---
+            // High-speed slides decelerate proportionally (exponential curve) to stay energetic.
+            // But to avoid the "long tail" coasting feeling, we also subtract a constant
+            // base deceleration each frame. This makes the slide end decisively.
             float currentSpeed = cachedCurrentSpeed;
             if (currentSpeed > 0.01f && cachedHorizontalVelocity.sqrMagnitude > 0.0001f)
             {
                 float dragMult = settings != null ? settings.slideDragFactor : slideDeceleration * 0.1f;
+                float baseDecel = settings != null ? settings.slideBaseDeceleration : slideDeceleration * 0.5f;
+
                 float retention = 1f - (dragMult * Time.fixedDeltaTime);
                 retention = Mathf.Max(retention, 0f);
-                float newSpeed = currentSpeed * retention;
+                
+                float newSpeed = (currentSpeed * retention) - (baseDecel * Time.fixedDeltaTime);
+                newSpeed = Mathf.Max(newSpeed, 0f);
 
                 Vector3 newVel = cachedHorizontalVelocity.normalized * newSpeed;
                 rb.linearVelocity = new Vector3(newVel.x, rb.linearVelocity.y, newVel.z);

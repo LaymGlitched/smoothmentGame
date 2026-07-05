@@ -135,7 +135,10 @@ namespace FPMovement
         public float slideSteeringInfluence = 0.15f;
 
         [Tooltip("Proportional drag coefficient for slides. Higher = faster deceleration. Drag is speed-proportional so high-speed slides feel fast and low-speed slides coast out.")]
-        public float slideDragFactor = 3.5f;
+        public float slideDragFactor = 2.5f;
+
+        [Tooltip("Constant base deceleration applied to slides in addition to proportional drag. Ensures slides end decisively rather than coasting forever.")]
+        public float slideBaseDeceleration = 8f;
 
         [Tooltip("How long (seconds) the slide survives after briefly leaving the ground (e.g. small bumps, uneven terrain).")]
         public float slideAirborneGrace = 0.15f;
