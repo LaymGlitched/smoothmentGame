@@ -940,7 +940,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 70, y: 70}
+  m_SizeDelta: {x: 50, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &57186134
 MonoBehaviour:
@@ -21618,7 +21618,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 0
+  m_IsActive: 1
 --- !u!224 &800560974
 RectTransform:
   m_ObjectHideFlags: 0
@@ -46974,7 +46974,7 @@ GameObject:
   - component: {fileID: 1626806022}
   - component: {fileID: 1626806021}
   - component: {fileID: 1626806026}
-  - component: {fileID: 1626806025}
+  - component: {fileID: 1626806027}
   m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
@@ -47068,7 +47068,7 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!114 &1626806025
+--- !u!114 &1626806026
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -47077,26 +47077,28 @@ MonoBehaviour:
   m_GameObject: {fileID: 1626806020}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 5703cfd2585ea0249b351ada2395bbed, type: 3}
+  m_Script: {fileID: 11500000, guid: 1343e006b9e655a4180b958c1477e41a, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: GameCode.UI::GameCode.UI.UIManager
-  healthComponent: {fileID: 0}
-  manaComponent: {fileID: 0}
-  spellCaster: {fileID: 0}
-  healthSlider: {fileID: 0}
-  healthFillImage: {fileID: 0}
-  healthText: {fileID: 0}
-  healthNormalColor: {r: 0, g: 1, b: 0, a: 1}
-  healthLowColor: {r: 1, g: 0, b: 0, a: 1}
-  healthLowThreshold: 0.3
-  pulseHealthBarWhenLow: 1
-  manaSlider: {fileID: 0}
-  manaFillImage: {fileID: 0}
-  manaText: {fileID: 0}
-  manaNormalColor: {r: 0, g: 0, b: 1, a: 1}
-  manaLowColor: {r: 0.5, g: 0.7, b: 1, a: 1}
+  m_EditorClassIdentifier: GameCode.UI::GameCode.UI.ReticleManager
+  healthComponent: {fileID: 1871250515}
+  manaComponent: {fileID: 1871250514}
+  reticleImage: {fileID: 57186134}
+  lerpSpeed: 10
+--- !u!114 &1626806027
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1626806020}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ea52ab73aa9dc2245ab34ad0bfe49b2c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: GameCode.UI::GameCode.UI.DamageVignette
+  healthComponent: {fileID: 1871250515}
   damageVignetteImage: {fileID: 800560975}
-  flashColor: {r: 0.8, g: 0, b: 0, a: 0.6}
+  flashColor: {r: 0.8113208, g: 0.8113208, b: 0.8113208, a: 1}
   flashDuration: 0.35
   flashCurve:
     serializedVersion: 2
@@ -47123,42 +47125,11 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   lowHealthVignetteThreshold: 0.3
-  lowHealthVignetteColor: {r: 0.6, g: 0, b: 0, a: 0.4}
+  lowHealthVignetteColor: {r: 0.6981132, g: 0.6981132, b: 0.6981132, a: 0.74509805}
   pulseVignetteAtLowHealth: 1
   vignettePulseSpeed: 2
-  vignetteMinPulseAlpha: 0.15
-  vignetteMaxPulseAlpha: 0.5
-  currentSpellNameText: {fileID: 0}
-  spellIconImage: {fileID: 0}
-  spellCooldownOverlay: {fileID: 0}
-  spellCooldownText: {fileID: 0}
-  hideCooldownWhenReady: 1
-  chargeContainer: {fileID: 0}
-  chargeSlider: {fileID: 0}
-  chargeFillImage: {fileID: 0}
-  chargeText: {fileID: 0}
-  chargeColorNormal: {r: 0, g: 1, b: 1, a: 1}
-  chargeColorFull: {r: 1, g: 0.92156863, b: 0.015686275, a: 1}
-  spellSlotHighlights: []
-  barSmoothSpeed: 10
-  activeSpellIconScalePulse: 1.25
-  iconPulseDuration: 0.15
---- !u!114 &1626806026
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1626806020}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1343e006b9e655a4180b958c1477e41a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: GameCode.UI::GameCode.UI.ReticleManager
-  healthComponent: {fileID: 0}
-  manaComponent: {fileID: 0}
-  reticleImage: {fileID: 57186134}
-  lerpSpeed: 10
+  vignetteMinPulseAlpha: 0.5
+  vignetteMaxPulseAlpha: 3
 --- !u!43 &1722788617
 Mesh:
   m_ObjectHideFlags: 0
