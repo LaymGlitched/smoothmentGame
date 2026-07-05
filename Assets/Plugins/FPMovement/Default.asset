@@ -23,6 +23,8 @@ MonoBehaviour:
   gravityMultiplier: 2.5
   coyoteTime: 0.12
   jumpBufferTime: 0.12
+  landingFrictionGraceDuration: 0.15
+  landingFrictionMinMultiplier: 0.3
   crouchHeightMultiplier: 0.55
   crouchTransitionSpeed: 10
   groundCheckDistance: 0.25
@@ -51,15 +53,19 @@ MonoBehaviour:
   landingBobSettleSpeed: 4
   landingBobMinSpeed: 3
   landingBobMaxSpeed: 25
-  slideSpeed: 20
-  slideDeceleration: 20
-  slideMinSpeed: 8
+  slideSpeed: 35
+  slideDeceleration: 0
+  slideMinSpeed: 6
   slideJumpMinDuration: 0.35
-  slideJumpBoost: 20
-  slideJumpMaxSpeed: 25
-  slideFovAdd: -5
+  slideJumpBoost: 30
+  slideJumpMaxSpeed: 40
+  slideFovAdd: -8
   slideHeightOffset: 0.5
   slideHeightTransitionSpeed: 15
+  slideSteeringInfluence: 0.15
+  slideDragFactor: 2
+  slideBaseDeceleration: 8
+  slideAirborneGrace: 0.15
   airDashForce: 25
   airDashUpwardForce: 5
   airDashCooldown: 1.2
@@ -75,6 +81,7 @@ MonoBehaviour:
   wallRunMinForwardInput: 0.3
   wallJumpUpForce: 5
   wallJumpAwayForce: 6
+  wallJumpForwardPreservation: 0.75
   wallReattachCooldown: 0.4
   wallRunCameraTilt: 8
   cameraRollLerpSpeed: 12
@@ -91,3 +98,4 @@ MonoBehaviour:
   ledgeTraversalCooldown: 0.25
   preserveMomentumAfterWallClimb: 1
   wallClimbExitSpeedMultiplier: 1
+  stateTransitionGracePeriod: 0.3
