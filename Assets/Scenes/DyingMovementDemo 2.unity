@@ -54908,9 +54908,10 @@ MonoBehaviour:
   lowerIkRigs:
   - {fileID: 1475325464}
   ikBlendSpeed: 5
-  disableIkDuringWallRun: 1
+  disableIkDuringWallRun: 0
   disableIkDuringSlide: 1
   disableIkDuringTraversal: 1
+  disableIkDuringKick: 0
   speedParam: Speed
   verticalVelocityParam: VerticalVelocity
   isGroundedParam: IsGrounded
@@ -54953,10 +54954,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 46e52bc6ef455fb4aa32f593c1e30fc6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::StylizedGrassSystem.GrassInteractor
-  radius: 0.58
+  radius: 0.4
   bendStrength: 1
   trailIntensity: 1
-  positionOffset: {x: 0, y: 0}
+  positionOffset: {x: 0, y: -0.2}
   maxInteractionHeight: 3
   groundMask:
     serializedVersion: 2

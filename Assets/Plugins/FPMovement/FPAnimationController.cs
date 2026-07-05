@@ -20,7 +20,7 @@ namespace FPMovement
         [Tooltip("Upper body IK rigs (arms/hands).")]
         public MonoBehaviour[] upperIkRigs;
         
-        [Tooltip("Lower body IK rigs (legs/feet). Disabled during Kicking.")]
+        [Tooltip("Lower body IK rigs (legs/feet). Can be disabled during Kicking.")]
         public MonoBehaviour[] lowerIkRigs;
         
         [Tooltip("Speed at which IK weights blend in and out.")]
@@ -34,6 +34,9 @@ namespace FPMovement
         
         [Tooltip("Enable this to completely disable IK during traversal (vault, mantle, climb).")]
         public bool disableIkDuringTraversal = true;
+
+        [Tooltip("Enable this to completely disable lower body IK during a kick.")]
+        public bool disableIkDuringKick = true;
 
         [Header("Parameter Names")]
         public string speedParam = "Speed";
@@ -326,10 +329,10 @@ namespace FPMovement
                              (isTraversing && disableIkDuringTraversal);
 
             targetUpperIkWeight = disableAllIk ? 0f : 1f;
-            targetLowerIkWeight = (disableAllIk || isKicking) ? 0f : 1f;
+            targetLowerIkWeight = (disableAllIk || (isKicking && disableIkDuringKick)) ? 0f : 1f;
 
             float upperIkSpeed = disableAllIk ? ikBlendSpeed : ikBlendSpeed * 3f;
-            float lowerIkSpeed = (disableAllIk || isKicking) ? ikBlendSpeed : ikBlendSpeed * 3f;
+            float lowerIkSpeed = (disableAllIk || (isKicking && disableIkDuringKick)) ? ikBlendSpeed : ikBlendSpeed * 3f;
 
             if (Mathf.Abs(currentUpperIkWeight - targetUpperIkWeight) > 0.01f)
             {

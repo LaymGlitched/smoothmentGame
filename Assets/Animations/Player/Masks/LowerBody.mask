@@ -95,3 +95,17 @@ AvatarMask:
     m_Weight: 1
   - m_Path: PlayerMesh
     m_Weight: 1
+  - m_Path: LowerBodyRig
+    m_Weight: 1
+  - m_Path: LowerBodyRig/LeftLegIK
+    m_Weight: 1
+  - m_Path: LowerBodyRig/LeftLegIK/LeftLeg_Target
+    m_Weight: 1
+  - m_Path: LowerBodyRig/LeftLegIK/LeftLeg_Hint
+    m_Weight: 1
+  - m_Path: LowerBodyRig/RightLegIK
+    m_Weight: 1
+  - m_Path: LowerBodyRig/RightLegIK/RightLeg_Target
+    m_Weight: 1
+  - m_Path: LowerBodyRig/RightLegIK/RightLeg_Hint
+    m_Weight: 1
