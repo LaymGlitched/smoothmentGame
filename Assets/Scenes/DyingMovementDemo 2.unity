@@ -67058,9 +67058,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Animation.Rigging::UnityEngine.Animations.Rigging.RigBuilder
   m_RigLayers:
   - m_Rig: {fileID: 1960194123}
-    m_Active: 1
+    m_Active: 0
   - m_Rig: {fileID: 1475325464}
-    m_Active: 1
+    m_Active: 0
   m_Effectors: []
 --- !u!95 &919132147485533532
 Animator:
