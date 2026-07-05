@@ -54,6 +54,9 @@ MonoBehaviour:
   slideSpeed: 20
   slideDeceleration: 20
   slideMinSpeed: 8
+  slideJumpMinDuration: 0.5
+  slideJumpBoost: 20
+  slideJumpMaxSpeed: 18
   slideFovAdd: -5
   slideHeightOffset: 0.5
   slideHeightTransitionSpeed: 15

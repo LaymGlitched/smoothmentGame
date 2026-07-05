@@ -469,6 +469,24 @@ namespace FPMovement
                 lastGroundedTime = -999f; // prevent double jump from coyote time
 
                 Vector3 v = rb.linearVelocity;
+                
+                if (IsSliding && slideController != null && slideController.SlideDuration >= settings.slideJumpMinDuration)
+                {
+                    Vector3 flatVel = new Vector3(v.x, 0f, v.z);
+                    Vector3 forwardDir = orientation.forward;
+                    forwardDir.y = 0f;
+                    forwardDir.Normalize();
+                    
+                    flatVel += forwardDir * settings.slideJumpBoost;
+                    if (flatVel.magnitude > settings.slideJumpMaxSpeed)
+                    {
+                        flatVel = flatVel.normalized * settings.slideJumpMaxSpeed;
+                    }
+                    
+                    v.x = flatVel.x;
+                    v.z = flatVel.z;
+                }
+                
                 v.y = settings.jumpForce;
                 rb.linearVelocity = v;
 

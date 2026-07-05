@@ -104,6 +104,15 @@ namespace FPMovement
         [Tooltip("Minimum speed required to initiate a slide.")]
         public float slideMinSpeed = 6f;
 
+        [Tooltip("Minimum time (in seconds) you must be sliding before a jump grants the slide-jump boost (so it only boosts near the end).")]
+        public float slideJumpMinDuration = 0.5f;
+
+        [Tooltip("Speed boost applied in the forward direction when jumping out of a slide.")]
+        public float slideJumpBoost = 5f;
+
+        [Tooltip("Maximum allowed speed after a slide-jump boost.")]
+        public float slideJumpMaxSpeed = 18f;
+
         [Tooltip("FOV offset while sliding.")]
         public float slideFovAdd = -5f;
 

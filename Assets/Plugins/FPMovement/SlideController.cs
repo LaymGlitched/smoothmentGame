@@ -36,8 +36,10 @@ namespace FPMovement
         private Rigidbody rb;
 
         private float slideTimer;
+        public float SlideDuration => IsSliding ? slideTimer : 0f;
         private float currentSlideHeightOffset;
         private bool wasCrouching;
+        private bool canStartSlideThisCrouch;
 
         // Cached values
         private float slideSpeed;
@@ -154,16 +156,20 @@ namespace FPMovement
 
             wasCrouching = crouching;
 
-            // If we're crouching and moving fast enough, try to start a slide
-            if (crouching && enableSliding && !IsSliding)
+            if (crouching)
             {
-                TryStartSlide();
+                canStartSlideThisCrouch = true;
+                if (enableSliding && !IsSliding)
+                {
+                    TryStartSlide();
+                }
             }
-
-            // If we stop crouching, stop sliding
-            if (!crouching && IsSliding)
+            else
             {
-                StopSlide();
+                if (IsSliding)
+                {
+                    StopSlide();
+                }
             }
         }
 
@@ -228,6 +234,9 @@ namespace FPMovement
 
         private void TryStartSlide()
         {
+            if (!canStartSlideThisCrouch)
+                return;
+
             if (!enableSliding || IsSliding || controller == null)
                 return;
 
@@ -255,6 +264,7 @@ namespace FPMovement
 
             IsSliding = true;
             slideTimer = 0f;
+            canStartSlideThisCrouch = false;
 
             try
             {
