@@ -112,14 +112,14 @@ namespace FPMovement
         [Tooltip("Minimum speed required to initiate a slide.")]
         public float slideMinSpeed = 6f;
 
-        [Tooltip("Minimum time (in seconds) you must be sliding before a jump grants the slide-jump boost (so it only boosts near the end).")]
-        public float slideJumpMinDuration = 0.5f;
+        [Tooltip("Time (seconds) of sliding before a jump grants the full slide-jump boost. Boost scales linearly from 0 to this point.")]
+        public float slideJumpMinDuration = 0.35f;
 
         [Tooltip("Speed boost applied in the forward direction when jumping out of a slide.")]
         public float slideJumpBoost = 5f;
 
         [Tooltip("Maximum allowed speed after a slide-jump boost.")]
-        public float slideJumpMaxSpeed = 18f;
+        public float slideJumpMaxSpeed = 25f;
 
         [Tooltip("FOV offset while sliding.")]
         public float slideFovAdd = -5f;
@@ -135,7 +135,7 @@ namespace FPMovement
         public float slideSteeringInfluence = 0.15f;
 
         [Tooltip("Proportional drag coefficient for slides. Higher = faster deceleration. Drag is speed-proportional so high-speed slides feel fast and low-speed slides coast out.")]
-        public float slideDragFactor = 2f;
+        public float slideDragFactor = 3.5f;
 
         [Tooltip("How long (seconds) the slide survives after briefly leaving the ground (e.g. small bumps, uneven terrain).")]
         public float slideAirborneGrace = 0.15f;
