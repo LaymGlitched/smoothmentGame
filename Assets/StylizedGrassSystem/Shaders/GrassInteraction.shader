@@ -49,7 +49,7 @@ Shader "Stylized/GrassInteraction"
                 return o;
             }
 
-            fixed4 frag (v2f i) : SV_Target
+            float4 frag (v2f i) : SV_Target
             {
                 // Radial gradient from center of quad
                 float2 centeredUV = i.uv * 2.0 - 1.0;
@@ -59,21 +59,16 @@ Shader "Stylized/GrassInteraction"
                 
                 // Gentler falloff — stronger near center, smooth at edges
                 float falloff = saturate(1.0 - dist);
-                falloff = pow(falloff, 0.6); // < 1 exponent = gentler falloff = stronger overall
+                falloff = pow(falloff, 0.6);
                 
                 // Direction is outwards from center (normalized)
                 float2 dir = normalize(centeredUV);
                 
-                // Output direction scaled to fit within the encodable range.
-                // The RT is cleared to (0.5, 0.5, 0, 0) and we use additive blending,
-                // so the final RT value is: 0.5 + output. To avoid clamping at [0,1]
-                // (which causes angle-dependent distortion / bean shape), we halve the
-                // direction output. The grass shader's decode (rg * 2 - 1) automatically
-                // compensates, giving the correct final magnitude at all angles.
-                float2 scaledDir = dir * falloff * _BendStrength * 0.5;
+                // Output raw signed direction directly. ARGBHalf supports negative values.
+                float2 bend = dir * falloff * _BendStrength;
                 
-                return fixed4(scaledDir.x, 
-                              scaledDir.y, 
+                return float4(bend.x, 
+                              bend.y, 
                               falloff * _TrailIntensity, 
                               1.0);
             }

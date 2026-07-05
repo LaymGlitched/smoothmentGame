@@ -50,7 +50,7 @@ namespace StylizedGrassSystem
 
             if (interactionMap == null)
             {
-                interactionMap = new RenderTexture(mapResolution, mapResolution, 0, RenderTextureFormat.ARGB32);
+                interactionMap = new RenderTexture(mapResolution, mapResolution, 0, RenderTextureFormat.ARGBHalf);
                 interactionMap.name = "GrassInteractionMap";
                 interactionMap.wrapMode = TextureWrapMode.Clamp;
                 interactionMap.filterMode = FilterMode.Bilinear;
@@ -118,8 +118,8 @@ namespace StylizedGrassSystem
             RenderTexture activeRT = RenderTexture.active;
             RenderTexture.active = interactionMap;
 
-            // Clear to gray (0.5, 0.5) for direction, 0 for intensity
-            GL.Clear(false, true, new Color(0.5f, 0.5f, 0f, 0f));
+            // Clear to 0 for raw signed direction
+            GL.Clear(false, true, new Color(0f, 0f, 0f, 0f));
 
             // Setup Ortho projection
             GL.PushMatrix();

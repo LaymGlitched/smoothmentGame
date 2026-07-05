@@ -126,14 +126,20 @@ Shader "Stylized/ProceduralGrass"
                     if (interUV.x >= 0 && interUV.x <= 1 && interUV.y >= 0 && interUV.y <= 1)
                     {
                         float4 interData = tex2Dlod(_InteractionMap, float4(interUV, 0, 0));
-                        float2 bendDir = (interData.rg * 2.0 - 1.0); 
+                        float2 bendDir = interData.rg; // Raw signed direction
                         float bendMag = length(bendDir);
                         
                         if (bendMag > 0.01)
                         {
-                            float3 bendWorld = float3(bendDir.x, 0, bendDir.y) * _BendStrength * interData.b;
+                            // bendDir is already scaled by the interactor's falloff and strength.
+                            // We multiply by the material's _BendStrength to allow global tuning.
+                            // DO NOT multiply by interData.b (trail) here, otherwise it squashes the horizontal bend!
+                            float3 bendWorld = float3(bendDir.x, 0, bendDir.y) * _BendStrength;
                             positionWS.xyz += bendWorld * heightPercent;
-                            positionWS.y -= bendMag * _BendStrength * interData.b * 0.5 * heightPercent;
+                            
+                            // Flattening down: combination of natural bend arc + explicit trail push
+                            float flattenAmount = (bendMag * _BendStrength * 0.3) + interData.b;
+                            positionWS.y -= flattenAmount * heightPercent;
                         }
                     }
                 }
@@ -254,13 +260,15 @@ Shader "Stylized/ProceduralGrass"
                 if (interUV.x >= 0 && interUV.x <= 1 && interUV.y >= 0 && interUV.y <= 1)
                 {
                     float4 interData = tex2Dlod(_InteractionMap, float4(interUV, 0, 0));
-                    float2 bendDir = (interData.rg * 2.0 - 1.0); 
+                    float2 bendDir = interData.rg; 
                     float bendMag = length(bendDir);
                     if (bendMag > 0.01)
                     {
-                        float3 bendWorld = float3(bendDir.x, 0, bendDir.y) * _BendStrength * interData.b;
+                        float3 bendWorld = float3(bendDir.x, 0, bendDir.y) * _BendStrength;
                         positionWS.xyz += bendWorld * heightPercent;
-                        positionWS.y -= bendMag * _BendStrength * interData.b * 0.5 * heightPercent;
+                        
+                        float flattenAmount = (bendMag * _BendStrength * 0.3) + interData.b;
+                        positionWS.y -= flattenAmount * heightPercent;
                     }
                 }
 
