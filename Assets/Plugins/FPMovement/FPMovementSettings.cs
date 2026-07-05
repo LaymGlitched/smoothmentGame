@@ -39,6 +39,14 @@ namespace FPMovement
         [Tooltip("How early before landing a jump press is still remembered.")]
         public float jumpBufferTime = 0.12f;
 
+        [Header("Landing")]
+        [Tooltip("How long after landing before ground friction returns to full strength.")]
+        public float landingFrictionGraceDuration = 0.15f;
+
+        [Tooltip("Friction multiplier at the instant of landing (0 = no friction, 1 = full).")]
+        [Range(0f, 1f)]
+        public float landingFrictionMinMultiplier = 0.3f;
+
         [Header("Crouching")]
         public float crouchHeightMultiplier = 0.55f;
         public float crouchTransitionSpeed = 10f;
@@ -161,6 +169,10 @@ namespace FPMovement
         [Tooltip("Push-away-from-wall component of a wall jump.")]
         public float wallJumpAwayForce = 6f;
 
+        [Tooltip("How much forward speed along the wall is preserved during a wall jump (0 = none, 1 = all).")]
+        [Range(0f, 1f)]
+        public float wallJumpForwardPreservation = 0.75f;
+
         [Tooltip("How long after leaving a wall before you can wall run on the SAME wall again.")]
         public float wallReattachCooldown = 0.4f;
 
@@ -217,5 +229,9 @@ namespace FPMovement
             "Multiplier applied to the restored speed when preserveMomentumAfterWallClimb is ON. 1 = exact speed you had before climbing."
         )]
         public float wallClimbExitSpeedMultiplier = 1f;
+
+        [Header("State Transitions")]
+        [Tooltip("Grace period after external control ends (traversal, wall run) before another external system can claim the player. Prevents accidental state grabs like climb into wall run.")]
+        public float stateTransitionGracePeriod = 0.3f;
     }
 }

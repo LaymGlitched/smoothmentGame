@@ -72,6 +72,11 @@ namespace FPMovement
         {
             if (controller.IsGrounded || controller.IsExternallyControlled)
                 return;
+            // Prevent wall run from starting during the grace period after another
+            // external system releases control (e.g. right after a wall climb finishes).
+            // This fixes the accidental climb → wall run transition.
+            if (controller.InStateTransitionGrace(settings.stateTransitionGracePeriod))
+                return;
             if (input == null || input.MoveInput.y < settings.wallRunMinForwardInput)
                 return;
             if (controller.Body.linearVelocity.y > 8f)
@@ -159,12 +164,21 @@ namespace FPMovement
             if (!IsWallRunning)
                 return;
 
-            Vector3 jumpVel =
-                currentWallNormal * settings.wallJumpAwayForce
-                + Vector3.up * settings.wallJumpUpForce;
+            // Capture velocity state BEFORE StopWallRun() calls EndExternalControl(),
+            // which re-enables gravity and can alter the rigidbody between frames.
+            Vector3 wallNormal = currentWallNormal;
+            Vector3 wallForward = GetWallRunDirection(wallNormal);
+            float forwardSpeed = Vector3.Dot(controller.Body.linearVelocity, wallForward);
+
             StopWallRun();
-            controller.Body.linearVelocity =
-                new Vector3(jumpVel.x, jumpVel.y, jumpVel.z) + controller.HorizontalVelocity * 0.3f;
+
+            // Build exit velocity: push away from wall + upward + preserved forward
+            // momentum along the wall. Previous code only kept 30% of horizontal
+            // velocity and read it AFTER stopping, which bled speed at every wall jump.
+            Vector3 jumpVel = wallNormal * settings.wallJumpAwayForce
+                            + Vector3.up * settings.wallJumpUpForce
+                            + wallForward * (forwardSpeed * settings.wallJumpForwardPreservation);
+            controller.Body.linearVelocity = jumpVel;
         }
 
         private void StopWallRun()

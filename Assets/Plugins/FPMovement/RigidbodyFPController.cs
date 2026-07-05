@@ -97,6 +97,10 @@ namespace FPMovement
         /// gravity are skipped while this is true so the two never fight each other.</summary>
         public bool IsExternallyControlled { get; private set; }
 
+        /// <summary>Time.time when the last external control ended. Subsystems use this
+        /// to implement grace periods that prevent competing state grabs.</summary>
+        public float LastExternalControlEndTime { get; private set; } = -999f;
+
         public Rigidbody Body => rb;
         public Transform Orientation => orientation;
         public PlayerInputHandler Input => input;
@@ -147,6 +151,7 @@ namespace FPMovement
         private float lastJumpPressedTime;
         private bool wasGroundedLastFrame;
         private bool jumpConsumedThisPress;
+        private float lastLandingTime = -999f;
 
         private void Awake()
         {
@@ -301,15 +306,27 @@ namespace FPMovement
         public void EndExternalControl()
         {
             IsExternallyControlled = false;
+            LastExternalControlEndTime = Time.time;
             if (rb != null)
                 rb.useGravity = true;
             lastGroundedTime = Time.time; // treat hand-off point as "grounded enough" so jump isn't stuck in coyote limbo
         }
 
+        /// <summary>Returns true if external control ended less than graceDuration seconds ago.
+        /// Subsystems use this to avoid grabbing the player immediately after another
+        /// system releases them (e.g. preventing wall run right after a climb).</summary>
+        public bool InStateTransitionGrace(float graceDuration)
+        {
+            return Time.time - LastExternalControlEndTime < graceDuration;
+        }
+
         private void HandleLandingEvent()
         {
             if (IsGrounded && !wasGroundedLastFrame && rb != null)
+            {
+                lastLandingTime = Time.time;
                 Landed?.Invoke(rb.linearVelocity);
+            }
         }
 
         // ---------------------------------------------------------------
@@ -367,7 +384,21 @@ namespace FPMovement
             if (speed < 0.001f)
                 return Vector3.zero;
 
-            float drop = speed * settings.groundFriction * Time.fixedDeltaTime;
+            // Reduce friction briefly after landing to preserve momentum from
+            // aerial mechanics (wall jump, air dash, etc.) instead of instantly
+            // bleeding speed the frame the player touches ground.
+            float frictionMult = 1f;
+            if (settings.landingFrictionGraceDuration > 0f)
+            {
+                float timeSinceLanding = Time.time - lastLandingTime;
+                if (timeSinceLanding < settings.landingFrictionGraceDuration)
+                {
+                    float t = timeSinceLanding / settings.landingFrictionGraceDuration;
+                    frictionMult = Mathf.Lerp(settings.landingFrictionMinMultiplier, 1f, t);
+                }
+            }
+
+            float drop = speed * settings.groundFriction * frictionMult * Time.fixedDeltaTime;
             float newSpeed = Mathf.Max(speed - drop, 0f) / speed;
             return velocity * newSpeed;
         }
