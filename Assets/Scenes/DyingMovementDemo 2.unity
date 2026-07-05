@@ -2784,36 +2784,28 @@ MonoBehaviour:
   grassCullingCompute: {fileID: 7200000, guid: adf5f23ade0af604ba4026182c4e7076, type: 3}
   grassMaterial: {fileID: 2100000, guid: 7fa7e8da506b4f642a5f36caf23fd624, type: 2}
   grassBladeMesh: {fileID: 4300000, guid: 90eabb347d2e3434c9d9750ee645462e, type: 2}
-  globalDensityMultiplier: 1000
+  globalDensityMultiplier: 200
   heightOffset: 0
-  sizeRange: {x: 0.1, y: 0.34599757}
-  heightRange: {x: 0.1, y: 0.6952586}
+  sizeRange: {x: 0.4872964, y: 1.1489291}
+  heightRange: {x: 0.1, y: 0.32345274}
   colorVariation1: {r: 1, g: 1, b: 1, a: 1}
   colorVariation2: {r: 0.8679245, g: 0.8679245, b: 0.8679245, a: 1}
   cullDistance: 50
   lodStartRatio: 0.1
   castShadows: 0
   patches:
-  - positionWS: {x: -2.7981782, y: -0.17970002, z: -22.253654}
+  - positionWS: {x: 8.026104, y: -0.17970002, z: -35.53521}
     normalWS: {x: 0, y: 1, z: 0}
     radius: 5
-    density: 111
-  - positionWS: {x: 1.2072017, y: -0.17970002, z: -22.168701}
+    density: 100
+  - positionWS: {x: 10.821846, y: -0.17970002, z: -34.693386}
     normalWS: {x: 0, y: 1, z: 0}
     radius: 5
-    density: 111
-  - positionWS: {x: 3.8639817, y: -0.17970002, z: -22.658691}
+    density: 100
+  - positionWS: {x: 9.514544, y: -0.17970002, z: -30.52621}
     normalWS: {x: 0, y: 1, z: 0}
     radius: 5
-    density: 111
-  - positionWS: {x: 2.9084935, y: -0.17970002, z: -25.31034}
-    normalWS: {x: 0, y: 1, z: 0}
-    radius: 5
-    density: 111
-  - positionWS: {x: 0.40777415, y: -0.17970002, z: -25.799381}
-    normalWS: {x: 0, y: 1, z: 0}
-    radius: 5
-    density: 111
+    density: 100
 --- !u!4 &66680875
 Transform:
   m_ObjectHideFlags: 0
