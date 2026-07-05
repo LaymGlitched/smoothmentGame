@@ -33,6 +33,7 @@ namespace FPMovement
         private float lastRightWallTime = -999f;
         private Vector3 currentWallNormal;
         private int currentSide; // +1 right, -1 left, 0 none
+        private float currentWallRunSpeed;
 
         private void Awake()
         {
@@ -110,10 +111,11 @@ namespace FPMovement
 
             // preserve forward speed, just redirect it onto the wall plane
             Vector3 flatVel = controller.HorizontalVelocity;
-            float speed = Mathf.Max(flatVel.magnitude, settings.wallRunSpeed * 0.6f);
+            currentWallRunSpeed = Mathf.Max(flatVel.magnitude, settings.wallRunSpeed);
+            
             Vector3 wallForward = GetWallRunDirection(wallNormal);
             controller.Body.linearVelocity =
-                wallForward * speed + Vector3.up * Mathf.Max(controller.Body.linearVelocity.y, 0f);
+                wallForward * currentWallRunSpeed + Vector3.up * Mathf.Max(controller.Body.linearVelocity.y, 0f);
 
             WallRunStateChanged?.Invoke(side > 0);
             if (mouseLook != null)
@@ -144,8 +146,11 @@ namespace FPMovement
             currentWallNormal = latestNormal;
             Vector3 wallForward = GetWallRunDirection(currentWallNormal);
 
+            // Decay speed back to base wallRunSpeed so you don't stay at 25 m/s forever
+            currentWallRunSpeed = Mathf.Lerp(currentWallRunSpeed, settings.wallRunSpeed, Time.fixedDeltaTime * 1.5f);
+
             Vector3 vel = controller.Body.linearVelocity;
-            Vector3 horizontal = wallForward * settings.wallRunSpeed;
+            Vector3 horizontal = wallForward * currentWallRunSpeed;
             // slight pull into the wall so the player hugs it instead of drifting off
             Vector3 stick = -currentWallNormal * 1.5f;
 

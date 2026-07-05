@@ -37,6 +37,9 @@ namespace FPMovement
 
         private float slideTimer;
         public float SlideDuration => IsSliding ? slideTimer : 0f;
+        public float LastSlideEndTime { get; private set; } = -999f;
+        public float LastSlideDuration { get; private set; } = 0f;
+        
         private float currentSlideHeightOffset;
         private bool wasCrouching;
         private bool canStartSlideThisCrouch;
@@ -374,7 +377,12 @@ namespace FPMovement
             if (!IsSliding)
                 return;
 
+            LastSlideEndTime = Time.time;
+            LastSlideDuration = slideTimer;
             IsSliding = false;
+
+            if (controller != null)
+                controller.TriggerLandingFrictionGrace();
 
             try
             {

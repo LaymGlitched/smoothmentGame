@@ -25,6 +25,10 @@ namespace FPMovement
         [SerializeField]
         private StaminaSystem stamina; // optional, used only for wall climb cost
 
+        [Tooltip("Optional. Used to trigger an FOV dip during vaults/mantles.")]
+        [SerializeField]
+        private DynamicFOVController fovController;
+
         [Header("Toggles")]
         public bool enableVaulting = true;
         public bool enableMantling = true;
@@ -48,6 +52,9 @@ namespace FPMovement
             input = controller.Input;
             if (input != null)
                 input.OnJumpPressed += HandleJumpPressed;
+                
+            if (fovController == null)
+                fovController = FindObjectOfType<DynamicFOVController>();
         }
 
         private void OnDestroy()
@@ -241,6 +248,9 @@ namespace FPMovement
             IsTraversing = true;
             ClimbSmallStarted?.Invoke();
             
+            if (fovController != null)
+                fovController.SetTemporaryFovOffset(-5f, 15f);
+            
             float entrySpeed = controller.HorizontalVelocity.magnitude;
             controller.BeginExternalControl();
 
@@ -273,6 +283,9 @@ namespace FPMovement
         {
             IsTraversing = true;
             ClimbMediumStarted?.Invoke();
+            
+            if (fovController != null)
+                fovController.SetTemporaryFovOffset(-5f, 12f);
             
             float entrySpeed = controller.HorizontalVelocity.magnitude;
             controller.BeginExternalControl();

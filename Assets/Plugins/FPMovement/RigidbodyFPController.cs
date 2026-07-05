@@ -329,6 +329,11 @@ namespace FPMovement
             }
         }
 
+        public void TriggerLandingFrictionGrace()
+        {
+            lastLandingTime = Time.time;
+        }
+
         // ---------------------------------------------------------------
         // Movement (Quake/Source style acceleration -> gives Titanfall-ish
         // air control and speed-preserving momentum for free)
@@ -541,12 +546,16 @@ namespace FPMovement
 
                 Vector3 v = rb.linearVelocity;
                 
-                if (IsSliding && slideController != null && slideController.SlideDuration > 0f)
+                bool isGhostSliding = slideController != null && (Time.time - slideController.LastSlideEndTime < 0.1f);
+                bool wasSliding = IsSliding || isGhostSliding;
+                float durationToUse = IsSliding ? slideController.SlideDuration : (slideController != null ? slideController.LastSlideDuration : 0f);
+
+                if (wasSliding && slideController != null && durationToUse > 0f)
                 {
                     // Gradual ramp: boost scales linearly from 0% at t=0 to 100%
                     // at slideJumpMinDuration. Early jumps get partial benefit;
                     // committing to the full slide earns the full reward.
-                    float slideT = Mathf.Clamp01(slideController.SlideDuration / Mathf.Max(0.01f, settings.slideJumpMinDuration));
+                    float slideT = Mathf.Clamp01(durationToUse / Mathf.Max(0.01f, settings.slideJumpMinDuration));
                     float boost = settings.slideJumpBoost * slideT;
 
                     Vector3 flatVel = new Vector3(v.x, 0f, v.z);
@@ -564,7 +573,8 @@ namespace FPMovement
                     v.z = flatVel.z;
                 }
                 
-                v.y = settings.jumpForce;
+                // Preserve upward momentum from running up ramps instead of overwriting it
+                v.y = Mathf.Max(v.y, 0f) + settings.jumpForce;
                 rb.linearVelocity = v;
 
                 Jumped?.Invoke();
