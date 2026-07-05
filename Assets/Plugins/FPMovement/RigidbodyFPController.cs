@@ -1,6 +1,6 @@
 using System;
-using UnityEngine;
 using Nanodogs.API.Nanoshake;
+using UnityEngine;
 
 namespace FPMovement
 {
@@ -21,6 +21,23 @@ namespace FPMovement
 
         [SerializeField]
         private StaminaSystem stamina; // optional, leave empty to disable stamina cost
+
+        [Header("Visual Effects")]
+        [SerializeField]
+        [Tooltip("The wind particle system to control based on speed.")]
+        private ParticleSystem windParticles;
+
+        [SerializeField]
+        [Tooltip("The speed at which wind particles reach their maximum emission rate and speed.")]
+        private float maxWindSpeed = 35f;
+
+        [SerializeField]
+        [Tooltip("The minimum speed required before wind particles start emitting.")]
+        private float windSpeedThreshold = 15f;
+
+        [SerializeField]
+        [Tooltip("The maximum emission rate of the wind particles.")]
+        private float maxWindEmissionRate = 50f;
 
         [Header("Feature Toggles")]
         [Tooltip("Master switch for sprinting.")]
@@ -201,6 +218,36 @@ namespace FPMovement
         {
             Kicked?.Invoke();
             Nanoshake.Shake(false, null, 0.5f, 0.5f, 1f);
+        }
+
+        private void Update()
+        {
+            UpdateWindParticles();
+        }
+
+        private void UpdateWindParticles()
+        {
+            if (windParticles != null)
+            {
+                float speed = CurrentSpeed;
+                var emission = windParticles.emission;
+                var main = windParticles.main;
+
+                if (speed <= windSpeedThreshold)
+                {
+                    emission.rateOverTime = 0f;
+                    main.startSpeed = 4f;
+                }
+                else
+                {
+                    // Scale from threshold to max speed
+                    float speedRange = Mathf.Max(0.1f, maxWindSpeed - windSpeedThreshold);
+                    float speedRatio = Mathf.Clamp01((speed - windSpeedThreshold) / speedRange);
+                    
+                    emission.rateOverTime = Mathf.Lerp(0f, maxWindEmissionRate, speedRatio);
+                    main.startSpeed = Mathf.Lerp(4f, 12f, speedRatio);
+                }
+            }
         }
 
         private void FixedUpdate()

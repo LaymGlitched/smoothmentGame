@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Reflection;
 using UnityEngine;
 
@@ -49,6 +50,7 @@ namespace FPMovement
         public string mantleTriggerParam = "Mantle";
         public string isTraversingParam = "IsTraversing";
         public string kickTriggerParam = "Kick";
+        public string spellCastTriggerParam = "SpellCast";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
@@ -69,6 +71,9 @@ namespace FPMovement
         private int mantleHash;
         private int isTraversingHash;
         private int kickHash;
+        private int spellCastHash;
+
+        public event Action SpellCasted;
 
         private float targetUpperIkWeight = 1f;
         private float currentUpperIkWeight = 1f;
@@ -99,6 +104,7 @@ namespace FPMovement
             mantleHash = Animator.StringToHash(mantleTriggerParam);
             isTraversingHash = Animator.StringToHash(isTraversingParam);
             kickHash = Animator.StringToHash(kickTriggerParam);
+            spellCastHash = Animator.StringToHash(spellCastTriggerParam);
         }
 
         private void OnEnable()
@@ -157,6 +163,25 @@ namespace FPMovement
             {
                 animator.SetTrigger(kickHash);
             }
+        }
+
+        public void CastSpell()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(spellCastHash);
+                StartCoroutine(SpellCastDelayRoutine());
+            }
+        }
+
+        private IEnumerator SpellCastDelayRoutine()
+        {
+            // Wait 10 frames
+            for (int i = 0; i < 10; i++)
+            {
+                yield return null;
+            }
+            SpellCasted?.Invoke();
         }
 
         private void OnWallRunStateChanged(bool isRightWall)

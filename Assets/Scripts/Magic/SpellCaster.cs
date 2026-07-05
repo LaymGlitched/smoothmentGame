@@ -23,6 +23,9 @@ namespace GameCode.Magic
         private RigidbodyFPController controller;
 
         [SerializeField]
+        private FPAnimationController animationController;
+
+        [SerializeField]
         private Camera playerCamera;
 
         [SerializeField]
@@ -55,6 +58,9 @@ namespace GameCode.Magic
         private string activeOverrideName = "";
         private float overrideDisplayTimer = 0f;
 
+        private SpellContext pendingContext;
+        private bool hasPendingSpell = false;
+
         private void Awake()
         {
             // Auto-find references
@@ -63,6 +69,9 @@ namespace GameCode.Magic
 
             if (controller == null)
                 controller = GetComponent<RigidbodyFPController>();
+
+            if (animationController == null)
+                animationController = GetComponent<FPAnimationController>();
 
             if (playerCamera == null)
                 playerCamera = Camera.main;
@@ -118,6 +127,9 @@ namespace GameCode.Magic
 
             if (PreviousSpellAction != null)
                 PreviousSpellAction.action.performed += ctx => CycleSpell(-1);
+
+            if (animationController != null)
+                animationController.SpellCasted += OnAnimationSpellCasted;
         }
 
         private void OnDisable()
@@ -150,6 +162,9 @@ namespace GameCode.Magic
 
             if (PreviousSpellAction != null)
                 PreviousSpellAction.action.performed -= ctx => CycleSpell(-1);
+
+            if (animationController != null)
+                animationController.SpellCasted -= OnAnimationSpellCasted;
         }
 
         private void Update()
@@ -289,23 +304,25 @@ namespace GameCode.Magic
             if (manaSystem != null)
                 manaSystem.TakeMana(currentSpell.Stats.ManaCost);
 
-            // Cast the spell
-            if (context.ActiveShape != null)
-            {
-                context.ActiveShape.Cast(context);
-                Nanoshake.Shake(false, null, 0.5f, 0.3f, 0.5f);
-            }
-            else
-            {
-                Debug.LogError($"Spell {currentSpell.Name} has no Shape assigned!");
-                return;
-            }
-
             // Start cooldown
             currentCooldown = currentSpell.Stats.Cooldown;
 
-            if (ShowDebugInfo)
-                Debug.Log($"Cast {currentSpell.Name}");
+            // Trigger animation or cast immediately
+            pendingContext = context;
+            hasPendingSpell = true;
+
+            if (animationController != null)
+            {
+                animationController.CastSpell();
+                if (ShowDebugInfo)
+                    Debug.Log($"Started Cast Animation for {currentSpell.Name}");
+            }
+            else
+            {
+                ExecutePendingSpell();
+                if (ShowDebugInfo)
+                    Debug.Log($"Cast {currentSpell.Name} immediately");
+            }
         }
 
         public void ReleaseChargedSpell()
@@ -352,25 +369,62 @@ namespace GameCode.Magic
             if (manaSystem != null)
                 manaSystem.TakeMana(chargedManaCost);
 
-            // Cast the charged spell
-            if (context.ActiveShape != null)
-            {
-                context.ActiveShape.Cast(context);
-                Nanoshake.Shake(false, null, 1f, 0.4f, 1f);
-            }
-            else
-            {
-                Debug.LogError($"Spell {currentSpell.Name} has no Shape assigned!");
-                return;
-            }
-
             // Start cooldown (longer for charged spells)
             currentCooldown = currentSpell.Stats.Cooldown * (1 + chargeTime / 3f);
 
-            if (ShowDebugInfo)
-                Debug.Log($"Cast charged spell: {context.ChargeAmount:P0}");
+            // Trigger animation or cast immediately
+            pendingContext = context;
+            hasPendingSpell = true;
+
+            if (animationController != null)
+            {
+                animationController.CastSpell();
+                if (ShowDebugInfo)
+                    Debug.Log($"Started Cast Animation for charged spell: {context.ChargeAmount:P0}");
+            }
+            else
+            {
+                ExecutePendingSpell();
+                if (ShowDebugInfo)
+                    Debug.Log($"Cast charged spell immediately: {context.ChargeAmount:P0}");
+            }
 
             chargeTime = 0f;
+        }
+
+        private void OnAnimationSpellCasted()
+        {
+            if (hasPendingSpell)
+            {
+                ExecutePendingSpell();
+            }
+        }
+
+        private void ExecutePendingSpell()
+        {
+            if (!hasPendingSpell || pendingContext == null)
+                return;
+
+            // Recompute aim direction and target point at the exact moment of casting
+            pendingContext.Direction = GetAimDirection();
+            pendingContext.TargetPoint = GetTargetPoint();
+
+            if (pendingContext.ActiveShape != null)
+            {
+                pendingContext.ActiveShape.Cast(pendingContext);
+                
+                if (pendingContext.ChargeAmount > 0)
+                    Nanoshake.Shake(false, null, 1f, 0.4f, 1f);
+                else
+                    Nanoshake.Shake(false, null, 0.5f, 0.3f, 0.5f);
+            }
+            else
+            {
+                Debug.LogError($"Spell {pendingContext.Spell.Name} has no Shape assigned!");
+            }
+
+            hasPendingSpell = false;
+            pendingContext = null;
         }
 
         private void EvaluateMovementOverrides(SpellContext context)

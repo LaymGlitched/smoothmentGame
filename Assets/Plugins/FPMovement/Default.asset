@@ -57,6 +57,11 @@ MonoBehaviour:
   slideFovAdd: -5
   slideHeightOffset: 0.5
   slideHeightTransitionSpeed: 15
+  airDashForce: 25
+  airDashUpwardForce: 5
+  airDashCooldown: 1.2
+  airDashFovAdd: 35
+  airDashFovTransitionSpeed: 4
   wallMask:
     serializedVersion: 2
     m_Bits: 4294967295
