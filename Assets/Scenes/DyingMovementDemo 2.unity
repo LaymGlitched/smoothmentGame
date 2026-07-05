@@ -54562,7 +54562,7 @@ Transform:
   m_GameObject: {fileID: 1871250497}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.25, y: 0.879, z: -2.19}
+  m_LocalPosition: {x: -1.25, y: 0.821, z: -2.19}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -67058,9 +67058,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: Unity.Animation.Rigging::UnityEngine.Animations.Rigging.RigBuilder
   m_RigLayers:
   - m_Rig: {fileID: 1960194123}
-    m_Active: 0
+    m_Active: 1
   - m_Rig: {fileID: 1475325464}
-    m_Active: 0
+    m_Active: 1
   m_Effectors: []
 --- !u!95 &919132147485533532
 Animator:
