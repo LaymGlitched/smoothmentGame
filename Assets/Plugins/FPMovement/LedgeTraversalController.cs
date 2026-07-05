@@ -156,6 +156,46 @@ namespace FPMovement
             if (height <= 0.15f)
                 return false; // not really an obstacle (curb / step noise)
 
+            // Prevent climbing through thin walls/ceilings (e.g. inside caves with space behind them)
+            // 1. Check if there is a ceiling directly above the player that blocks the climb
+            Vector3 headTop = controller.transform.position + Vector3.up * (controller.ColliderHeight * 0.5f);
+            if (topHit.point.y > headTop.y)
+            {
+                float climbDist = topHit.point.y - headTop.y + 0.1f;
+                if (Physics.Raycast(
+                        headTop,
+                        Vector3.up,
+                        climbDist,
+                        settings.wallMask,
+                        QueryTriggerInteraction.Ignore))
+                {
+                    return false; // Blocked by ceiling above player
+                }
+            }
+
+            // 2. Check if there is a solid wall blocking horizontal movement AT the height of the ledge.
+            // This prevents detecting a "ledge" that is actually the floor behind a thin wall.
+            Vector3 highOrigin = controller.FeetPosition;
+            highOrigin.y = topHit.point.y + 0.1f; // Just above the detected ledge
+
+            Vector3 toLedge = (topHit.point - highOrigin);
+            toLedge.y = 0;
+            float distToLedge = toLedge.magnitude;
+
+            if (distToLedge > 0.01f)
+            {
+                if (Physics.Raycast(
+                        highOrigin,
+                        toLedge.normalized,
+                        out RaycastHit blockHit,
+                        distToLedge,
+                        settings.wallMask,
+                        QueryTriggerInteraction.Ignore))
+                {
+                    return false; // Ledge is behind a solid wall (e.g. clipping through a cave mesh)
+                }
+            }
+
             obstacle = new ObstacleInfo
             {
                 WallHitPoint = wallHit.point,
