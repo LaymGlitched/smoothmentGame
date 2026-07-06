@@ -7,7 +7,7 @@ Shader "Custom/IslandVertexColor"
     }
     SubShader
     {
-        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Overlay" }
+        Tags { "RenderType"="Opaque" "RenderPipeline"="UniversalPipeline" "Queue"="Geometry" }
         LOD 200
 
         Pass
@@ -18,6 +18,12 @@ Shader "Custom/IslandVertexColor"
             HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
+
+            #pragma multi_compile _ _MAIN_LIGHT_SHADOWS _MAIN_LIGHT_SHADOWS_CASCADE _MAIN_LIGHT_SHADOWS_SCREEN
+            #pragma multi_compile_fragment _ _SHADOWS_SOFT
+            #pragma multi_compile _ _ADDITIONAL_LIGHTS_VERTEX _ADDITIONAL_LIGHTS
+            #pragma multi_compile_instancing
+
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
@@ -26,6 +32,7 @@ Shader "Custom/IslandVertexColor"
                 float4 positionOS : POSITION;
                 float3 normalOS   : NORMAL;
                 float4 color      : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
             struct Varyings
@@ -34,14 +41,22 @@ Shader "Custom/IslandVertexColor"
                 float3 normalWS    : TEXCOORD0;
                 float3 positionWS  : TEXCOORD1;
                 float4 color       : COLOR;
+                UNITY_VERTEX_INPUT_INSTANCE_ID
+                UNITY_VERTEX_OUTPUT_STEREO
             };
 
-            float _Smoothness;
-            float _AmbientBoost;
+            CBUFFER_START(UnityPerMaterial)
+                float _Smoothness;
+                float _AmbientBoost;
+            CBUFFER_END
 
             Varyings vert(Attributes IN)
             {
                 Varyings OUT;
+                UNITY_SETUP_INSTANCE_ID(IN);
+                UNITY_TRANSFER_INSTANCE_ID(IN, OUT);
+                UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(OUT);
+
                 VertexPositionInputs posInputs = GetVertexPositionInputs(IN.positionOS.xyz);
                 OUT.positionHCS = posInputs.positionCS;
                 OUT.positionWS  = posInputs.positionWS;
@@ -53,7 +68,9 @@ Shader "Custom/IslandVertexColor"
             half4 frag(Varyings IN) : SV_Target
             {
                 float3 normalWS = normalize(IN.normalWS);
-                Light mainLight = GetMainLight(TransformWorldToShadowCoord(IN.positionWS));
+
+                float4 shadowCoord = TransformWorldToShadowCoord(IN.positionWS);
+                Light mainLight = GetMainLight(shadowCoord);
 
                 float NdotL = saturate(dot(normalWS, mainLight.direction));
                 float3 diffuse = mainLight.color * NdotL * mainLight.shadowAttenuation;
