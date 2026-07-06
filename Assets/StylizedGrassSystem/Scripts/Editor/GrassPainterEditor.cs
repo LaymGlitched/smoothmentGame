@@ -15,6 +15,7 @@ namespace StylizedGrassSystem
         private bool showReferences = true;
         private bool showPainting = true;
         private bool showSettings = true;
+        private bool showGroundSnapping = true;
 
         public override void OnInspectorGUI()
         {
@@ -109,6 +110,23 @@ namespace StylizedGrassSystem
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("cullDistance"), new GUIContent("Max Render Distance"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("lodStartRatio"), new GUIContent("LOD Start (lower = faster)"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("castShadows"), new GUIContent("Cast Shadows (Expensive!)"));
+                EditorGUI.indentLevel--;
+            }
+
+            EditorGUILayout.Space(5);
+
+            // Ground Snapping
+            showGroundSnapping = EditorGUILayout.Foldout(showGroundSnapping, "Ground Snapping", true, EditorStyles.foldoutHeader);
+            if (showGroundSnapping)
+            {
+                EditorGUI.indentLevel++;
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("snapToGround"), new GUIContent("Snap To Ground"));
+                
+                if (serializedObject.FindProperty("snapToGround").boolValue)
+                {
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("snapRayDistance"), new GUIContent("Ray Distance"));
+                    EditorGUILayout.PropertyField(serializedObject.FindProperty("snapLayerMask"), new GUIContent("Ground Layers"));
+                }
                 EditorGUI.indentLevel--;
             }
 
