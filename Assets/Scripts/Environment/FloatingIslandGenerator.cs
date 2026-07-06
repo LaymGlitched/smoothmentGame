@@ -50,15 +50,10 @@ public class FloatingIslandGenerator : MonoBehaviour
     public float erosionStrength = 0.2f;
     public float erosionScale = 2.0f;
 
-    [Header("Natural Bottom / Roots")]
+    [Header("Natural Bottom")]
     [Tooltip("How far the rocky underside tapers down, relative to baseSize.y.")]
     [Range(0.5f, 4f)]
     public float bottomDepth = 1.6f;
-    [Tooltip("Approximate number of longer 'root' protrusions around the bottom.")]
-    [Range(1, 12)]
-    public int rootCount = 5;
-    [Range(0f, 1f)]
-    public float rootLengthVariation = 0.6f;
     [Tooltip("Higher = the underside pinches to points faster (more stalactite-like).")]
     [Range(1f, 4f)]
     public float taperSharpness = 2.2f;
@@ -69,6 +64,12 @@ public class FloatingIslandGenerator : MonoBehaviour
     [Tooltip("How tightly the underside pulls inward as it descends.")]
     public float bottomContraction = 0.85f;
 
+    [Header("Direct Sculpt Cage")]
+    [Tooltip("Enables the draggable ring/point cage in the Scene view for direct shape sculpting.")]
+    public bool useCage = true;
+    [Tooltip("Rings of control points used to directly sculpt the island's silhouette. The top and bottom entries are single pole points; rings in between can have multiple draggable points spaced around the island.")]
+    public List<CageRing> cageRings = new List<CageRing>();
+
     [Header("Colors")]
     public Gradient colorGradient;
     [Range(0f, 0.3f)]
@@ -78,8 +79,24 @@ public class FloatingIslandGenerator : MonoBehaviour
     public bool generateMeshCollider = true;
     public Material overrideMaterial;
 
+    [System.Serializable]
+    public class CageRing
+    {
+        [Range(-1f, 1f)]
+        [Tooltip("Height along the island, from -1 (bottom tip) to 1 (top), same space as Equator Height.")]
+        public float heightT;
+        [Range(1, 16)]
+        [Tooltip("Number of draggable points around this ring. Use 1 for a single pole point (e.g. the very top or bottom tip).")]
+        public int pointCount = 8;
+        [Tooltip("Per-point radial offset. 1 = unchanged, greater than 1 bulges outward, less than 1 pinches inward.")]
+        public List<float> radiusOffsets = new List<float>();
+        [Tooltip("Per-point vertical nudge, added on top of this ring's base height.")]
+        public List<float> heightOffsets = new List<float>();
+    }
+
     private Mesh _mesh;
     private System.Random _rng;
+    private List<CageRing> _sortedCage;
 
     private static readonly int[] IcoFaces = {
         0,11,5, 0,5,1, 0,1,7, 0,7,10, 0,10,11,
@@ -92,6 +109,43 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
         if (colorGradient == null || colorGradient.colorKeys.Length == 0)
             SetDefaultGradient();
+
+        if (cageRings == null || cageRings.Count == 0)
+            GenerateDefaultCage();
+    }
+
+    /// <summary>Resets the cage to a default: a top pole, three 8-point rings, and a bottom pole.</summary>
+    public void GenerateDefaultCage()
+    {
+        cageRings = new List<CageRing>
+        {
+            MakeRing(1f, 1),
+            MakeRing(0.45f, 8),
+            MakeRing(0f, 8),
+            MakeRing(-0.45f, 8),
+            MakeRing(-1f, 1),
+        };
+    }
+
+    private static CageRing MakeRing(float heightT, int pointCount)
+    {
+        CageRing ring = new CageRing { heightT = heightT, pointCount = pointCount };
+        EnsureRingArrays(ring);
+        return ring;
+    }
+
+    /// <summary>Pads or trims a ring's offset lists so they match its point count. Safe to call after inspector edits.</summary>
+    public static void EnsureRingArrays(CageRing ring)
+    {
+        ring.pointCount = Mathf.Max(1, ring.pointCount);
+        if (ring.radiusOffsets == null) ring.radiusOffsets = new List<float>();
+        if (ring.heightOffsets == null) ring.heightOffsets = new List<float>();
+
+        while (ring.radiusOffsets.Count < ring.pointCount) ring.radiusOffsets.Add(1f);
+        while (ring.radiusOffsets.Count > ring.pointCount) ring.radiusOffsets.RemoveAt(ring.radiusOffsets.Count - 1);
+
+        while (ring.heightOffsets.Count < ring.pointCount) ring.heightOffsets.Add(0f);
+        while (ring.heightOffsets.Count > ring.pointCount) ring.heightOffsets.RemoveAt(ring.heightOffsets.Count - 1);
     }
 
     private void SetDefaultGradient()
@@ -116,6 +170,11 @@ public class FloatingIslandGenerator : MonoBehaviour
 
         _rng = new System.Random(seed);
 
+        if (cageRings == null) cageRings = new List<CageRing>();
+        foreach (CageRing ring in cageRings) EnsureRingArrays(ring);
+        _sortedCage = new List<CageRing>(cageRings);
+        _sortedCage.Sort((a, b) => a.heightT.CompareTo(b.heightT));
+
         Vector3 sizeMul = new Vector3(
             1f + ((float)_rng.NextDouble() * 2f - 1f) * sizeVariation,
             1f + ((float)_rng.NextDouble() * 2f - 1f) * sizeVariation,
@@ -128,7 +187,6 @@ public class FloatingIslandGenerator : MonoBehaviour
             (float)_rng.NextDouble() * 1000f,
             (float)_rng.NextDouble() * 1000f
         );
-        float rootAngleOffset = (float)_rng.NextDouble() * Mathf.PI * 2f;
 
         List<Vector3> verts;
         List<int> tris;
@@ -140,7 +198,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         for (int i = 0; i < count; i++)
         {
             Vector3 dir = verts[i];
-            shaped[i] = ShapeVertex(dir, noiseOffset, rootAngleOffset);
+            shaped[i] = ShapeVertex(dir, noiseOffset);
         }
 
         for (int i = 0; i < count; i++)
@@ -209,7 +267,7 @@ public class FloatingIslandGenerator : MonoBehaviour
         }
     }
 
-    private Vector3 ShapeVertex(Vector3 dir, Vector3 noiseOffset, float rootAngleOffset)
+    private Vector3 ShapeVertex(Vector3 dir, Vector3 noiseOffset)
     {
         float y = dir.y;
         float blend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(equatorHeight - 0.12f, equatorHeight + 0.12f, y));
@@ -217,11 +275,9 @@ public class FloatingIslandGenerator : MonoBehaviour
         float horiz = Mathf.Sqrt(dir.x * dir.x + dir.z * dir.z);
         Vector2 horizDir = horiz > 0.0001f ? new Vector2(dir.x / horiz, dir.z / horiz) : Vector2.zero;
 
-        // --- Rim Jaggedness / Coastline Distortion ---
         float rimNoise = Noise3D(new Vector3(dir.x, 0f, dir.z) * rimNoiseScale + noiseOffset);
         float rimDistort = 1f + (rimNoise - 0.5f) * 2f * rimJaggedness;
 
-        // --- Top Surface Modification ---
         float domeY = dir.y;
         float flatY = 1f - Mathf.Pow(Mathf.Clamp01(horiz), topEdgeSharpness);
         float shapedY = Mathf.Lerp(domeY, flatY, topFlatness);
@@ -233,12 +289,10 @@ public class FloatingIslandGenerator : MonoBehaviour
             normalizedHoriz = Mathf.Lerp(horiz, Mathf.Min(cylinderHoriz, 1f), topFlatness);
         }
 
-        // Layered Fractal Noise (fBm) for realistic mountain terrain
         float topN = OctaveNoise3D(dir * topNoiseScale + noiseOffset, topOctaves);
 
-        // Erosion effect (Billow/Ridge style inversion to cut valleys)
         float erosionNoise = Noise3D(dir * erosionScale + noiseOffset * 2f);
-        float erosionFactor = Mathf.Abs(erosionNoise - 0.5f) * 2f; // V-shaped profiles
+        float erosionFactor = Mathf.Abs(erosionNoise - 0.5f) * 2f;
         float erosionInvert = Mathf.Lerp(1f, erosionFactor, erosionStrength);
 
         float topHeightModifier = 1f + (topN - 0.3f) * topNoiseStrength;
@@ -249,15 +303,9 @@ public class FloatingIslandGenerator : MonoBehaviour
             horizDir.y * normalizedHoriz * rimDistort * topHeightModifier
         );
 
-        // --- Bottom Surface Modification ---
         float t = Mathf.Clamp01(Mathf.InverseLerp(equatorHeight, -1f, y));
-        float angle = Mathf.Atan2(dir.z, dir.x) + rootAngleOffset;
-
-        float rootSignal = 0.5f + 0.5f * Mathf.Sin(angle * rootCount);
-        rootSignal = Mathf.Lerp(1f, rootSignal, rootLengthVariation);
-
         float depthT = Mathf.Pow(t, taperSharpness);
-        float depth = depthT * bottomDepth * (0.35f + 0.65f * rootSignal);
+        float depth = depthT * bottomDepth;
 
         float contraction = Mathf.Clamp01(1f - t * bottomContraction);
 
@@ -270,7 +318,75 @@ public class FloatingIslandGenerator : MonoBehaviour
 
         Vector3 bottomVert = new Vector3(bx, by, bz);
 
-        return Vector3.Lerp(bottomVert, topVert, blend);
+        Vector3 result = Vector3.Lerp(bottomVert, topVert, blend);
+
+        if (useCage && _sortedCage != null && _sortedCage.Count > 0)
+        {
+            float angleDeg = Mathf.Atan2(dir.z, dir.x) * Mathf.Rad2Deg;
+            SampleCage(y, angleDeg, out float radiusMul, out float heightAdd);
+            result.x *= radiusMul;
+            result.z *= radiusMul;
+            result.y += heightAdd;
+        }
+
+        return result;
+    }
+
+    /// <summary>Samples the cage at a given unit-sphere height and angle, blending between the two nearest rings.</summary>
+    private void SampleCage(float y, float angleDeg, out float radiusMul, out float heightAdd)
+    {
+        radiusMul = 1f;
+        heightAdd = 0f;
+
+        if (_sortedCage.Count == 1)
+        {
+            SampleRing(_sortedCage[0], angleDeg, out radiusMul, out heightAdd);
+            return;
+        }
+
+        CageRing lower = null;
+        CageRing upper = null;
+        for (int i = 0; i < _sortedCage.Count; i++)
+        {
+            if (_sortedCage[i].heightT <= y) lower = _sortedCage[i];
+            if (upper == null && _sortedCage[i].heightT >= y) upper = _sortedCage[i];
+        }
+        if (lower == null) lower = _sortedCage[0];
+        if (upper == null) upper = _sortedCage[_sortedCage.Count - 1];
+
+        if (lower == upper)
+        {
+            SampleRing(lower, angleDeg, out radiusMul, out heightAdd);
+            return;
+        }
+
+        float t = Mathf.InverseLerp(lower.heightT, upper.heightT, y);
+        SampleRing(lower, angleDeg, out float rl, out float hl);
+        SampleRing(upper, angleDeg, out float ru, out float hu);
+        radiusMul = Mathf.Lerp(rl, ru, t);
+        heightAdd = Mathf.Lerp(hl, hu, t);
+    }
+
+    /// <summary>Interpolates a single ring's per-point offsets at a given angle, wrapping around the circle.</summary>
+    private static void SampleRing(CageRing ring, float angleDeg, out float radiusOffset, out float heightOffset)
+    {
+        int n = Mathf.Max(1, ring.pointCount);
+        if (n <= 1 || ring.radiusOffsets == null || ring.radiusOffsets.Count == 0)
+        {
+            radiusOffset = (ring.radiusOffsets != null && ring.radiusOffsets.Count > 0) ? ring.radiusOffsets[0] : 1f;
+            heightOffset = (ring.heightOffsets != null && ring.heightOffsets.Count > 0) ? ring.heightOffsets[0] : 0f;
+            return;
+        }
+
+        float a = ((angleDeg % 360f) + 360f) % 360f;
+        float step = 360f / n;
+        float idxF = a / step;
+        int i0 = Mathf.FloorToInt(idxF) % n;
+        int i1 = (i0 + 1) % n;
+        float frac = idxF - Mathf.Floor(idxF);
+
+        radiusOffset = Mathf.Lerp(ring.radiusOffsets[i0], ring.radiusOffsets[i1], frac);
+        heightOffset = Mathf.Lerp(ring.heightOffsets[i0], ring.heightOffsets[i1], frac);
     }
 
     private static float Noise3D(Vector3 p)
