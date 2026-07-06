@@ -21,9 +21,12 @@ namespace GameCode.UI
 
         private Material reticleMaterial;
         private const float MpsToKmh = 3.6f;
+        
+        private float currentReticleAngle = 0f;
 
         // Shader property IDs for performance
-        private readonly int centripetalSpeedID = Shader.PropertyToID("_CentripetalSpeed");
+        private readonly int centripetalRotationID = Shader.PropertyToID("_CentripetalSpeed"); // Keeping name to match your shader property
+
         private readonly int maxSpeedGlowID = Shader.PropertyToID("_MaxSpeedGlow");
         private readonly int crosshairOpeningID = Shader.PropertyToID("_CrosshairOpening");
 
@@ -62,10 +65,13 @@ namespace GameCode.UI
             {
                 float speedRatio = Mathf.Clamp01(currentSpeed / maxMomentumSpeed);
                 
-                // 1. Centripetal Speed: increase rotation as speed goes up
-                // At 0 speed it's 1x, at max speed it's maxRotationSpeedMultiplier.
+                // 1. Centripetal Rotation: Accumulate rotation in C# to prevent snapping
                 float currentRotationSpeed = Mathf.Lerp(1f, maxRotationSpeedMultiplier, speedRatio);
-                reticleMaterial.SetFloat(centripetalSpeedID, currentRotationSpeed);
+                currentReticleAngle += currentRotationSpeed * Time.deltaTime;
+                currentReticleAngle %= (Mathf.PI * 2f); // Wrap angle to prevent precision issues over time
+
+                
+                reticleMaterial.SetFloat(centripetalRotationID, currentReticleAngle);
 
                 // 2. Feedback: pulse white-hot and open up at max momentum
                 // We use a sharp threshold (e.g., above 0.95 ratio) or just straight mapping
