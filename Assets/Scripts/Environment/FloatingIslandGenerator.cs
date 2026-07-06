@@ -32,8 +32,23 @@ public class FloatingIslandGenerator : MonoBehaviour
     [Tooltip("Higher values keep the plateau flatter for longer and make the rim drop off more sharply. Only matters when Top Flatness > 0.")]
     public float topEdgeSharpness = 3.5f;
     public float topNoiseScale = 1.2f;
-    [Range(0f, 0.6f)]
-    public float topNoiseStrength = 0.18f;
+    [Range(0f, 1f)]
+    public float topNoiseStrength = 0.25f;
+    [Range(1, 4)]
+    [Tooltip("Number of noise layers for detail. Higher = more detailed mountain ridges.")]
+    public int topOctaves = 3;
+
+    [Header("Rim Distortion")]
+    [Range(0f, 0.8f)]
+    [Tooltip("Distorts the circular outline of the island to make it look organic instead of a round disc.")]
+    public float rimJaggedness = 0.4f;
+    public float rimNoiseScale = 1.5f;
+
+    [Header("Erosion & Canyons")]
+    [Range(0f, 0.5f)]
+    [Tooltip("Carves deep crevices and valleys into the side and top of the island.")]
+    public float erosionStrength = 0.2f;
+    public float erosionScale = 2.0f;
 
     [Header("Natural Bottom / Roots")]
     [Tooltip("How far the rocky underside tapers down, relative to baseSize.y.")]
@@ -83,10 +98,10 @@ public class FloatingIslandGenerator : MonoBehaviour
     {
         colorGradient = new Gradient();
         var colorKeys = new GradientColorKey[4];
-        colorKeys[0] = new GradientColorKey(new Color(0.29f, 0.55f, 0.22f), 0.85f); // grass (top)
-        colorKeys[1] = new GradientColorKey(new Color(0.42f, 0.32f, 0.20f), 0.65f); // dirt
-        colorKeys[2] = new GradientColorKey(new Color(0.35f, 0.34f, 0.33f), 0.35f); // rock
-        colorKeys[3] = new GradientColorKey(new Color(0.15f, 0.14f, 0.14f), 0.0f);  // dark root tips
+        colorKeys[0] = new GradientColorKey(new Color(0.29f, 0.55f, 0.22f), 0.85f);
+        colorKeys[1] = new GradientColorKey(new Color(0.42f, 0.32f, 0.20f), 0.65f);
+        colorKeys[2] = new GradientColorKey(new Color(0.35f, 0.34f, 0.33f), 0.35f);
+        colorKeys[3] = new GradientColorKey(new Color(0.15f, 0.14f, 0.14f), 0.0f);
         var alphaKeys = new GradientAlphaKey[2] {
             new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f)
         };
@@ -101,7 +116,6 @@ public class FloatingIslandGenerator : MonoBehaviour
 
         _rng = new System.Random(seed);
 
-        // Per-axis size variation, driven deterministically by seed.
         Vector3 sizeMul = new Vector3(
             1f + ((float)_rng.NextDouble() * 2f - 1f) * sizeVariation,
             1f + ((float)_rng.NextDouble() * 2f - 1f) * sizeVariation,
@@ -125,11 +139,10 @@ public class FloatingIslandGenerator : MonoBehaviour
 
         for (int i = 0; i < count; i++)
         {
-            Vector3 dir = verts[i]; // unit sphere direction
+            Vector3 dir = verts[i];
             shaped[i] = ShapeVertex(dir, noiseOffset, rootAngleOffset);
         }
 
-        // Scale to final island size.
         for (int i = 0; i < count; i++)
         {
             shaped[i] = new Vector3(
@@ -139,14 +152,12 @@ public class FloatingIslandGenerator : MonoBehaviour
             );
         }
 
-        // Colors based on relative height.
         float minY = float.MaxValue, maxY = float.MinValue;
         for (int i = 0; i < count; i++)
         {
             if (shaped[i].y < minY) minY = shaped[i].y;
             if (shaped[i].y > maxY) maxY = shaped[i].y;
         }
-        float range = Mathf.Max(0.0001f, maxY - minY);
 
         Color[] colors = new Color[count];
         for (int i = 0; i < count; i++)
@@ -201,34 +212,47 @@ public class FloatingIslandGenerator : MonoBehaviour
     private Vector3 ShapeVertex(Vector3 dir, Vector3 noiseOffset, float rootAngleOffset)
     {
         float y = dir.y;
-
-        // Smooth blend zone around the equator so top and bottom shaping meet without a hard seam.
         float blend = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(equatorHeight - 0.12f, equatorHeight + 0.12f, y));
 
-        // --- Top shaping: flattened plateau (mesa) instead of a raw sphere dome ---
-        // horiz = distance from the vertical axis on the unit sphere (0 at the very top, 1 at the equator).
         float horiz = Mathf.Sqrt(dir.x * dir.x + dir.z * dir.z);
-
-        float domeY = dir.y; // natural sphere curvature
-        float flatY = 1f - Mathf.Pow(Mathf.Clamp01(horiz), topEdgeSharpness); // stays near 1, drops near the rim
-        float shapedY = Mathf.Lerp(domeY, flatY, topFlatness);
-
         Vector2 horizDir = horiz > 0.0001f ? new Vector2(dir.x / horiz, dir.z / horiz) : Vector2.zero;
 
-        float topN = Noise3D(dir * topNoiseScale + noiseOffset);
-        float topRadius = 1f + (topN - 0.5f) * 2f * topNoiseStrength;
+        // --- Rim Jaggedness / Coastline Distortion ---
+        float rimNoise = Noise3D(new Vector3(dir.x, 0f, dir.z) * rimNoiseScale + noiseOffset);
+        float rimDistort = 1f + (rimNoise - 0.5f) * 2f * rimJaggedness;
+
+        // --- Top Surface Modification ---
+        float domeY = dir.y;
+        float flatY = 1f - Mathf.Pow(Mathf.Clamp01(horiz), topEdgeSharpness);
+        float shapedY = Mathf.Lerp(domeY, flatY, topFlatness);
+
+        float normalizedHoriz = horiz;
+        if (dir.y > 0.0001f)
+        {
+            float cylinderHoriz = horiz / dir.y;
+            normalizedHoriz = Mathf.Lerp(horiz, Mathf.Min(cylinderHoriz, 1f), topFlatness);
+        }
+
+        // Layered Fractal Noise (fBm) for realistic mountain terrain
+        float topN = OctaveNoise3D(dir * topNoiseScale + noiseOffset, topOctaves);
+
+        // Erosion effect (Billow/Ridge style inversion to cut valleys)
+        float erosionNoise = Noise3D(dir * erosionScale + noiseOffset * 2f);
+        float erosionFactor = Mathf.Abs(erosionNoise - 0.5f) * 2f; // V-shaped profiles
+        float erosionInvert = Mathf.Lerp(1f, erosionFactor, erosionStrength);
+
+        float topHeightModifier = 1f + (topN - 0.3f) * topNoiseStrength;
 
         Vector3 topVert = new Vector3(
-            horizDir.x * horiz * topRadius,
-            shapedY * topRadius,
-            horizDir.y * horiz * topRadius
+            horizDir.x * normalizedHoriz * rimDistort * topHeightModifier,
+            shapedY * topHeightModifier * erosionInvert,
+            horizDir.y * normalizedHoriz * rimDistort * topHeightModifier
         );
 
-        // --- Bottom shaping: tapered, jagged, root-like underside ---
+        // --- Bottom Surface Modification ---
         float t = Mathf.Clamp01(Mathf.InverseLerp(equatorHeight, -1f, y));
         float angle = Mathf.Atan2(dir.z, dir.x) + rootAngleOffset;
 
-        // Low-frequency angular signal creates a handful of longer "roots".
         float rootSignal = 0.5f + 0.5f * Mathf.Sin(angle * rootCount);
         rootSignal = Mathf.Lerp(1f, rootSignal, rootLengthVariation);
 
@@ -240,8 +264,8 @@ public class FloatingIslandGenerator : MonoBehaviour
         float roughN1 = Noise3D(dir * bottomNoiseScale + noiseOffset) - 0.5f;
         float roughN2 = Noise3D(dir * bottomNoiseScale * 2.3f + noiseOffset * 1.3f) - 0.5f;
 
-        float bx = dir.x * contraction + roughN1 * bottomRoughness * t;
-        float bz = dir.z * contraction + roughN2 * bottomRoughness * t;
+        float bx = dir.x * contraction * rimDistort + roughN1 * bottomRoughness * t;
+        float bz = dir.z * contraction * rimDistort + roughN2 * bottomRoughness * t;
         float by = equatorHeight - depth;
 
         Vector3 bottomVert = new Vector3(bx, by, bz);
@@ -249,7 +273,6 @@ public class FloatingIslandGenerator : MonoBehaviour
         return Vector3.Lerp(bottomVert, topVert, blend);
     }
 
-    // Cheap seeded 3D noise built from three 2D Perlin samples.
     private static float Noise3D(Vector3 p)
     {
         float ab = Mathf.PerlinNoise(p.x, p.y);
@@ -258,10 +281,26 @@ public class FloatingIslandGenerator : MonoBehaviour
         return (ab + bc + ca) / 3f;
     }
 
+    private static float OctaveNoise3D(Vector3 p, int octaves)
+    {
+        float total = 0f;
+        float frequency = 1f;
+        float amplitude = 1f;
+        float maxValue = 0f;
+
+        for (int i = 0; i < octaves; i++)
+        {
+            total += Noise3D(p * frequency) * amplitude;
+            maxValue += amplitude;
+            amplitude *= 0.5f;
+            frequency *= 2.0f;
+        }
+
+        return total / maxValue;
+    }
+
     private void BuildIcosphere(int subdiv, out List<Vector3> vertices, out List<int> triangles)
     {
-        // Local functions can't capture ref/out parameters, so build everything
-        // with plain local variables and assign to the out params at the end.
         var verts = new List<Vector3>();
         var tris = new List<int>();
 
