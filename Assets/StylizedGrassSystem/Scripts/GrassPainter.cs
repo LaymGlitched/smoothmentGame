@@ -40,6 +40,8 @@ namespace StylizedGrassSystem
         public LayerMask snapLayerMask = ~0;
 
         [Header("Performance Settings")]
+        [Tooltip("Maximum allowed blades to prevent GPU crashes. If exceeded, density will be scaled down.")]
+        public int maxTotalBlades = 300000;
         public float cullDistance = 200f;
         [Range(0.1f, 0.9f), Tooltip("Distance ratio where LOD thinning begins. Lower = more aggressive.")]
         public float lodStartRatio = 0.3f;
@@ -134,11 +136,34 @@ namespace StylizedGrassSystem
 
             // Calculate blade counts per patch
             int[] bladeCounts = new int[patches.Count];
-            int totalExpected = 0;
+            long totalExpected = 0;
             for (int i = 0; i < patches.Count; i++)
             {
-                bladeCounts[i] = Mathf.CeilToInt(patches[i].density * globalDensityMultiplier);
-                totalExpected += bladeCounts[i];
+                long patchCount = (long)Mathf.Ceil(patches[i].density * globalDensityMultiplier);
+                totalExpected += patchCount;
+            }
+
+            if (totalExpected > maxTotalBlades)
+            {
+                Debug.LogWarning($"GrassPainter: requested {totalExpected} blades across {patches.Count} patches exceeds maxTotalBlades ({maxTotalBlades}). Scaling density down to fit. Raise maxTotalBlades if this is intentional.");
+                
+                double scale = (double)maxTotalBlades / totalExpected;
+                long newTotal = 0;
+                for (int i = 0; i < patches.Count; i++)
+                {
+                    long patchCount = (long)Mathf.Ceil(patches[i].density * globalDensityMultiplier);
+                    int scaledCount = (int)(patchCount * scale);
+                    bladeCounts[i] = scaledCount;
+                    newTotal += scaledCount;
+                }
+                totalExpected = newTotal;
+            }
+            else
+            {
+                for (int i = 0; i < patches.Count; i++)
+                {
+                    bladeCounts[i] = (int)Mathf.Ceil(patches[i].density * globalDensityMultiplier);
+                }
             }
 
             if (totalExpected == 0)
@@ -149,7 +174,7 @@ namespace StylizedGrassSystem
             }
 
             // Generate blade instances on CPU with per-blade ground raycasting
-            List<GrassInstance> instanceData = new List<GrassInstance>(totalExpected);
+            List<GrassInstance> instanceData = new List<GrassInstance>((int)totalExpected);
             int actualBladeCount = 0;
 
             Vector3 colorVar1 = new Vector3(colorVariation1.r, colorVariation1.g, colorVariation1.b);

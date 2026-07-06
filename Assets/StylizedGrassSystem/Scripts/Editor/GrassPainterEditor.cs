@@ -109,6 +109,7 @@ namespace StylizedGrassSystem
                 EditorGUILayout.Space(5);
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("cullDistance"), new GUIContent("Max Render Distance"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("lodStartRatio"), new GUIContent("LOD Start (lower = faster)"));
+                EditorGUILayout.PropertyField(serializedObject.FindProperty("maxTotalBlades"), new GUIContent("Max Total Blades"));
                 EditorGUILayout.PropertyField(serializedObject.FindProperty("castShadows"), new GUIContent("Cast Shadows (Expensive!)"));
                 EditorGUI.indentLevel--;
             }
