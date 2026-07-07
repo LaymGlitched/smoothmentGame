@@ -15302,23 +15302,23 @@ MonoBehaviour:
     selectionData:
       positions:
       - x: 0
-        y: -0.000000029802322
+        y: -0.000000014901161
+        z: 0
+      - x: 0
+        y: 0.0042390674
         z: -0.000000029802322
-      - x: -0.000000007450581
-        y: 0.0042390823
+      - x: 0.00015825778
+        y: 0.00811559
         z: -0.000000029802322
-      - x: 0.00015825033
-        y: 0.008115619
-        z: -0.000000029802322
-      - x: 0.00028734654
-        y: 0.011875123
+      - x: 0.0002873391
+        y: 0.011875108
         z: -0.000000029802322
       attributes:
       - Value: 1
       - Value: 2
       - Value: 2
       - Value: 2
-      maxConnectionDistance: 0.004239112
+      maxConnectionDistance: 0.0042390823
       userEdit: 0
     preBuildData:
       enabled: 0
@@ -62936,8 +62936,8 @@ Transform:
   m_GameObject: {fileID: 919132147485533529}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: -0.752, z: -0.231}
-  m_LocalScale: {x: 0.7, y: 0.7, z: 0.7}
+  m_LocalPosition: {x: 0, y: -0.876, z: -0.193}
+  m_LocalScale: {x: 0.8, y: 0.8, z: 0.8}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 8160277321559147508}
@@ -63660,7 +63660,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: 7666266049737368757, guid: 7169b265bdbb45a46ab547305234100a, type: 3}
   m_Bones:
@@ -64180,25 +64180,25 @@ MonoBehaviour:
       positions:
       - x: 0
         y: 0
-        z: 0.000000059604645
+        z: -0.000000029802322
       - x: 0
-        y: 0.015211523
-        z: 0
-      - x: -0.0015660822
-        y: 0.02727276
-        z: -0.0005713105
-      - x: -0.0028081238
-        y: 0.03504069
-        z: -0.0009371042
+        y: 0.015211508
+        z: -0.000000029802322
+      - x: -0.001566112
+        y: 0.027272724
+        z: -0.0005713701
+      - x: -0.0028081536
+        y: 0.03504067
+        z: -0.000937134
       - x: -0.0038620234
-        y: 0.041631654
-        z: -0.0012474656
-      - x: -0.00457713
-        y: 0.046104103
-        z: -0.0014580488
-      - x: -0.0054992735
-        y: 0.051871195
-        z: -0.0017296076
+        y: 0.04163163
+        z: -0.0012474954
+      - x: -0.00457716
+        y: 0.046104066
+        z: -0.0014580786
+      - x: -0.0054993033
+        y: 0.051871173
+        z: -0.0017296374
       attributes:
       - Value: 1
       - Value: 2
@@ -64207,7 +64207,7 @@ MonoBehaviour:
       - Value: 2
       - Value: 2
       - Value: 2
-      maxConnectionDistance: 0.015211523
+      maxConnectionDistance: 0.015211508
       userEdit: 0
     preBuildData:
       enabled: 0
@@ -64428,7 +64428,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: -278085929633702562, guid: 7169b265bdbb45a46ab547305234100a, type: 3}
   m_Bones:
@@ -64544,7 +64544,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: 3900480760133451625, guid: 7169b265bdbb45a46ab547305234100a, type: 3}
   m_Bones:
@@ -64733,6 +64733,7 @@ SkinnedMeshRenderer:
   m_RendererPriority: 0
   m_Materials:
   - {fileID: 2100000, guid: 17528b558b6b59841850a4be42b382c3, type: 2}
+  - {fileID: 2100000, guid: 3e633eb015af6154e9e9c0dcdd8ad478, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -64757,7 +64758,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: -5819183975530660181, guid: 7169b265bdbb45a46ab547305234100a, type: 3}
   m_Bones:
@@ -64887,7 +64888,7 @@ SkinnedMeshRenderer:
   m_MaskInteraction: 0
   serializedVersion: 2
   m_Quality: 0
-  m_UpdateWhenOffscreen: 0
+  m_UpdateWhenOffscreen: 1
   m_SkinnedMotionVectors: 1
   m_Mesh: {fileID: -3608689983483504861, guid: 7169b265bdbb45a46ab547305234100a, type: 3}
   m_Bones:
