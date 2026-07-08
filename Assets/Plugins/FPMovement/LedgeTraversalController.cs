@@ -159,6 +159,10 @@ namespace FPMovement
             )
                 return false; // no ledge found within climbable range - too tall or open air, ignore
 
+            // The top of the ledge must be a walkable surface, not just a continuation of a steep ramp
+            if (Vector3.Angle(topHit.normal, Vector3.up) > settings.slopeLimit)
+                return false;
+
             float height = topHit.point.y - feetY;
             if (height <= 0.15f)
                 return false; // not really an obstacle (curb / step noise)

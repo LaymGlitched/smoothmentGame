@@ -53,12 +53,17 @@ MonoBehaviour:
   landingBobSettleSpeed: 4
   landingBobMinSpeed: 3
   landingBobMaxSpeed: 25
+  speedShakeMinSpeed: 15
+  speedShakeMaxSpeed: 25
+  speedShakePosAmplitude: 0.02
+  speedShakeRotAmplitude: 1.1
+  speedShakeFrequency: 8
   slideSpeed: 35
-  slideDeceleration: 0
+  slideDeceleration: 4
   slideMinSpeed: 6
   slideJumpMinDuration: 0.35
-  slideJumpBoost: 30
-  slideJumpMaxSpeed: 40
+  slideJumpBoost: 10
+  slideJumpMaxSpeed: 25
   slideFovAdd: -8
   slideHeightOffset: 0.5
   slideHeightTransitionSpeed: 15
