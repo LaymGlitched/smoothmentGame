@@ -22,6 +22,6 @@ MonoBehaviour:
   WindColor: {r: 0.5, g: 0.8, b: 1, a: 0.5}
   WindEffectPrefab: {fileID: 4135840932007753064, guid: c9486968010ed744b9fd9a0070e73183, type: 3}
   IsWindBlast: 1
-  BlastForce: 5
+  BlastForce: 10
   BlastDirection: 2
   CustomDirection: {x: 1, y: 1, z: 1}

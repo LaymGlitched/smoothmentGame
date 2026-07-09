@@ -46,7 +46,7 @@ MonoBehaviour:
   maxPitch: 89
   baseFov: 90
   sprintFovAdd: 10
-  fovLerpSpeed: 2
+  fovLerpSpeed: 4
   bobFrequencyWalk: 6
   bobFrequencySprint: 12
   bobAmplitude: 0.3
@@ -77,8 +77,8 @@ MonoBehaviour:
   airDashForce: 12.5
   airDashUpwardForce: 5
   airDashCooldown: 1.2
-  airDashFovAdd: 35
-  airDashFovTransitionSpeed: 4
+  airDashFovAdd: 120
+  airDashFovTransitionSpeed: 12
   wallMask:
     serializedVersion: 2
     m_Bits: 4294967295

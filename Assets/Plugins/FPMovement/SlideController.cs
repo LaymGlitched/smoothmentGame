@@ -45,6 +45,9 @@ namespace FPMovement
         private bool canStartSlideThisCrouch;
         private float lastGroundedDuringSlide = -999f;
 
+        private Vector3 lastCollisionNormal = Vector3.zero;
+        private int lastContactCount = 0;
+
         // Cached values
         private float slideSpeed;
         private float slideDeceleration;
@@ -184,6 +187,23 @@ namespace FPMovement
                 StopSlide();
         }
 
+        private void OnCollisionStay(Collision collision)
+        {
+            if (!IsSliding) return;
+            
+            lastContactCount = collision.contactCount;
+            if (collision.contactCount > 0)
+            {
+                lastCollisionNormal = collision.GetContact(0).normal;
+            }
+        }
+        
+        private void OnCollisionExit(Collision collision)
+        {
+            lastCollisionNormal = Vector3.zero;
+            lastContactCount = 0;
+        }
+
         private void FixedUpdate()
         {
             if (!isInitialized)
@@ -302,11 +322,16 @@ namespace FPMovement
             }
 
             float speed = Mathf.Max(cachedCurrentSpeed, slideSpeed);
-            rb.linearVelocity = new Vector3(
-                slideDir.x * speed,
-                rb.linearVelocity.y,
-                slideDir.z * speed
-            );
+            Vector3 startVel = new Vector3(slideDir.x * speed, 0f, slideDir.z * speed);
+            if (controller.IsGrounded)
+            {
+                startVel = Vector3.ProjectOnPlane(startVel, controller.GroundNormal);
+            }
+            else
+            {
+                startVel.y = rb.linearVelocity.y;
+            }
+            rb.linearVelocity = startVel;
         }
 
         private void UpdateSlide()
@@ -323,31 +348,84 @@ namespace FPMovement
             if (controller.IsGrounded)
                 lastGroundedDuringSlide = Time.time;
 
-            // --- Proportional + Linear drag deceleration ---
-            // High-speed slides decelerate proportionally (exponential curve) to stay energetic.
-            // But to avoid the "long tail" coasting feeling, we also subtract a constant
-            // base deceleration each frame. This makes the slide end decisively.
-            float currentSpeed = cachedCurrentSpeed;
-            if (currentSpeed > 0.01f && cachedHorizontalVelocity.sqrMagnitude > 0.0001f)
+            if (controller.IsGrounded)
             {
-                float dragMult = settings != null ? settings.slideDragFactor : slideDeceleration * 0.1f;
-                float baseDecel = settings != null ? settings.slideBaseDeceleration : slideDeceleration * 0.5f;
-
-                float retention = 1f - (dragMult * Time.fixedDeltaTime);
-                retention = Mathf.Max(retention, 0f);
+                Vector3 velBeforeProj = rb.linearVelocity;
+                Vector3 currentVel = rb.linearVelocity;
+                Vector3 normal = controller.GroundNormal;
                 
-                float newSpeed = (currentSpeed * retention) - (baseDecel * Time.fixedDeltaTime);
-                newSpeed = Mathf.Max(newSpeed, 0f);
+                // Project velocity to stay attached to ramps/dips smoothly
+                currentVel = Vector3.ProjectOnPlane(currentVel, normal);
+                Vector3 velAfterProj = currentVel;
 
-                Vector3 newVel = cachedHorizontalVelocity.normalized * newSpeed;
-                rb.linearVelocity = new Vector3(newVel.x, rb.linearVelocity.y, newVel.z);
+                // Add gravity along slope manually since RigidbodyFPController disables it
+                float gravityMult = settings != null ? settings.gravityMultiplier : 1f;
+                Vector3 gravity = Physics.gravity * gravityMult;
+                Vector3 gravityAlongSlope = Vector3.ProjectOnPlane(gravity, normal);
+                
+                currentVel += gravityAlongSlope * Time.fixedDeltaTime;
+                Vector3 velAfterGrav = currentVel;
+
+                // Apply slide steering
+                if (settings != null && settings.slideSteeringInfluence > 0f)
+                {
+                    float strafeInput = input != null ? input.MoveInput.x : 0f;
+                    if (Mathf.Abs(strafeInput) > 0.05f && controller.Orientation != null)
+                    {
+                        Vector3 strafeDir = controller.Orientation.right * strafeInput;
+                        strafeDir = Vector3.ProjectOnPlane(strafeDir, normal).normalized;
+                        
+                        float speed = currentVel.magnitude;
+                        float steerForce = speed * settings.slideSteeringInfluence * Time.fixedDeltaTime;
+                        currentVel += strafeDir * steerForce;
+                        currentVel = currentVel.normalized * speed; // steering doesn't add total energy
+                    }
+                }
+
+                // Apply slide deceleration
+                float currentSpeed = currentVel.magnitude;
+                if (currentSpeed > 0.01f)
+                {
+                    float dragMult = settings != null ? settings.slideDragFactor : slideDeceleration * 0.1f;
+                    float baseDecel = settings != null ? settings.slideBaseDeceleration : slideDeceleration * 0.5f;
+
+                    float retention = 1f - (dragMult * Time.fixedDeltaTime);
+                    retention = Mathf.Max(retention, 0f);
+                    
+                    float newSpeed = (currentSpeed * retention) - (baseDecel * Time.fixedDeltaTime);
+                    newSpeed = Mathf.Max(newSpeed, 0f);
+
+                    currentVel = currentVel.normalized * newSpeed;
+                }
+                Vector3 velAfterDrag = currentVel;
+                
+                rb.linearVelocity = currentVel;
+                Vector3 velAfterAssign = rb.linearVelocity;
+
+                Debug.Log($"[SlideDebug] " +
+                    $"VelBeforeProj: {velBeforeProj.magnitude:F2} | " +
+                    $"VelAfterProj: {velAfterProj.magnitude:F2} | " +
+                    $"VelAfterGrav: {velAfterGrav.magnitude:F2} | " +
+                    $"VelAfterDrag: {velAfterDrag.magnitude:F2} | " +
+                    $"VelAfterAssign: {velAfterAssign.magnitude:F2} | " +
+                    $"ColNormal: {lastCollisionNormal} | " +
+                    $"Contacts: {lastContactCount} | " +
+                    $"GroundNormal: {normal}");
+
+                Vector3 debugPos = transform.position + Vector3.up * 1f;
+                Debug.DrawRay(debugPos, currentVel.normalized * 2f, Color.green);
+                Debug.DrawRay(debugPos, normal * 2f, Color.blue);
+                if (lastContactCount > 0)
+                {
+                    Debug.DrawRay(debugPos, lastCollisionNormal * 2f, Color.red);
+                }
             }
 
             // --- Stop conditions ---
             bool shouldStop = false;
 
             // Stop if speed drops too low
-            if (cachedCurrentSpeed < 0.5f)
+            if (rb.linearVelocity.magnitude < 0.5f)
                 shouldStop = true;
 
             // Stop if player tries to move backward
