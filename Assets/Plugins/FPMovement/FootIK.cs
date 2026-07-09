@@ -110,5 +110,47 @@ namespace FPMovement
                 animator.SetIKRotationWeight(foot, 0f);
             }
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            Animator anim = GetComponent<Animator>();
+            if (anim == null || anim.avatar == null || !anim.isHuman) return;
+
+            DrawFootGizmo(anim, HumanBodyBones.LeftFoot);
+            DrawFootGizmo(anim, HumanBodyBones.RightFoot);
+        }
+
+        private void DrawFootGizmo(Animator anim, HumanBodyBones bone)
+        {
+            Transform footTransform = anim.GetBoneTransform(bone);
+            if (footTransform == null) return;
+
+            Vector3 footPos = footTransform.position;
+            Vector3 rayOrigin = footPos + Vector3.up * raycastUpOffset;
+            
+            // Ray origin
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawSphere(rayOrigin, 0.03f);
+            
+            // Ray distance
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * raycastDistance);
+            
+            if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastDistance, groundMask, QueryTriggerInteraction.Ignore))
+            {
+                // Hit line
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(rayOrigin, hit.point);
+                Gizmos.DrawSphere(hit.point, 0.04f);
+                
+                // Target IK position
+                Gizmos.color = Color.cyan;
+                Vector3 targetPos = hit.point;
+                targetPos.y += footOffset;
+                Gizmos.DrawWireCube(targetPos, new Vector3(0.15f, 0.02f, 0.15f));
+            }
+        }
+#endif
     }
 }
