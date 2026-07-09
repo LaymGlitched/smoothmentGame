@@ -22,6 +22,9 @@ namespace FPMovement
         
         [Tooltip("Lower body IK rigs (legs/feet). Can be disabled during Kicking.")]
         public MonoBehaviour[] lowerIkRigs;
+
+        private IIKWeightTarget[] upperIkTargets;
+        private IIKWeightTarget[] lowerIkTargets;
         
         [Tooltip("Speed at which IK weights blend in and out.")]
         public float ikBlendSpeed = 5f;
@@ -108,6 +111,23 @@ namespace FPMovement
             isTraversingHash = Animator.StringToHash(isTraversingParam);
             kickHash = Animator.StringToHash(kickTriggerParam);
             spellCastHash = Animator.StringToHash(spellCastTriggerParam);
+
+            upperIkTargets = CacheIKTargets(upperIkRigs);
+            lowerIkTargets = CacheIKTargets(lowerIkRigs);
+        }
+
+        private IIKWeightTarget[] CacheIKTargets(MonoBehaviour[] rigs)
+        {
+            if (rigs == null) return new IIKWeightTarget[0];
+            System.Collections.Generic.List<IIKWeightTarget> targets = new System.Collections.Generic.List<IIKWeightTarget>();
+            foreach (var rig in rigs)
+            {
+                if (rig is IIKWeightTarget target)
+                {
+                    targets.Add(target);
+                }
+            }
+            return targets.ToArray();
         }
 
         private void OnEnable()
@@ -337,28 +357,24 @@ namespace FPMovement
             if (Mathf.Abs(currentUpperIkWeight - targetUpperIkWeight) > 0.01f)
             {
                 currentUpperIkWeight = Mathf.Lerp(currentUpperIkWeight, targetUpperIkWeight, Time.deltaTime * upperIkSpeed);
-                SetRigWeights(upperIkRigs, currentUpperIkWeight);
+                SetRigWeights(upperIkTargets, currentUpperIkWeight);
             }
 
             if (Mathf.Abs(currentLowerIkWeight - targetLowerIkWeight) > 0.01f)
             {
                 currentLowerIkWeight = Mathf.Lerp(currentLowerIkWeight, targetLowerIkWeight, Time.deltaTime * lowerIkSpeed);
-                SetRigWeights(lowerIkRigs, currentLowerIkWeight);
+                SetRigWeights(lowerIkTargets, currentLowerIkWeight);
             }
         }
 
-        private void SetRigWeights(MonoBehaviour[] rigs, float weight)
+        private void SetRigWeights(IIKWeightTarget[] targets, float weight)
         {
-            if (rigs == null || rigs.Length == 0) return;
-            foreach (var rig in rigs)
+            if (targets == null || targets.Length == 0) return;
+            foreach (var target in targets)
             {
-                if (rig != null)
+                if (target != null)
                 {
-                    var prop = rig.GetType().GetProperty("weight", BindingFlags.Public | BindingFlags.Instance);
-                    if (prop != null && prop.PropertyType == typeof(float))
-                    {
-                        prop.SetValue(rig, weight);
-                    }
+                    target.weight = weight;
                 }
             }
         }

@@ -3,7 +3,7 @@ using UnityEngine;
 namespace FPMovement
 {
     [RequireComponent(typeof(Animator))]
-    public class FootIK : MonoBehaviour
+    public class FootIK : MonoBehaviour, IIKWeightTarget
     {
         [Header("IK Settings")]
         [Tooltip("Which layers should the feet collide with?")]

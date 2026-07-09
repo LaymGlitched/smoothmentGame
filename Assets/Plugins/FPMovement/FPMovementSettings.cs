@@ -58,6 +58,10 @@ namespace FPMovement
         [Range(0f, 89f)]
         public float slopeLimit = 50f;
 
+        [Header("Combat / Interaction")]
+        [Tooltip("What layers the kick can hit.")]
+        public LayerMask kickHitMask = ~0;
+
         [Header("Stamina")]
         public float maxStamina = 100f;
         public float staminaDrainPerSecond = 18f;

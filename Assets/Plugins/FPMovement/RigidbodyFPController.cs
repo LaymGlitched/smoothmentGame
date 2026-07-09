@@ -152,6 +152,7 @@ namespace FPMovement
         private bool wasGroundedLastFrame;
         private bool jumpConsumedThisPress;
         private float lastLandingTime = -999f;
+        private float lastJumpTime = -999f;
 
         private void Awake()
         {
@@ -228,7 +229,8 @@ namespace FPMovement
             Nanoshake.Shake(false, null, 0.6f, 0.15f, 1f);
 
             // Simple physical kick hit detection
-            if (Physics.SphereCast(EyePosition, 0.4f, orientation.forward, out RaycastHit hit, 2.5f))
+            LayerMask mask = settings != null ? settings.kickHitMask : (LayerMask)~0;
+            if (Physics.SphereCast(EyePosition, 0.4f, orientation.forward, out RaycastHit hit, 2.5f, mask, QueryTriggerInteraction.Ignore))
             {
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
                 {
@@ -280,6 +282,9 @@ namespace FPMovement
                 IsGrounded = false;
             }
 
+            bool jumping = Time.time - lastJumpTime < 0.1f;
+            bool effectivelyGrounded = IsGrounded && !jumping && !IsSliding;
+
             if (IsGrounded)
                 lastGroundedTime = Time.time;
 
@@ -291,11 +296,16 @@ namespace FPMovement
                 return;
             }
 
+            if (rb != null)
+            {
+                rb.useGravity = !effectivelyGrounded;
+            }
+
             HandleCrouch();
             HandleSprintAndStamina();
-            HandleMovement();
+            HandleMovement(effectivelyGrounded);
             HandleJump();
-            ApplyExtraGravity();
+            ApplyExtraGravity(effectivelyGrounded);
 
             wasGroundedLastFrame = IsGrounded;
         }
@@ -351,7 +361,7 @@ namespace FPMovement
         // Movement (Quake/Source style acceleration -> gives Titanfall-ish
         // air control and speed-preserving momentum for free)
         // ---------------------------------------------------------------
-        private void HandleMovement()
+        private void HandleMovement(bool effectivelyGrounded)
         {
             if (rb == null || settings == null)
                 return;
@@ -374,28 +384,34 @@ namespace FPMovement
                 ? settings.crouchSpeed
                 : (IsSprinting ? settings.sprintSpeed : settings.walkSpeed);
 
-            Vector3 horizontalVel = HorizontalVelocity;
-
-            if (IsGrounded)
+            if (effectivelyGrounded)
             {
-                // reorient velocity onto the slope so you don't lose speed walking up gentle inclines
+                Vector3 currentVel = rb.linearVelocity;
+                
+                // reorient velocity and input onto the slope so you don't lose speed walking up gentle inclines
                 if (ground != null)
-                    horizontalVel = Vector3.ProjectOnPlane(horizontalVel, ground.GroundNormal);
-                horizontalVel = ApplyFriction(horizontalVel);
-                horizontalVel = Accelerate(
-                    horizontalVel,
+                {
+                    currentVel = Vector3.ProjectOnPlane(currentVel, ground.GroundNormal);
+                    wishDir = Vector3.ProjectOnPlane(wishDir, ground.GroundNormal).normalized;
+                }
+                
+                currentVel = ApplyFriction(currentVel);
+                currentVel = Accelerate(
+                    currentVel,
                     wishDir,
                     targetSpeed,
                     settings.groundAccelerate
                 );
+                
+                rb.linearVelocity = currentVel;
             }
             else
             {
+                Vector3 horizontalVel = HorizontalVelocity;
                 float airCap = Mathf.Min(targetSpeed, settings.maxAirSpeed);
                 horizontalVel = Accelerate(horizontalVel, wishDir, airCap, settings.airAccelerate);
+                rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
             }
-
-            rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
         }
 
         /// <summary>Applies gentle camera-relative steering during slides.
@@ -556,6 +572,7 @@ namespace FPMovement
             {
                 jumpConsumedThisPress = true;
                 lastGroundedTime = -999f; // prevent double jump from coyote time
+                lastJumpTime = Time.time;
 
                 Vector3 v = rb.linearVelocity;
                 
@@ -594,9 +611,12 @@ namespace FPMovement
             }
         }
 
-        private void ApplyExtraGravity()
+        private void ApplyExtraGravity(bool effectivelyGrounded)
         {
             if (rb == null || settings == null)
+                return;
+
+            if (effectivelyGrounded)
                 return;
 
             // extra downward acceleration for a snappier, less floaty arc

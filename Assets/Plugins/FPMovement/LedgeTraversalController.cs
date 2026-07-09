@@ -63,6 +63,17 @@ namespace FPMovement
                 input.OnJumpPressed -= HandleJumpPressed;
         }
 
+        private void OnDisable()
+        {
+            if (IsTraversing)
+            {
+                IsTraversing = false;
+                if (controller != null)
+                    controller.EndExternalControl();
+                TraversalEnded?.Invoke();
+            }
+        }
+
         private void FixedUpdate()
         {
             if (IsTraversing || Time.time < cooldownUntil || controller.IsExternallyControlled)

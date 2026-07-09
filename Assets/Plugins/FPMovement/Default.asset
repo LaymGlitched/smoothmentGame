@@ -18,7 +18,7 @@ MonoBehaviour:
   maxAirSpeed: 10
   groundAccelerate: 18
   airAccelerate: 2.5
-  groundFriction: 12
+  groundFriction: 14
   jumpForce: 7.5
   gravityMultiplier: 2.5
   coyoteTime: 0.12
@@ -31,7 +31,10 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  slopeLimit: 25
+  slopeLimit: 30
+  kickHitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   maxStamina: 100
   staminaDrainPerSecond: 18
   staminaRegenPerSecond: 12
