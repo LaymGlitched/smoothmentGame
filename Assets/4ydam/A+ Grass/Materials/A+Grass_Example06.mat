@@ -17,7 +17,7 @@ Material:
   - _USECOLOURMAP_ON
   - _USEPERSPECTIVECORRECTION_ON
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -117,6 +117,7 @@ Material:
     - _AlphaClip: 0
     - _AlphaCutoff: 0.5
     - _AlphaToMask: 0
+    - _BendPivotOffset: 0
     - _Blend: 0
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -127,10 +128,14 @@ Material:
     - _ColourmapBlendToBase: 0.3
     - _ColourmapStrength: 1
     - _Cull: 2
+    - _CullAtFadeEnd: 0
     - _CullMode: 0
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
+    - _DistanceFadeEnd: 90
+    - _DistanceFadeMode: 0
+    - _DistanceFadeStart: 60
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -147,6 +152,7 @@ Material:
     - _Parallax: 0.005
     - _PerspectiveCorrectionStrength: 0.35
     - _PerspectiveHeightPower: 0.1
+    - _PerspectiveHeightStart: 0
     - _PerspectiveMaxOffset: 0.2
     - _PerspectiveTopDownStart: 0.45
     - _PushDownAmount: 0.1
@@ -161,6 +167,7 @@ Material:
     - _Surface: 0
     - _TrailTintStrength: 1
     - _UseColourmap: 1
+    - _UseDistanceFade: 0
     - _UseGradient: 1
     - _UsePerspectiveCorrection: 1
     - _WindBlend: 0.324
