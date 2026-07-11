@@ -17,6 +17,18 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
         [SerializeField]
         public List<PrefabInstanceData> paintedData = new List<PrefabInstanceData>();
 
+        private bool isDirty = true;
+        private int lastTotalCount = -1;
+
+        private class RenderBatch
+        {
+            public Mesh mesh;
+            public Material material;
+            public Matrix4x4[][] matrixArrays;
+        }
+
+        private List<RenderBatch> cachedBatches = new List<RenderBatch>();
+
         public void AddInstance(GameObject prefab, Matrix4x4 matrix)
         {
             var data = paintedData.Find(d => d.prefab == prefab);
@@ -26,6 +38,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                 paintedData.Add(data);
             }
             data.matrices.Add(matrix);
+            isDirty = true;
         }
 
         public void RemoveInstanceAt(GameObject prefab, int index)
@@ -34,22 +47,33 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
             if (data != null && index >= 0 && index < data.matrices.Count)
             {
                 data.matrices.RemoveAt(index);
+                isDirty = true;
             }
         }
 
         public void ClearAll()
         {
             paintedData.Clear();
+            isDirty = true;
         }
 
-        private void Update()
+        public void SetDirty()
         {
+            isDirty = true;
+        }
+
+        private void OnEnable()
+        {
+            isDirty = true;
+        }
+
+        private void RebuildBatches()
+        {
+            cachedBatches.Clear();
+            isDirty = false;
+
             if (paintedData == null || paintedData.Count == 0) return;
 
-            // Optional: You could use Graphics.RenderMeshInstanced in Unity 2022+ for better performance
-            // For simplicity and compatibility, we use Graphics.DrawMeshInstanced which handles max 1023 per call
-            // We slice the matrices into 1023 blocks.
-            
             foreach (var group in paintedData)
             {
                 if (group.prefab == null || group.matrices.Count == 0) continue;
@@ -61,33 +85,71 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                 {
                     if (extract.mesh == null || extract.material == null) continue;
 
-                    // Combine local matrix of the mesh with the instance world matrix
-                    List<Matrix4x4> finalMatrices = new List<Matrix4x4>(group.matrices.Count);
-                    for (int i = 0; i < group.matrices.Count; i++)
-                    {
-                        finalMatrices.Add(group.matrices[i] * extract.localMatrix);
-                    }
+                    int total = group.matrices.Count;
+                    int batchesCount = Mathf.CeilToInt(total / 1023f);
 
-                    int total = finalMatrices.Count;
-                    int batches = Mathf.CeilToInt(total / 1023f);
+                    Matrix4x4[][] arrays = new Matrix4x4[batchesCount][];
 
-                    for (int b = 0; b < batches; b++)
+                    for (int b = 0; b < batchesCount; b++)
                     {
                         int count = Mathf.Min(1023, total - b * 1023);
-                        var batchArray = finalMatrices.GetRange(b * 1023, count);
-                        Graphics.DrawMeshInstanced(
-                            extract.mesh, 
-                            0, 
-                            extract.material, 
-                            batchArray,
-                            null,
-                            UnityEngine.Rendering.ShadowCastingMode.On,
-                            true,
-                            0,
-                            null,
-                            UnityEngine.Rendering.LightProbeUsage.BlendProbes
-                        );
+                        arrays[b] = new Matrix4x4[count];
+                        for (int i = 0; i < count; i++)
+                        {
+                            arrays[b][i] = group.matrices[b * 1023 + i] * extract.localMatrix;
+                        }
                     }
+
+                    cachedBatches.Add(new RenderBatch
+                    {
+                        mesh = extract.mesh,
+                        material = extract.material,
+                        matrixArrays = arrays
+                    });
+                }
+            }
+        }
+
+        private void Update()
+        {
+            int currentCount = 0;
+            if (paintedData != null)
+            {
+                foreach (var g in paintedData) currentCount += g.matrices.Count;
+            }
+
+            if (currentCount != lastTotalCount)
+            {
+                isDirty = true;
+                lastTotalCount = currentCount;
+            }
+
+            if (isDirty)
+            {
+                RebuildBatches();
+            }
+
+            if (cachedBatches.Count == 0) return;
+
+            foreach (var batch in cachedBatches)
+            {
+                if (batch.mesh == null || batch.material == null || batch.matrixArrays == null) continue;
+
+                for (int i = 0; i < batch.matrixArrays.Length; i++)
+                {
+                    Graphics.DrawMeshInstanced(
+                        batch.mesh, 
+                        0, 
+                        batch.material, 
+                        batch.matrixArrays[i],
+                        batch.matrixArrays[i].Length,
+                        null,
+                        UnityEngine.Rendering.ShadowCastingMode.On,
+                        true,
+                        0,
+                        null,
+                        UnityEngine.Rendering.LightProbeUsage.BlendProbes
+                    );
                 }
             }
         }

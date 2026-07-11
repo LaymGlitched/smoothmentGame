@@ -22,5 +22,5 @@ MonoBehaviour:
     randomRotationY: 0
     randomRotationXYZ: {x: 0, y: 0, z: 0}
     offsetRotation: {x: 0, y: 0, z: 0}
-    collisionRadius: 0.1
+    collisionRadius: 0.4
   placementMode: 1

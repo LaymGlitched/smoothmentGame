@@ -39,12 +39,12 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   densityPerSqMeter: 1
-  spacing: 1
-  jitter: 0.5
+  spacing: 0
+  jitter: 0
   normalAlignment: 1
   hitMask:
     serializedVersion: 2
-    m_Bits: 4294967295
+    m_Bits: 512
   minSlope: 0
   maxSlope: 90
   useHeightFilter: 0

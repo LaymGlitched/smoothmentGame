@@ -13,7 +13,9 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - _GRADIENT_ON
+  - _RECEIVE_SHADOWS_OFF
   m_InvalidKeywords:
+  - _RECEIVESHADOWS_OFF
   - _USECOLOURMAP_ON
   - _USEDISTANCEFADE_ON
   - _USEPERSPECTIVECORRECTION_ON
@@ -85,7 +87,7 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _TextureSample:
-        m_Texture: {fileID: 2800000, guid: 4651793b4780afc4a94e2b5f25719e43, type: 3}
+        m_Texture: {fileID: 2800000, guid: e8d765ae4444e3d41a8a03889aba063f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _WindNoiseTexture:
@@ -159,7 +161,7 @@ Material:
     - _PushDownAmount: 0.1
     - _QueueControl: -1
     - _QueueOffset: 0
-    - _ReceiveShadows: 1
+    - _ReceiveShadows: 0
     - _Smoothness: 0.5
     - _SmoothnessTextureChannel: 0
     - _SpecularHighlights: 1
