@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 05c05bfdde68ebf4e96b624824897f97, type: 3}
-  m_Name: WindballShape
+  m_Name: Wind Shape
   m_EditorClassIdentifier: GameCode.Magic::SphereShape
   DisplayName: Windball Shape
   ProjectilePrefab: {fileID: 5770206729885987765, guid: 26580679f75c2134a97b75e3f2db2443, type: 3}
