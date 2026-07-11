@@ -28,8 +28,17 @@ namespace FPMovement
         // if this script is added to its 'Lower Ik Rigs' array!
         public float weight { get; set; } = 1f;
 
-        private Animator animator;
+        [Header("Animation Rigging Targets (Generic Rig)")]
+        [Tooltip("The Target transform for the Left Leg TwoBoneIKConstraint.")]
+        public Transform leftLegTarget;
+        [Tooltip("The Target transform for the Right Leg TwoBoneIKConstraint.")]
+        public Transform rightLegTarget;
+        [Tooltip("The actual Left Foot bone.")]
+        public Transform leftFootBone;
+        [Tooltip("The actual Right Foot bone.")]
+        public Transform rightFootBone;
 
+        private Animator animator;
         private float leftFootIKWeight;
         private float rightFootIKWeight;
 
@@ -38,113 +47,88 @@ namespace FPMovement
             animator = GetComponent<Animator>();
         }
 
-        private void OnAnimatorIK(int layerIndex)
+        private void LateUpdate()
         {
-            if (animator == null) return;
-
-            // Target weight combined from our internal logic (grounded) and the controller's master weight
+            // Execute before RigBuilder evaluates (which also uses LateUpdate but usually later in the execution order)
             float masterWeight = this.weight;
 
+            if (leftLegTarget != null && leftFootBone != null)
+                ProcessFootRigging(leftFootBone, leftLegTarget, ref leftFootIKWeight, masterWeight);
+
+            if (rightLegTarget != null && rightFootBone != null)
+                ProcessFootRigging(rightFootBone, rightLegTarget, ref rightFootIKWeight, masterWeight);
+        }
+
+        private void ProcessFootRigging(Transform footBone, Transform ikTarget, ref float currentWeight, float masterWeight)
+        {
             if (masterWeight <= 0.01f)
             {
-                animator.SetIKPositionWeight(AvatarIKGoal.LeftFoot, 0f);
-                animator.SetIKRotationWeight(AvatarIKGoal.LeftFoot, 0f);
-                animator.SetIKPositionWeight(AvatarIKGoal.RightFoot, 0f);
-                animator.SetIKRotationWeight(AvatarIKGoal.RightFoot, 0f);
+                currentWeight = 0f;
+                // If weight is 0, just snap target to the bone so it doesn't drift
+                ikTarget.position = footBone.position;
+                ikTarget.rotation = footBone.rotation;
                 return;
             }
 
-            ProcessFoot(AvatarIKGoal.LeftFoot, ref leftFootIKWeight, masterWeight);
-            ProcessFoot(AvatarIKGoal.RightFoot, ref rightFootIKWeight, masterWeight);
-        }
-
-        private void ProcessFoot(AvatarIKGoal foot, ref float currentWeight, float masterWeight)
-        {
-            Vector3 ikPos = animator.GetIKPosition(foot);
-            Quaternion ikRot = animator.GetIKRotation(foot);
+            Vector3 animPos = footBone.position;
+            Quaternion animRot = footBone.rotation;
             
             float targetWeight = 0f;
-            Vector3 targetPos = ikPos;
-            Quaternion targetRot = ikRot;
+            Vector3 targetPos = animPos;
+            Quaternion targetRot = animRot;
 
-            // Raycast down from above the foot
-            Vector3 rayOrigin = ikPos + Vector3.up * raycastUpOffset;
+            Vector3 rayOrigin = animPos + Vector3.up * raycastUpOffset;
             
             if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastDistance, groundMask, QueryTriggerInteraction.Ignore))
             {
-                // Calculate how high the foot's animation position is above the detected ground
-                float heightDiff = ikPos.y - hit.point.y;
+                float heightDiff = animPos.y - hit.point.y;
                 
                 if (heightDiff < stepHeightThreshold)
                 {
-                    // Fade in IK as foot gets closer to ground, to allow natural stepping mid-walk
                     targetWeight = 1f - Mathf.Clamp01(Mathf.Max(0f, heightDiff) / stepHeightThreshold);
                     
                     targetPos = hit.point;
                     targetPos.y += footOffset;
 
-                    // Align rotation to ground normal
                     Quaternion tilt = Quaternion.FromToRotation(Vector3.up, hit.normal);
-                    targetRot = tilt * ikRot;
+                    targetRot = tilt * animRot;
                 }
             }
 
-            // Smooth the weight transition
             currentWeight = Mathf.Lerp(currentWeight, targetWeight, Time.deltaTime * ikSmoothSpeed);
-            
             float finalWeight = currentWeight * masterWeight;
-            
-            // Apply IK properties
-            if (finalWeight > 0.001f)
-            {
-                animator.SetIKPositionWeight(foot, finalWeight);
-                animator.SetIKRotationWeight(foot, finalWeight);
-                
-                // Blend between the animation's natural position and the grounded IK position
-                animator.SetIKPosition(foot, Vector3.Lerp(ikPos, targetPos, finalWeight));
-                animator.SetIKRotation(foot, Quaternion.Slerp(ikRot, targetRot, finalWeight));
-            }
-            else
-            {
-                animator.SetIKPositionWeight(foot, 0f);
-                animator.SetIKRotationWeight(foot, 0f);
-            }
+
+            // Move the IK target to the blended position
+            ikTarget.position = Vector3.Lerp(animPos, targetPos, finalWeight);
+            ikTarget.rotation = Quaternion.Slerp(animRot, targetRot, finalWeight);
         }
 
 #if UNITY_EDITOR
         private void OnDrawGizmosSelected()
         {
-            Animator anim = GetComponent<Animator>();
-            if (anim == null || anim.avatar == null || !anim.isHuman) return;
-
-            DrawFootGizmo(anim, HumanBodyBones.LeftFoot);
-            DrawFootGizmo(anim, HumanBodyBones.RightFoot);
+            if (leftFootBone != null) DrawFootGizmo(leftFootBone);
+            if (rightFootBone != null) DrawFootGizmo(rightFootBone);
         }
 
-        private void DrawFootGizmo(Animator anim, HumanBodyBones bone)
+        private void DrawFootGizmo(Transform footTransform)
         {
-            Transform footTransform = anim.GetBoneTransform(bone);
             if (footTransform == null) return;
 
             Vector3 footPos = footTransform.position;
             Vector3 rayOrigin = footPos + Vector3.up * raycastUpOffset;
             
-            // Ray origin
             Gizmos.color = Color.yellow;
             Gizmos.DrawSphere(rayOrigin, 0.03f);
             
-            // Ray distance
             Gizmos.color = Color.red;
             Gizmos.DrawLine(rayOrigin, rayOrigin + Vector3.down * raycastDistance);
             
             if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, raycastDistance, groundMask, QueryTriggerInteraction.Ignore))
             {
-                // Hit line
                 Gizmos.color = Color.green;
                 Gizmos.DrawLine(rayOrigin, hit.point);
                 Gizmos.DrawSphere(hit.point, 0.04f);
                 
-                // Target IK position
                 Gizmos.color = Color.cyan;
                 Vector3 targetPos = hit.point;
                 targetPos.y += footOffset;

@@ -114,6 +114,12 @@ public class TwoBoneIKAligner : EditorWindow
         // Place hint at a distance from the mid joint in the bend direction
         hint.position = mid.position + bendDir * hintDist;
 
+        // 3. Parent Target to Tip and Hint to Root
+        // This ensures the IK targets naturally follow the base animation,
+        // solving the issue where static targets cause limbs to stretch as the body animates.
+        Undo.SetTransformParent(target, tip, "Parent Target");
+        Undo.SetTransformParent(hint, root, "Parent Hint");
+
         // Mark as dirty
         EditorUtility.SetDirty(target);
         EditorUtility.SetDirty(hint);
