@@ -291,23 +291,23 @@ ModelImporter:
       position: {x: -0.0021842695, y: 0.00007267848, z: 0.00042949512}
       rotation: {x: -0.027731715, y: -0.0029934752, z: -0.005279847, w: 0.999597}
       scale: {x: 0.22743262, y: 0.29419687, z: 0.28705603}
-    - name: Bone
+    - name: ClothRope
       parentName: Cloth
       position: {x: -0, y: 0, z: 0}
       rotation: {x: 0.0861616, y: 0.701839, z: -0.70183754, w: 0.086152345}
       scale: {x: 1, y: 1.0000005, z: 1}
-    - name: Bone.001
-      parentName: Bone
+    - name: ClothRope.001
+      parentName: ClothRope
       position: {x: 2.2100377e-14, y: 0.004239085, z: -1.4210854e-16}
       rotation: {x: 0.00000046412043, y: -0.00000017397457, z: -0.020399837, w: 0.9997919}
       scale: {x: 1, y: 1.0000001, z: 1}
-    - name: Bone.002
-      parentName: Bone.001
+    - name: ClothRope.002
+      parentName: ClothRope.001
       position: {x: 3.7274395e-11, y: 0.0038797627, z: 1.2789769e-15}
       rotation: {x: -0.000000040237282, y: -0.0000004780977, z: 0.0032400996, w: 0.99999475}
       scale: {x: 1, y: 0.99999994, z: 1}
-    - name: Bone.002_end
-      parentName: Bone.002
+    - name: ClothRope.002_end
+      parentName: ClothRope.002
       position: {x: -0, y: 0.0037617122, z: 0}
       rotation: {x: 0, y: -0, z: -0, w: 1}
       scale: {x: 1, y: 1, z: 1}
@@ -336,38 +336,38 @@ ModelImporter:
       position: {x: -0.15287845, y: 0.73844063, z: 0.0052982885}
       rotation: {x: 0.11694818, y: 0.69736874, z: -0.6973687, w: -0.11694819}
       scale: {x: 8.919657, y: 8.919657, z: 8.919657}
-    - name: Bone
+    - name: SashRope
       parentName: Sash
       position: {x: -0, y: 0, z: 0}
       rotation: {x: 0.7215979, y: -0.063279755, z: 0.059666168, w: 0.6868276}
       scale: {x: 1, y: 1, z: 1}
-    - name: Bone.001
-      parentName: Bone
+    - name: SashRope.001
+      parentName: SashRope
       position: {x: 1.2863893e-10, y: 0.015211514, z: 4.933099e-11}
       rotation: {x: -0.023493785, y: -0.00035796873, z: 0.06447163, w: 0.99764293}
       scale: {x: 1, y: 0.99999994, z: 0.99999994}
-    - name: Bone.002
-      parentName: Bone.001
+    - name: SashRope.002
+      parentName: SashRope.001
       position: {x: 3.8882716e-10, y: 0.01217589, z: -1.8626451e-11}
       rotation: {x: 0.00019431327, y: 0.00000005905798, z: 0.0146998335, w: 0.99989194}
       scale: {x: 1, y: 1, z: 1}
-    - name: Bone.003
-      parentName: Bone.002
+    - name: SashRope.003
+      parentName: SashRope.002
       position: {x: 3.0209776e-10, y: 0.007875109, z: 8.381903e-11}
       rotation: {x: 4.2899959e-10, y: -0.000000091968104, z: 0.000000015061687, w: 1}
       scale: {x: 1, y: 1, z: 1}
-    - name: Bone.004
-      parentName: Bone.003
+    - name: SashRope.004
+      parentName: SashRope.003
       position: {x: 0.0000000010349321, y: 0.0066819135, z: 7.4505804e-11}
       rotation: {x: -7.224278e-10, y: 0.000000015541445, z: -0.000000029637349, w: 1}
       scale: {x: 1, y: 1, z: 1}
-    - name: Bone.005
-      parentName: Bone.004
+    - name: SashRope.005
+      parentName: SashRope.004
       position: {x: -0.0000000013731187, y: 0.004534149, z: 5.5879353e-11}
       rotation: {x: 7.3585316e-10, y: -0.0000000039581214, z: 0.00000005231516, w: 1}
       scale: {x: 0.99999994, y: 0.9999999, z: 0.99999994}
-    - name: Bone.005_end
-      parentName: Bone.005
+    - name: SashRope.005_end
+      parentName: SashRope.005
       position: {x: -0, y: 0.0058466713, z: 0}
       rotation: {x: 0, y: -0, z: -0, w: 1}
       scale: {x: 1, y: 1, z: 1}

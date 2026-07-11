@@ -84,10 +84,10 @@ public class TwoBoneIKAligner : EditorWindow
         // Ensure unexpected scales aren't inherited
         target.localScale = Vector3.one;
 
-        // Force 'Maintain Target Offset' on the constraint
+        // Disable 'Maintain Target Offset' on the constraint
         var data = constraint.data;
-        data.maintainTargetPositionOffset = true;
-        data.maintainTargetRotationOffset = true;
+        data.maintainTargetPositionOffset = false;
+        data.maintainTargetRotationOffset = false;
         constraint.data = data;
 
         // 2. Calculate Hint Position
