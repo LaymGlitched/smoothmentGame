@@ -82,7 +82,7 @@ ModelImporter:
     normalSmoothingSource: 0
     calculateBlendshapeNormalsDeltaFromImportedNormals: 0
   referencedClips: []
-  importAnimation: 1
+  importAnimation: 0
   humanDescription:
     serializedVersion: 3
     human:
@@ -276,13 +276,68 @@ ModelImporter:
       position: {x: 0, y: 0, z: 0}
       rotation: {x: 0, y: 0, z: 0, w: 1}
       scale: {x: 1, y: 1, z: 1}
-    - name: Armature
+    - name: "B\xE9zierCircle"
+      parentName: PlayerRigged(Clone)
+      position: {x: -0.001663994, y: 0.7884582, z: 0.0009281048}
+      rotation: {x: -0.7071068, y: 0.000000028735277, z: -0.000000019455703, w: 0.7071067}
+      scale: {x: 13.539362, y: 9.61808, z: 13.750583}
+    - name: Cloth
+      parentName: PlayerRigged(Clone)
+      position: {x: 0.3096646, y: 0.7125907, z: 0.018884264}
+      rotation: {x: -0.71722984, y: -0.00013769645, z: 0.0021501323, w: 0.69683343}
+      scale: {x: 11.069954, y: 11.069953, z: 11.069953}
+    - name: "B\xE9zierCircle.001"
+      parentName: Cloth
+      position: {x: -0.0021842695, y: 0.00007267848, z: 0.00042949512}
+      rotation: {x: -0.027731715, y: -0.0029934752, z: -0.005279847, w: 0.999597}
+      scale: {x: 0.22743262, y: 0.29419687, z: 0.28705603}
+    - name: Bone
+      parentName: Cloth
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: 0.0861616, y: 0.701839, z: -0.70183754, w: 0.086152345}
+      scale: {x: 1, y: 1.0000005, z: 1}
+    - name: Bone.001
+      parentName: Bone
+      position: {x: 2.2100377e-14, y: 0.004239085, z: -1.4210854e-16}
+      rotation: {x: 0.00000046412043, y: -0.00000017397457, z: -0.020399837, w: 0.9997919}
+      scale: {x: 1, y: 1.0000001, z: 1}
+    - name: Bone.002
+      parentName: Bone.001
+      position: {x: 3.7274395e-11, y: 0.0038797627, z: 1.2789769e-15}
+      rotation: {x: -0.000000040237282, y: -0.0000004780977, z: 0.0032400996, w: 0.99999475}
+      scale: {x: 1, y: 0.99999994, z: 1}
+    - name: Bone.002_end
+      parentName: Bone.002
+      position: {x: -0, y: 0.0037617122, z: 0}
+      rotation: {x: 0, y: -0, z: -0, w: 1}
+      scale: {x: 1, y: 1, z: 1}
+    - name: Jacket
+      parentName: PlayerRigged(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071067}
+      scale: {x: 100.452484, y: 112.96614, z: 100.452484}
+    - name: NurbsPath
+      parentName: PlayerRigged(Clone)
+      position: {x: 0.30875343, y: 0.717289, z: 0.020294856}
+      rotation: {x: 0.04480191, y: -0.0063538747, z: -0.65945715, w: 0.750379}
+      scale: {x: 59.442223, y: 59.442207, z: 59.44221}
+    - name: Pants
+      parentName: PlayerRigged(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: PlayerMesh
+      parentName: PlayerRigged(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071069, y: 0, z: 0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: Sash
       parentName: PlayerRigged(Clone)
       position: {x: -0.15287845, y: 0.73844063, z: 0.0052982885}
       rotation: {x: 0.11694818, y: 0.69736874, z: -0.6973687, w: -0.11694819}
       scale: {x: 8.919657, y: 8.919657, z: 8.919657}
     - name: Bone
-      parentName: Armature
+      parentName: Sash
       position: {x: -0, y: 0, z: 0}
       rotation: {x: 0.7215979, y: -0.063279755, z: 0.059666168, w: 0.6868276}
       scale: {x: 1, y: 1, z: 1}
@@ -316,30 +371,15 @@ ModelImporter:
       position: {x: -0, y: 0.0058466713, z: 0}
       rotation: {x: 0, y: -0, z: -0, w: 1}
       scale: {x: 1, y: 1, z: 1}
-    - name: "B\xE9zierCircle"
-      parentName: PlayerRigged(Clone)
-      position: {x: -0.001663994, y: 0.7884582, z: 0.0009281048}
-      rotation: {x: -0.7071068, y: 0.000000028735277, z: -0.000000019455703, w: 0.7071067}
-      scale: {x: 13.539362, y: 9.61808, z: 13.750583}
-    - name: Jacket
-      parentName: PlayerRigged(Clone)
-      position: {x: -0, y: 0, z: 0}
-      rotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071067}
-      scale: {x: 100.452484, y: 112.96614, z: 100.452484}
-    - name: Pants
-      parentName: PlayerRigged(Clone)
-      position: {x: -0, y: 0, z: 0}
-      rotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
-      scale: {x: 100, y: 100, z: 100}
-    - name: PlayerMesh
-      parentName: PlayerRigged(Clone)
-      position: {x: -0, y: 0, z: 0}
-      rotation: {x: -0.7071069, y: 0, z: 0, w: 0.7071067}
-      scale: {x: 100, y: 100, z: 100}
     - name: Shirt
       parentName: PlayerRigged(Clone)
       position: {x: -0, y: 0, z: 0}
       rotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071067}
+      scale: {x: 100, y: 100, z: 100}
+    - name: Shoes
+      parentName: PlayerRigged(Clone)
+      position: {x: -0, y: 0, z: 0}
+      rotation: {x: -0.7071069, y: 0, z: 0, w: 0.7071067}
       scale: {x: 100, y: 100, z: 100}
     - name: metarig
       parentName: PlayerRigged(Clone)
@@ -613,11 +653,11 @@ ModelImporter:
     hasTranslationDoF: 0
     hasExtraRoot: 1
     skeletonHasParents: 1
-  lastHumanDescriptionAvatarSource: {instanceID: 0}
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: c6549b0f19ce1df4399f5a8ecb4acc0b, type: 3}
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 3
   humanoidOversampling: 1
-  avatarSetup: 1
+  avatarSetup: 2
   addHumanoidExtraRootOnlyWhenUsingAvatar: 1
   importBlendShapeDeformPercent: 1
   remapMaterialsIfMaterialImportModeIsNone: 0
