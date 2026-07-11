@@ -1,9 +1,9 @@
-    using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public class GrassManager : MonoBehaviour
 {
-#region Variables
+    #region Variables
     public static GrassManager Instance { get; private set; }
 
     [Header("Interaction Map")]
@@ -31,7 +31,7 @@ public class GrassManager : MonoBehaviour
     [SerializeField] private float rendererCacheRefreshInterval = 1.5f;
     [SerializeField] private float rendererCullPadding = 0.5f;
     [SerializeField] private bool showGizmos = true;
-    
+
     private const int BaseMapResolution = 128;
     private const float MinMapWorldSize = 8f;
     private const int MaxAdaptiveResolution = 1024;
@@ -70,7 +70,17 @@ public class GrassManager : MonoBehaviour
     private readonly List<long> overflowRemoveKeys = new List<long>();
     private readonly List<long> overflowUpdateKeys = new List<long>();
     private readonly List<OverflowCellState> overflowUpdateStates = new List<OverflowCellState>();
-    private readonly List<Renderer> grassRenderers = new List<Renderer>();
+    // Caches the material lookups (shader name compare, HasProperty/GetFloat calls) that
+    // ShouldRenderGrassRenderer used to redo every culling tick. Rebuilt only when the
+    // renderer cache itself refreshes (rendererCacheRefreshInterval), not every cull update.
+    private struct GrassRendererInfo
+    {
+        public Renderer renderer;
+        public bool allowsDistanceCull;
+        public float cullDistance; // un-padded DistanceFadeEnd from the material
+    }
+
+    private readonly List<GrassRendererInfo> grassRendererInfos = new List<GrassRendererInfo>();
     private readonly List<int> activeCells = new List<int>();
 
     private int mapResolution = BaseMapResolution;
@@ -131,16 +141,16 @@ public class GrassManager : MonoBehaviour
     private float RecenterThreshold => MapWorldSize * Mathf.Clamp(recenterThresholdPercent, 0.05f, 0.5f);
     private float TargetCellSize => ReferenceMapWorldSize / BaseMapResolution;
 
-#endregion
+    #endregion
 
-#region Helpers
+    #region Helpers
     private static float ExpSmoothing(float speed, float deltaTime)
     {
         return 1f - Mathf.Exp(-Mathf.Max(0f, speed) * deltaTime);
     }
-#endregion
+    #endregion
 
-#region Lifecycle
+    #region Lifecycle
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -234,7 +244,7 @@ public class GrassManager : MonoBehaviour
         if (!Application.isPlaying)
             ApplyGlobalWindSettings(force: true);
     }
-    
+
     private void Start()
     {
         RegisterExistingInteractors();
@@ -415,9 +425,9 @@ public class GrassManager : MonoBehaviour
         return false;
     }
 
-#endregion
+    #endregion
 
-#region Interaction Map
+    #region Interaction Map
     private void ApplyInteractionMapSettings(bool force, bool clearData)
     {
         float mapSize = MapWorldSize;
@@ -501,11 +511,11 @@ public class GrassManager : MonoBehaviour
             for (int x = minX; x <= maxX; x++)
             {
                 float worldCellX = mapCenter.x - halfSize + (x + 0.5f) * CellSize;
-            float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
-            float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
-            float dx = closestX - worldPos.x;
-            float dz = closestZ - worldPos.z;
-            float distSqr = dx * dx + dz * dz;
+                float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
+                float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
+                float dx = closestX - worldPos.x;
+                float dz = closestZ - worldPos.z;
+                float distSqr = dx * dx + dz * dz;
 
                 if (distSqr < radiusSqr)
                 {
@@ -554,11 +564,11 @@ public class GrassManager : MonoBehaviour
             for (int x = minX; x <= maxX; x++)
             {
                 float worldCellX = mapCenter.x - halfSize + (x + 0.5f) * CellSize;
-            float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
-            float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
-            float dx = closestX - worldPos.x;
-            float dz = closestZ - worldPos.z;
-            float distSqr = dx * dx + dz * dz;
+                float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
+                float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
+                float dx = closestX - worldPos.x;
+                float dz = closestZ - worldPos.z;
+                float distSqr = dx * dx + dz * dz;
 
                 if (distSqr < extRadiusSqr)
                 {
@@ -790,9 +800,9 @@ public class GrassManager : MonoBehaviour
 
         return Mathf.Max(Mathf.Max(t00, t10), Mathf.Max(t01, t11));
     }
-#endregion
+    #endregion
 
-#region Wind
+    #region Wind
     private static float NormalizeWindAngle(float angle)
     {
         angle %= 360f;
@@ -959,9 +969,9 @@ public class GrassManager : MonoBehaviour
 
         Instance.SetGlobalWeather(firstWindMultiplier, secondWindMultiplier, yRotationDegrees, immediate);
     }
-#endregion
+    #endregion
 
-#region Interactors
+    #region Interactors
     public void RegisterInteractor(GrassInteractor interactor)
     {
         if (interactor != null && !interactors.Contains(interactor))
@@ -994,9 +1004,9 @@ public class GrassManager : MonoBehaviour
             interactionMap.Apply(false, false);
         }
     }
-#endregion
+    #endregion
 
-#region Culling And Usage
+    #region Culling And Usage
     private void UpdateRendererDistanceCulling()
     {
         if (!Application.isPlaying)
@@ -1011,7 +1021,7 @@ public class GrassManager : MonoBehaviour
             }
 
             rendererDistanceCullingWasEnabled = false;
-            lastTrackedRendererCount = grassRenderers.Count;
+            lastTrackedRendererCount = grassRendererInfos.Count;
             lastCulledRendererCount = 0;
             return;
         }
@@ -1023,7 +1033,7 @@ public class GrassManager : MonoBehaviour
 
         nextRendererCullUpdateTime = Time.time + rendererCullUpdateInterval;
 
-        if (grassRenderers.Count == 0 || Time.time >= nextRendererCacheRefreshTime)
+        if (grassRendererInfos.Count == 0 || Time.time >= nextRendererCacheRefreshTime)
         {
             RefreshGrassRendererCache();
             nextRendererCacheRefreshTime = Time.time + rendererCacheRefreshInterval;
@@ -1039,19 +1049,19 @@ public class GrassManager : MonoBehaviour
         Vector3 camPos = mainCamera.transform.position;
         int culledCount = 0;
 
-        for (int i = grassRenderers.Count - 1; i >= 0; i--)
+        for (int i = grassRendererInfos.Count - 1; i >= 0; i--)
         {
-            Renderer renderer = grassRenderers[i];
-            if (renderer == null)
+            GrassRendererInfo info = grassRendererInfos[i];
+            if (info.renderer == null)
             {
-                grassRenderers.RemoveAt(i);
+                grassRendererInfos.RemoveAt(i);
                 continue;
             }
 
-            bool shouldRender = ShouldRenderGrassRenderer(renderer, camPos, rendererCullPadding);
-            if (renderer.enabled != shouldRender)
+            bool shouldRender = ShouldRenderGrassRenderer(info, camPos, rendererCullPadding);
+            if (info.renderer.enabled != shouldRender)
             {
-                renderer.enabled = shouldRender;
+                info.renderer.enabled = shouldRender;
             }
 
             if (!shouldRender)
@@ -1060,7 +1070,7 @@ public class GrassManager : MonoBehaviour
             }
         }
 
-        lastTrackedRendererCount = grassRenderers.Count;
+        lastTrackedRendererCount = grassRendererInfos.Count;
         lastCulledRendererCount = culledCount;
     }
 
@@ -1137,7 +1147,7 @@ public class GrassManager : MonoBehaviour
 
     private void RefreshGrassRendererCache()
     {
-        grassRenderers.Clear();
+        grassRendererInfos.Clear();
         Renderer[] sceneRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
 
         for (int i = 0; i < sceneRenderers.Length; i++)
@@ -1146,34 +1156,22 @@ public class GrassManager : MonoBehaviour
             if (renderer == null)
                 continue;
 
-            if (HasGrassMaterial(renderer))
+            if (TryBuildGrassRendererInfo(renderer, out var info))
             {
-                grassRenderers.Add(renderer);
+                grassRendererInfos.Add(info);
             }
         }
     }
 
-    private static bool HasGrassMaterial(Renderer renderer)
+    // All shader-name string compares and material HasProperty/GetFloat calls happen here,
+    // once per cache refresh, instead of every culling tick in ShouldRenderGrassRenderer.
+    private static bool TryBuildGrassRendererInfo(Renderer renderer, out GrassRendererInfo info)
     {
-        Material[] materials = renderer.sharedMaterials;
-        for (int i = 0; i < materials.Length; i++)
-        {
-            Material material = materials[i];
-            if (material == null || material.shader == null)
-                continue;
+        info = default;
 
-            if (material.shader.name == GrassShaderName)
-                return true;
-        }
-
-        return false;
-    }
-
-    private static bool ShouldRenderGrassRenderer(Renderer renderer, Vector3 cameraPosition, float cullPadding)
-    {
         Material[] materials = renderer.sharedMaterials;
         bool hasGrassMaterial = false;
-        bool allGrassMaterialsAllowDistanceCull = true;
+        bool allowsDistanceCull = true;
         float maxFadeEnd = 0f;
 
         for (int i = 0; i < materials.Length; i++)
@@ -1189,33 +1187,47 @@ public class GrassManager : MonoBehaviour
 
             if (!usesDistanceFade || !cullAtFadeEnd || !material.HasProperty(DistanceFadeEndID))
             {
-                allGrassMaterialsAllowDistanceCull = false;
+                allowsDistanceCull = false;
                 break;
             }
 
             maxFadeEnd = Mathf.Max(maxFadeEnd, material.GetFloat(DistanceFadeEndID));
         }
 
-        if (!hasGrassMaterial || !allGrassMaterialsAllowDistanceCull)
+        if (!hasGrassMaterial)
+            return false;
+
+        info.renderer = renderer;
+        info.allowsDistanceCull = allowsDistanceCull;
+        info.cullDistance = Mathf.Max(0f, maxFadeEnd);
+        return true;
+    }
+
+    // Hot-path test: just an add + multiply + bounds/distance check, no material lookups.
+    // rendererCullPadding is applied here (not baked into the cache) so tweaking it in the
+    // Inspector takes effect immediately without waiting for a cache refresh.
+    private static bool ShouldRenderGrassRenderer(in GrassRendererInfo info, Vector3 cameraPosition, float cullPadding)
+    {
+        if (!info.allowsDistanceCull)
             return true;
 
-        float cullDistance = Mathf.Max(0f, maxFadeEnd + cullPadding);
+        float cullDistance = info.cullDistance + cullPadding;
         float cullDistanceSqr = cullDistance * cullDistance;
-        float distanceToRendererSqr = (renderer.bounds.center - cameraPosition).sqrMagnitude;
+        float distanceToRendererSqr = (info.renderer.bounds.center - cameraPosition).sqrMagnitude;
         return distanceToRendererSqr <= cullDistanceSqr;
     }
 
     private void SetAllGrassRenderersEnabled(bool isEnabled)
     {
-        if (grassRenderers.Count == 0)
+        if (grassRendererInfos.Count == 0)
             return;
 
-        for (int i = grassRenderers.Count - 1; i >= 0; i--)
+        for (int i = grassRendererInfos.Count - 1; i >= 0; i--)
         {
-            Renderer renderer = grassRenderers[i];
+            Renderer renderer = grassRendererInfos[i].renderer;
             if (renderer == null)
             {
-                grassRenderers.RemoveAt(i);
+                grassRendererInfos.RemoveAt(i);
                 continue;
             }
 
@@ -1225,9 +1237,9 @@ public class GrassManager : MonoBehaviour
             }
         }
     }
-#endregion
+    #endregion
 
-#region Cleanup And Gizmos
+    #region Cleanup And Gizmos
     private void OnDestroy()
     {
         SetAllGrassRenderersEnabled(true);
@@ -1285,5 +1297,5 @@ public class GrassManager : MonoBehaviour
         Gizmos.DrawLine(tip2, tip2 + right2 * head2Length);
         Gizmos.DrawLine(tip2, tip2 + left2 * head2Length);
     }
-#endregion
+    #endregion
 }
