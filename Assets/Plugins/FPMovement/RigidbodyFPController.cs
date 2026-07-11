@@ -57,6 +57,7 @@ namespace FPMovement
         public bool IsSprinting { get; private set; }
         public bool IsCrouching { get; private set; }
         public bool IsSliding => slideController != null && slideController.IsSliding;
+        public Vector3 GroundNormal => ground != null ? ground.GroundNormal : Vector3.up;
 
         private Vector3 _horizontalVelocity;
         public Vector3 HorizontalVelocity
@@ -152,6 +153,8 @@ namespace FPMovement
         private bool wasGroundedLastFrame;
         private bool jumpConsumedThisPress;
         private float lastLandingTime = -999f;
+        private float lastJumpTime = -999f;
+        private float _lastFrameVelocityMag;
 
         private void Awake()
         {
@@ -228,7 +231,8 @@ namespace FPMovement
             Nanoshake.Shake(false, null, 0.6f, 0.15f, 1f);
 
             // Simple physical kick hit detection
-            if (Physics.SphereCast(EyePosition, 0.4f, orientation.forward, out RaycastHit hit, 2.5f))
+            LayerMask mask = settings != null ? settings.kickHitMask : (LayerMask)~0;
+            if (Physics.SphereCast(EyePosition, 0.4f, orientation.forward, out RaycastHit hit, 2.5f, mask, QueryTriggerInteraction.Ignore))
             {
                 if (hit.rigidbody != null && !hit.rigidbody.isKinematic)
                 {
@@ -280,6 +284,9 @@ namespace FPMovement
                 IsGrounded = false;
             }
 
+            bool jumping = Time.time - lastJumpTime < 0.1f;
+            bool effectivelyGrounded = IsGrounded && !jumping;
+
             if (IsGrounded)
                 lastGroundedTime = Time.time;
 
@@ -291,13 +298,20 @@ namespace FPMovement
                 return;
             }
 
+            if (rb != null)
+            {
+                rb.useGravity = !effectivelyGrounded;
+            }
+
             HandleCrouch();
             HandleSprintAndStamina();
-            HandleMovement();
+            HandleMovement(effectivelyGrounded);
             HandleJump();
-            ApplyExtraGravity();
+            ApplyExtraGravity(effectivelyGrounded);
 
             wasGroundedLastFrame = IsGrounded;
+            if (rb != null)
+                _lastFrameVelocityMag = rb.linearVelocity.magnitude;
         }
 
         /// <summary>
@@ -351,17 +365,13 @@ namespace FPMovement
         // Movement (Quake/Source style acceleration -> gives Titanfall-ish
         // air control and speed-preserving momentum for free)
         // ---------------------------------------------------------------
-        private void HandleMovement()
+        private void HandleMovement(bool effectivelyGrounded)
         {
             if (rb == null || settings == null)
                 return;
 
-            // During a slide, apply reduced steering instead of full movement.
-            // This gives the player subtle directional influence without overriding
-            // the slide's own velocity management.
             if (IsSliding)
             {
-                ApplySlideSteering();
                 return;
             }
 
@@ -374,64 +384,57 @@ namespace FPMovement
                 ? settings.crouchSpeed
                 : (IsSprinting ? settings.sprintSpeed : settings.walkSpeed);
 
-            Vector3 horizontalVel = HorizontalVelocity;
-
-            if (IsGrounded)
+            if (effectivelyGrounded)
             {
-                // reorient velocity onto the slope so you don't lose speed walking up gentle inclines
+                Vector3 currentVel = rb.linearVelocity;
+                
                 if (ground != null)
-                    horizontalVel = Vector3.ProjectOnPlane(horizontalVel, ground.GroundNormal);
-                horizontalVel = ApplyFriction(horizontalVel);
-                horizontalVel = Accelerate(
-                    horizontalVel,
+                {
+                    Vector3 projected = Vector3.ProjectOnPlane(currentVel, ground.GroundNormal);
+                    
+                    // 1. Momentum Preservation: Unity collision scrubs speed at dips.
+                    // We restore the magnitude from the previous frame to smoothly glide up curves.
+                    if (projected.sqrMagnitude > 0.001f && _lastFrameVelocityMag > currentVel.magnitude)
+                    {
+                        currentVel = projected.normalized * _lastFrameVelocityMag;
+                    }
+                    else
+                    {
+                        currentVel = projected;
+                    }
+
+                    // 2. Dynamic Slope Gravity: Gravity is disabled while grounded to prevent idle sliding.
+                    // We manually add it back only when the player is actively moving to allow downhill acceleration.
+                    bool isMoving = currentVel.magnitude > 0.5f || wishDir.sqrMagnitude > 0.01f;
+                    if (isMoving)
+                    {
+                        Vector3 slopeGravity = Vector3.ProjectOnPlane(Physics.gravity * settings.gravityMultiplier, ground.GroundNormal);
+                        currentVel += slopeGravity * Time.fixedDeltaTime;
+                    }
+
+                    wishDir = Vector3.ProjectOnPlane(wishDir, ground.GroundNormal).normalized;
+                }
+                
+                currentVel = ApplyFriction(currentVel);
+                currentVel = Accelerate(
+                    currentVel,
                     wishDir,
                     targetSpeed,
                     settings.groundAccelerate
                 );
+                
+                rb.linearVelocity = currentVel;
             }
             else
             {
+                Vector3 horizontalVel = HorizontalVelocity;
                 float airCap = Mathf.Min(targetSpeed, settings.maxAirSpeed);
                 horizontalVel = Accelerate(horizontalVel, wishDir, airCap, settings.airAccelerate);
+                rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
             }
-
-            rb.linearVelocity = new Vector3(horizontalVel.x, rb.linearVelocity.y, horizontalVel.z);
         }
 
-        /// <summary>Applies gentle camera-relative steering during slides.
-        /// Only strafe input is used (not forward/back) so the player can nudge
-        /// the slide trajectory without fully overriding the slide direction.</summary>
-        private void ApplySlideSteering()
-        {
-            if (settings.slideSteeringInfluence <= 0f)
-                return;
 
-            Vector2 rawInput = input != null ? input.MoveInput : Vector2.zero;
-            // Only use strafe (left/right) for steering — forward/back is ignored
-            // so the slide's own velocity management stays in control.
-            float strafeInput = rawInput.x;
-            if (Mathf.Abs(strafeInput) < 0.05f)
-                return;
-
-            Vector3 strafeDir = orientation.right * strafeInput;
-            strafeDir.y = 0f;
-            strafeDir.Normalize();
-
-            Vector3 horizontalVel = HorizontalVelocity;
-            float speed = horizontalVel.magnitude;
-            if (speed < 0.1f)
-                return;
-
-            // Blend a small steering force into the current velocity direction.
-            // The force is proportional to current speed so steering feels consistent
-            // at different velocities rather than overpowering slow slides.
-            float steerForce = speed * settings.slideSteeringInfluence * Time.fixedDeltaTime;
-            Vector3 steered = horizontalVel + strafeDir * steerForce;
-
-            // Preserve speed — steering redirects, it doesn't add or remove energy.
-            steered = steered.normalized * speed;
-            rb.linearVelocity = new Vector3(steered.x, rb.linearVelocity.y, steered.z);
-        }
 
         private Vector3 ApplyFriction(Vector3 velocity)
         {
@@ -556,6 +559,7 @@ namespace FPMovement
             {
                 jumpConsumedThisPress = true;
                 lastGroundedTime = -999f; // prevent double jump from coyote time
+                lastJumpTime = Time.time;
 
                 Vector3 v = rb.linearVelocity;
                 
@@ -594,9 +598,12 @@ namespace FPMovement
             }
         }
 
-        private void ApplyExtraGravity()
+        private void ApplyExtraGravity(bool effectivelyGrounded)
         {
             if (rb == null || settings == null)
+                return;
+
+            if (effectivelyGrounded)
                 return;
 
             // extra downward acceleration for a snappier, less floaty arc

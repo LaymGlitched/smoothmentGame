@@ -37,6 +37,9 @@ namespace FPMovement
         public float landingBobMaxSpeedOverride = 0f;
 
         private Vector3 startLocalPos;
+        private Quaternion startLocalRot;
+        private Vector3 currentSmoothedPos;
+        private float currentShakeIntensity;
         private float bobTimer;
         private float landingBobTimer;
         private float landingBobIntensity;
@@ -51,6 +54,8 @@ namespace FPMovement
         private void Awake()
         {
             startLocalPos = bobPivot.localPosition;
+            startLocalRot = bobPivot.localRotation;
+            currentSmoothedPos = startLocalPos;
 
             // Cache values with override support
             landingBobAmplitude =
@@ -105,9 +110,16 @@ namespace FPMovement
         {
             if (!enableHeadBob)
             {
-                bobPivot.localPosition = Vector3.Lerp(
-                    bobPivot.localPosition,
+                currentSmoothedPos = Vector3.Lerp(
+                    currentSmoothedPos,
                     startLocalPos,
+                    Time.deltaTime * settings.bobSmoothSpeed
+                );
+                currentShakeIntensity = Mathf.Lerp(currentShakeIntensity, 0f, Time.deltaTime * 5f);
+                bobPivot.localPosition = currentSmoothedPos;
+                bobPivot.localRotation = Quaternion.Slerp(
+                    bobPivot.localRotation,
+                    startLocalRot,
                     Time.deltaTime * settings.bobSmoothSpeed
                 );
                 return;
@@ -159,11 +171,46 @@ namespace FPMovement
                 bobTimer = 0f;
             }
 
-            bobPivot.localPosition = Vector3.Lerp(
-                bobPivot.localPosition,
+            Vector3 shakePos = Vector3.zero;
+            Vector3 shakeRot = Vector3.zero;
+
+            float speed = controller.CurrentSpeed;
+            float targetShakeIntensity = 0f;
+            
+            if (speed >= settings.speedShakeMinSpeed)
+            {
+                targetShakeIntensity = Mathf.Clamp01((speed - settings.speedShakeMinSpeed) / Mathf.Max(0.1f, settings.speedShakeMaxSpeed - settings.speedShakeMinSpeed));
+            }
+            
+            currentShakeIntensity = Mathf.Lerp(currentShakeIntensity, targetShakeIntensity, Time.deltaTime * 8f);
+
+            if (currentShakeIntensity > 0.001f)
+            {
+                float timeX = Time.time * settings.speedShakeFrequency;
+                float timeY = Time.time * settings.speedShakeFrequency + 100f;
+                float timeZ = Time.time * settings.speedShakeFrequency + 200f;
+                
+                shakePos = new Vector3(
+                    (Mathf.PerlinNoise(timeX, 0f) - 0.5f) * 2f,
+                    (Mathf.PerlinNoise(0f, timeY) - 0.5f) * 2f,
+                    (Mathf.PerlinNoise(timeZ, timeZ) - 0.5f) * 2f
+                ) * (settings.speedShakePosAmplitude * currentShakeIntensity);
+
+                shakeRot = new Vector3(
+                    (Mathf.PerlinNoise(timeX + 300f, 0f) - 0.5f) * 2f,
+                    (Mathf.PerlinNoise(0f, timeY + 300f) - 0.5f) * 2f,
+                    (Mathf.PerlinNoise(timeZ + 300f, timeZ + 300f) - 0.5f) * 2f
+                ) * (settings.speedShakeRotAmplitude * currentShakeIntensity);
+            }
+
+            currentSmoothedPos = Vector3.Lerp(
+                currentSmoothedPos,
                 targetPos,
                 Time.deltaTime * settings.bobSmoothSpeed
             );
+            
+            bobPivot.localPosition = currentSmoothedPos + shakePos;
+            bobPivot.localRotation = startLocalRot * Quaternion.Euler(shakeRot);
         }
 
         /// <summary>

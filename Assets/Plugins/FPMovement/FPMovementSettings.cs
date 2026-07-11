@@ -58,6 +58,10 @@ namespace FPMovement
         [Range(0f, 89f)]
         public float slopeLimit = 50f;
 
+        [Header("Combat / Interaction")]
+        [Tooltip("What layers the kick can hit.")]
+        public LayerMask kickHitMask = ~0;
+
         [Header("Stamina")]
         public float maxStamina = 100f;
         public float staminaDrainPerSecond = 18f;
@@ -101,6 +105,22 @@ namespace FPMovement
 
         [Tooltip("Maximum landing speed for full landing bob effect.")]
         public float landingBobMaxSpeed = 15f;
+
+        [Header("Speed Shake")]
+        [Tooltip("Minimum speed required to start continuous camera shake.")]
+        public float speedShakeMinSpeed = 15f;
+
+        [Tooltip("Speed at which the camera shake reaches maximum intensity.")]
+        public float speedShakeMaxSpeed = 25f;
+
+        [Tooltip("Maximum positional shake amplitude.")]
+        public float speedShakePosAmplitude = 0.04f;
+
+        [Tooltip("Maximum rotational shake amplitude (degrees).")]
+        public float speedShakeRotAmplitude = 1.2f;
+
+        [Tooltip("How fast the speed shake oscillates.")]
+        public float speedShakeFrequency = 25f;
 
         [Header("Sliding")]
         [Tooltip("Speed maintained while sliding.")]

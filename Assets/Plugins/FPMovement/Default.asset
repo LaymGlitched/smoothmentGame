@@ -18,7 +18,7 @@ MonoBehaviour:
   maxAirSpeed: 10
   groundAccelerate: 18
   airAccelerate: 2.5
-  groundFriction: 12
+  groundFriction: 14
   jumpForce: 7.5
   gravityMultiplier: 2.5
   coyoteTime: 0.12
@@ -31,7 +31,10 @@ MonoBehaviour:
   groundMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  slopeLimit: 25
+  slopeLimit: 30
+  kickHitMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
   maxStamina: 100
   staminaDrainPerSecond: 18
   staminaRegenPerSecond: 12
@@ -43,7 +46,7 @@ MonoBehaviour:
   maxPitch: 89
   baseFov: 90
   sprintFovAdd: 10
-  fovLerpSpeed: 2
+  fovLerpSpeed: 4
   bobFrequencyWalk: 6
   bobFrequencySprint: 12
   bobAmplitude: 0.3
@@ -53,12 +56,17 @@ MonoBehaviour:
   landingBobSettleSpeed: 4
   landingBobMinSpeed: 3
   landingBobMaxSpeed: 25
+  speedShakeMinSpeed: 15
+  speedShakeMaxSpeed: 25
+  speedShakePosAmplitude: 0.02
+  speedShakeRotAmplitude: 1.1
+  speedShakeFrequency: 8
   slideSpeed: 35
-  slideDeceleration: 0
+  slideDeceleration: 4
   slideMinSpeed: 6
   slideJumpMinDuration: 0.35
-  slideJumpBoost: 30
-  slideJumpMaxSpeed: 40
+  slideJumpBoost: 10
+  slideJumpMaxSpeed: 25
   slideFovAdd: -8
   slideHeightOffset: 0.5
   slideHeightTransitionSpeed: 15
@@ -66,11 +74,11 @@ MonoBehaviour:
   slideDragFactor: 2
   slideBaseDeceleration: 8
   slideAirborneGrace: 0.15
-  airDashForce: 25
+  airDashForce: 12.5
   airDashUpwardForce: 5
   airDashCooldown: 1.2
-  airDashFovAdd: 35
-  airDashFovTransitionSpeed: 4
+  airDashFovAdd: 120
+  airDashFovTransitionSpeed: 12
   wallMask:
     serializedVersion: 2
     m_Bits: 4294967295

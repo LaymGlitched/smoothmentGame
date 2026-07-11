@@ -12,8 +12,23 @@ public class HeatAffinity : AffinityDefinition
     public Color TrailColor = Color.red; // Make this editable in Inspector
     public Material TrailMaterial;
 
+    [Header("Flame Recoil")]
+    public bool EnableRecoil = false;
+    public float RecoilForce = 15f;
+
     public override void Apply(SpellContext context)
     {
+        // Apply recoil to caster
+        if (EnableRecoil && context.Caster != null)
+        {
+            Rigidbody casterRb = context.Caster.GetComponent<Rigidbody>();
+            if (casterRb != null)
+            {
+                // Apply impulse opposite to cast direction
+                casterRb.AddForce(-context.Direction.normalized * RecoilForce, ForceMode.Impulse);
+            }
+        }
+
         if (context.Projectile == null)
             return;
 
