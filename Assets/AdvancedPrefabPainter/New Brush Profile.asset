@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d8af666d0c41e64184a6ab62155bf84, type: 3}
   m_Name: New Brush Profile
   m_EditorClassIdentifier: Assembly-CSharp::AdvancedPrefabPainter.Runtime.Data.BrushProfile
-  radius: 4
+  radius: 8
   falloffType: 2
   customFalloffCurve:
     serializedVersion: 2
@@ -38,7 +38,7 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  densityPerSqMeter: 1
+  densityPerSqMeter: 10
   spacing: 0
   jitter: 0
   normalAlignment: 1

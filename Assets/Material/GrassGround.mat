@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Grid 1
+  m_Name: GrassGround
   m_Shader: {fileID: -6465566751694194690, guid: f2c8b1113e85b0b49b9f65e28b9d3e7e, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -58,31 +58,31 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Ambient_Occlusion: 3
-    - _Fresnel_Power: 2.51
-    - _Lighting_Steps: 4
-    - _Normal_Intensity: 1
+    - _Ambient_Occlusion: 2
+    - _Fresnel_Power: 7
+    - _Lighting_Steps: 8
+    - _Normal_Intensity: 0.2
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Scatter_Intensity: -0.84
-    - _Smoothness: -0
-    - _Step_Edge: 0.18
-    - _Step_Fresnel: 0
+    - _Scatter_Intensity: 1
+    - _Smoothness: 0.1
+    - _Step_Edge: 0.2
+    - _Step_Fresnel: 1
     - _UseEmissionMap: 0
     - _Use_AO_Map: 0
     - _Use_Albedo_Texture: 1
     - _Use_Emission: 1
     - _Use_Fresnel: 1
-    - _Use_Normal_Map: 1
+    - _Use_Normal_Map: 0
     - _Use_Roughness_Map: 0
     - _Use_Subsurface_Scattering: 0
     m_Colors:
     - _Albedo: {r: 1, g: 1, b: 1, a: 1}
     - _EmissionColor: {r: 0.09473228, g: 0.0890497, b: 0.0890497, a: 1}
-    - _Fresnel_Color: {r: 0, g: 0.007475972, b: 4.4560267e-10, a: 1}
+    - _Fresnel_Color: {r: 0.019006113, g: 0.043137256, b: 0, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scatter_Color: {r: 0.9716981, g: 0.8204432, b: 0.8204432, a: 1}
-    - _Tiling: {r: 240, g: 240, b: 0, a: 0}
+    - _Tiling: {r: 4, g: 4, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &2588532550246274902

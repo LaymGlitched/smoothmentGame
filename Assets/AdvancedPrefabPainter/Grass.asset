@@ -13,14 +13,14 @@ MonoBehaviour:
   m_Name: Grass
   m_EditorClassIdentifier: Assembly-CSharp::AdvancedPrefabPainter.Runtime.Data.PrefabPalette
   items:
-  - prefab: {fileID: 4753912271362108128, guid: 98c1e998e6ee3ac469eb69c0dc252c6c, type: 3}
+  - prefab: {fileID: 7249928055513360242, guid: 31adb4be27d5fed48889ce152cceb686, type: 3}
     weight: 1
     uniformScale: 1
-    minMaxScaleX: {x: 1, y: 1}
-    minMaxScaleY: {x: 1, y: 1}
-    minMaxScaleZ: {x: 1, y: 1}
+    minMaxScaleX: {x: 0.5, y: 0.5}
+    minMaxScaleY: {x: 0.5, y: 0.5}
+    minMaxScaleZ: {x: 0.5, y: 0.5}
     randomRotationY: 0
     randomRotationXYZ: {x: 0, y: 0, z: 0}
     offsetRotation: {x: 0, y: 0, z: 0}
-    collisionRadius: 0.4
+    collisionRadius: 0
   placementMode: 1
