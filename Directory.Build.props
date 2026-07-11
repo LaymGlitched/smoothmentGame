@@ -1,8 +1,0 @@
-<Project>
-  <PropertyGroup>
-    <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
-    <!-- Suppress Unity-specific false positives -->
-    <!-- IDE0051: Remove unused private members (Unity messages like Start, Update) -->
-    <!-- IDE0044: Add readonly modifier (serialized fields) -->
-  </PropertyGroup>
-</Project>
