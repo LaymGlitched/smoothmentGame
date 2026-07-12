@@ -118,6 +118,9 @@ namespace GameCode.Spirits.Runtime
 
         private void HandleIntentGenerated(Communication.CommunicationIntent intent)
         {
+            // Debug log to visualize the successful generation of an intent before Phase 4 UI exists
+            UnityEngine.Debug.Log($"[SpiritSystem] Spirit '{intent.SourceSpirit.Id}' generated a {intent.Priority} intent to talk about: {intent.Topic}");
+            
             OnSpiritIntentGenerated?.Invoke(intent.SourceSpirit, intent);
         }
 
