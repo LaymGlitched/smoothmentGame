@@ -19102,7 +19102,6 @@ GameObject:
   - component: {fileID: 638404162}
   - component: {fileID: 638404161}
   - component: {fileID: 638404160}
-  - component: {fileID: 638404164}
   m_Layer: 9
   m_Name: Cube
   m_TagString: Untagged
@@ -19156,7 +19155,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0d884794945380a49ad67188599b65a1, type: 2}
+  - {fileID: 2100000, guid: 8507c4c7f4d6b0c489ceceb554cb21e5, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -19203,18 +19202,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &638404164
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 638404159}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 4bd5e5ddd242bd64581fb5ed9c0e0507, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.Polybrush::UnityEngine.Polybrush.PolybrushMesh
 --- !u!1 &669938800
 GameObject:
   m_ObjectHideFlags: 0

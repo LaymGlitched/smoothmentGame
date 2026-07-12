@@ -25,7 +25,7 @@ Material:
     serializedVersion: 3
     m_TexEnvs:
     - _Ambient_Occlusion_Map:
-        m_Texture: {fileID: 0}
+        m_Texture: {fileID: 2800000, guid: c73d6a52181c7854eb8d0f12318df532, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _Emission_Map:
@@ -58,30 +58,32 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Ambient_Occlusion: 2
+    - _Ambient_Occlusion: 1
+    - _Blend: 5
     - _Fresnel_Power: 7
-    - _Lighting_Steps: 8
-    - _Normal_Intensity: 0.2
+    - _Lighting_Steps: 6
+    - _Normal_Intensity: 1
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _Scatter_Intensity: 1
-    - _Smoothness: 0.1
+    - _Scatter_Intensity: 0.04
+    - _Smoothness: 0
     - _Step_Edge: 0.2
-    - _Step_Fresnel: 1
+    - _Step_Fresnel: 0
+    - _Tile: 0.5
     - _UseEmissionMap: 0
     - _Use_AO_Map: 0
     - _Use_Albedo_Texture: 1
-    - _Use_Emission: 1
-    - _Use_Fresnel: 1
-    - _Use_Normal_Map: 0
+    - _Use_Emission: 0
+    - _Use_Fresnel: 0
+    - _Use_Normal_Map: 1
     - _Use_Roughness_Map: 0
     - _Use_Subsurface_Scattering: 0
     m_Colors:
-    - _Albedo: {r: 1, g: 1, b: 1, a: 1}
-    - _EmissionColor: {r: 0.09473228, g: 0.0890497, b: 0.0890497, a: 1}
-    - _Fresnel_Color: {r: 0.019006113, g: 0.043137256, b: 0, a: 1}
+    - _Albedo: {r: 0.12363626, g: 0.29797077, b: 0, a: 1}
+    - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
+    - _Fresnel_Color: {r: 0.025736857, g: 0.050195813, b: 0.023167985, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Scatter_Color: {r: 0.9716981, g: 0.8204432, b: 0.8204432, a: 1}
+    - _Scatter_Color: {r: 0, g: 1, b: 0.05645162, a: 1}
     - _Tiling: {r: 4, g: 4, b: 0, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
