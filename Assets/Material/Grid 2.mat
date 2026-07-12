@@ -14,7 +14,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -59,8 +59,8 @@ Material:
     m_Ints: []
     m_Floats:
     - _Ambient_Occlusion: 0.8
-    - _Blend: 1
-    - _Fresnel_Power: 7
+    - _Blend: 0.5
+    - _Fresnel_Power: 20.83
     - _Lighting_Steps: 4
     - _Normal_Intensity: 1
     - _QueueControl: 0
@@ -68,14 +68,14 @@ Material:
     - _Scatter_Intensity: 13.49
     - _Smoothness: 0.1
     - _Step_Edge: 0.5
-    - _Step_Fresnel: 1
+    - _Step_Fresnel: 0
     - _Tile: 1
     - _UseEmissionMap: 0
-    - _Use_AO_Map: 1
+    - _Use_AO_Map: 0
     - _Use_Albedo_Texture: 1
     - _Use_Emission: 0
     - _Use_Fresnel: 1
-    - _Use_Normal_Map: 0
+    - _Use_Normal_Map: 1
     - _Use_Roughness_Map: 0
     - _Use_Subsurface_Scattering: 0
     m_Colors:
