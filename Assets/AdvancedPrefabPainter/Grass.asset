@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Grass
   m_EditorClassIdentifier: Assembly-CSharp::AdvancedPrefabPainter.Runtime.Data.PrefabPalette
   items:
-  - prefab: {fileID: 4753912271362108128, guid: 98c1e998e6ee3ac469eb69c0dc252c6c, type: 3}
+  - prefab: {fileID: 4753912271362108128, guid: 6c1067fe51c8da04f9277c7f1fc82277, type: 3}
     weight: 1
     uniformScale: 1
     minMaxScaleX: {x: 1, y: 1}

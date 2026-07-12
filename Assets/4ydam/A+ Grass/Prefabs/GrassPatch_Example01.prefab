@@ -108,6 +108,14 @@ PrefabInstance:
       propertyPath: m_LODs.Array.data[3].screenRelativeHeight
       value: 0.05
       objectReference: {fileID: 0}
+    - target: {fileID: 4742473837712756890, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+      propertyPath: m_LODs.Array.data[0].renderers.Array.data[0].renderer
+      value: 
+      objectReference: {fileID: 2958225215126942973}
+    - target: {fileID: 4742473837712756890, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+      propertyPath: m_LODs.Array.data[1].renderers.Array.data[0].renderer
+      value: 
+      objectReference: {fileID: 2958225215126942973}
     - target: {fileID: 5431045811782687749, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
@@ -140,8 +148,16 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 7a60677170c3cec44b699e006e10ba9e, type: 2}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
+    m_RemovedComponents:
+    - {fileID: 4742473837712756890, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+    m_RemovedGameObjects:
+    - {fileID: -5244291118931440898, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+    - {fileID: 1830389947748072789, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+--- !u!23 &2958225215126942973 stripped
+MeshRenderer:
+  m_CorrespondingSourceObject: {fileID: 7220846898303411020, guid: cf718f6f008f8cc43aeea6676649775f, type: 3}
+  m_PrefabInstance: {fileID: 5564236749831772081}
+  m_PrefabAsset: {fileID: 0}
