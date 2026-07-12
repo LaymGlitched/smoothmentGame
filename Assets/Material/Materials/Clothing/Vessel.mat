@@ -7,7 +7,7 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: Sash
+  m_Name: Vessel
   m_Shader: {fileID: -6465566751694194690, guid: f2c8b1113e85b0b49b9f65e28b9d3e7e, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
@@ -111,8 +111,8 @@ Material:
     - _Cutoff: 0.5
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
-    - _Dither_In: 1.5
-    - _Dither_Multipler: 2.5
+    - _Dither_In: 2.03
+    - _Dither_Multipler: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -123,7 +123,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _GradientColor: 1
-    - _Lighting_Steps: 4
+    - _Lighting_Steps: 2
     - _Metallic: 0
     - _Normal_Intensity: 1
     - _OcclusionStrength: 1
@@ -142,7 +142,7 @@ Material:
     - _Step: 0
     - _Step_Dither: 1
     - _Step_Edge: 0.35
-    - _Step_Edge_Dither: 0.5
+    - _Step_Edge_Dither: 1.56
     - _Step_Fresnel: 1
     - _Surface: 0
     - _Tile: 2
@@ -152,14 +152,14 @@ Material:
     - _Use_Dither: 1
     - _Use_Emission: 0
     - _Use_Fresnel: 1
-    - _Use_Normal_Map: 1
+    - _Use_Normal_Map: 0
     - _Use_Roughness_Map: 0
     - _Use_Subsurface_Scattering: 1
     - _WorkflowMode: 1
     - _XRMotionVectorsPass: 1
     - _ZWrite: 1
     m_Colors:
-    - _Albedo: {r: 0.754717, g: 0.046279836, b: 0.046279836, a: 1}
+    - _Albedo: {r: 0.6824492, g: 0.57634765, b: 0.46658733, a: 1}
     - _BaseColor: {r: 0.509434, g: 0.0197455, b: 0, a: 1}
     - _Color: {r: 0.509434, g: 0.0197455, b: 0, a: 1}
     - _Color1: {r: 1, g: 0, b: 0, a: 1}
@@ -167,10 +167,10 @@ Material:
     - _Color3: {r: 0, g: 0, b: 1, a: 1}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
     - _FillColor: {r: 0, g: 0, b: 0, a: 1}
-    - _Fresnel_Color: {r: 0.37450984, g: 0.04769701, b: 0.04769701, a: 1}
+    - _Fresnel_Color: {r: 0.42326775, g: 0.2917707, b: 0.18447503, a: 1}
     - _MainColor: {r: 1, g: 0, b: 0, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Scatter_Color: {r: 1, g: 0, b: 0, a: 1}
+    - _Scatter_Color: {r: 1, g: 0.454902, b: 0.43921572, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _Tiling: {r: 3, g: 2, b: 0, a: 0}
   m_BuildTextureStacks: []

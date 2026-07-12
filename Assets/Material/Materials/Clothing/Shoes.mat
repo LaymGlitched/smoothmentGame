@@ -134,6 +134,7 @@ Material:
     - _Glossiness: 0
     - _GlossyReflections: 0
     - _GradientColor: 1
+    - _Lighting_Steps: 4
     - _Metallic: 0
     - _Normal_Intensity: 1
     - _OcclusionStrength: 1
@@ -153,10 +154,11 @@ Material:
     - _Step_Edge: 0.35
     - _Step_Fresnel: 1
     - _Surface: 0
+    - _Tile: 1
     - _UseEmissionMap: 0
     - _Use_AO_Map: 0
     - _Use_Albedo_Texture: 0
-    - _Use_Emission: 1
+    - _Use_Emission: 0
     - _Use_Fresnel: 1
     - _Use_Normal_Map: 1
     - _Use_Roughness_Map: 0
