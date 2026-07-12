@@ -1,9 +1,9 @@
-    using UnityEngine;
+using UnityEngine;
 using System.Collections.Generic;
 
 public class GrassManager : MonoBehaviour
 {
-#region Variables
+    #region Variables
     public static GrassManager Instance { get; private set; }
 
     [Header("Interaction Map")]
@@ -31,7 +31,7 @@ public class GrassManager : MonoBehaviour
     [SerializeField] private float rendererCacheRefreshInterval = 1.5f;
     [SerializeField] private float rendererCullPadding = 0.5f;
     [SerializeField] private bool showGizmos = true;
-    
+
     private const int BaseMapResolution = 128;
     private const float MinMapWorldSize = 8f;
     private const int MaxAdaptiveResolution = 1024;
@@ -70,7 +70,62 @@ public class GrassManager : MonoBehaviour
     private readonly List<long> overflowRemoveKeys = new List<long>();
     private readonly List<long> overflowUpdateKeys = new List<long>();
     private readonly List<OverflowCellState> overflowUpdateStates = new List<OverflowCellState>();
-    private readonly List<Renderer> grassRenderers = new List<Renderer>();
+    // Caches the material lookups (shader name compare, HasProperty/GetFloat calls) that
+    // ShouldRenderGrassRenderer used to redo every culling tick. Rebuilt only when the
+    // renderer cache itself refreshes (rendererCacheRefreshInterval), not every cull update.
+    private struct GrassRendererInfo
+    {
+        public Renderer renderer;
+        public bool allowsDistanceCull;
+        public float cullDistance; // un-padded DistanceFadeEnd from the material
+    }
+
+    // Per-instance data for grass renderers that get merged into GPU-instanced draw calls
+    // (standard MeshRenderer+MeshFilter using the grass shader). The source Renderer is
+    // disabled the moment it's cached here - Unity never draws it directly again, we draw
+    // it manually via Graphics.DrawMeshInstanced instead, batched with every other instance
+    // that shares the same mesh+submesh+material+shadow settings. The Renderer reference is
+    // kept only for its bounds (distance culling) and so we can hand it back to Unity if
+    // GrassManager is disabled/destroyed.
+    private struct GrassInstanceInfo
+    {
+        public Renderer renderer;
+        public Mesh mesh;
+        public int submeshIndex;
+        public Material material;
+        public Matrix4x4 matrix;
+        public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
+        public bool receiveShadows;
+        public bool allowsDistanceCull;
+        public float cullDistance;
+    }
+
+    // One GPU-instanced draw target. Every GrassInstanceInfo sharing (mesh, submeshIndex,
+    // material, shadow settings) collapses into a single batch, so N grass patches that use
+    // the same mesh+material turn into ceil(N / 1023) draw calls total instead of N separate
+    // draw calls - identical visuals, far fewer draw calls.
+    private class GrassInstanceBatch
+    {
+        public Mesh mesh;
+        public int submeshIndex;
+        public Material material;
+        public UnityEngine.Rendering.ShadowCastingMode shadowCastingMode;
+        public bool receiveShadows;
+        public readonly List<int> memberIndices = new List<int>();  // indices into grassInstanceInfos
+        public readonly List<int> visibleIndices = new List<int>(); // subset currently passing distance cull
+    }
+
+    private const int MaxGrassInstancesPerDrawCall = 1023;
+
+    private readonly List<GrassRendererInfo> grassRendererInfos = new List<GrassRendererInfo>();
+    private readonly List<GrassInstanceInfo> grassInstanceInfos = new List<GrassInstanceInfo>();
+    private readonly List<GrassInstanceBatch> grassInstanceBatches = new List<GrassInstanceBatch>();
+    private readonly Dictionary<(Mesh mesh, int submeshIndex, Material material, UnityEngine.Rendering.ShadowCastingMode shadow, bool receiveShadows), GrassInstanceBatch> grassBatchLookup =
+        new Dictionary<(Mesh, int, Material, UnityEngine.Rendering.ShadowCastingMode, bool), GrassInstanceBatch>();
+
+    // Reused every draw call instead of allocating a new Matrix4x4[] per batch per frame.
+    private readonly Matrix4x4[] grassScratchBuffer = new Matrix4x4[MaxGrassInstancesPerDrawCall];
+
     private readonly List<int> activeCells = new List<int>();
 
     private int mapResolution = BaseMapResolution;
@@ -119,6 +174,7 @@ public class GrassManager : MonoBehaviour
     public float CullingCpuUsagePercent => cullingCpuUsagePercent;
     public int TrackedGrassRendererCount => lastTrackedRendererCount;
     public int CulledGrassRendererCount => lastCulledRendererCount;
+    public int GrassInstancedDrawCallBatchCount => grassInstanceBatches.Count;
     public float InteractionMapWorldSize
     {
         get => interactionMapWorldSize;
@@ -131,16 +187,16 @@ public class GrassManager : MonoBehaviour
     private float RecenterThreshold => MapWorldSize * Mathf.Clamp(recenterThresholdPercent, 0.05f, 0.5f);
     private float TargetCellSize => ReferenceMapWorldSize / BaseMapResolution;
 
-#endregion
+    #endregion
 
-#region Helpers
+    #region Helpers
     private static float ExpSmoothing(float speed, float deltaTime)
     {
         return 1f - Mathf.Exp(-Mathf.Max(0f, speed) * deltaTime);
     }
-#endregion
+    #endregion
 
-#region Lifecycle
+    #region Lifecycle
     private void Awake()
     {
         if (Instance != null && Instance != this)
@@ -217,7 +273,8 @@ public class GrassManager : MonoBehaviour
 
     private void OnDisable()
     {
-        SetAllGrassRenderersEnabled(true);
+        SetAllLegacyGrassRenderersEnabled(true);
+        RestoreInstancedGrassRenderers();
     }
 
     private void OnValidate()
@@ -234,7 +291,7 @@ public class GrassManager : MonoBehaviour
         if (!Application.isPlaying)
             ApplyGlobalWindSettings(force: true);
     }
-    
+
     private void Start()
     {
         RegisterExistingInteractors();
@@ -254,6 +311,11 @@ public class GrassManager : MonoBehaviour
         {
             UpdateRendererDistanceCulling();
         }
+
+        // Must run every frame regardless of the interaction-map early-outs below:
+        // Graphics.DrawMeshInstanced has no persistent state, so skipping a frame here would
+        // mean a frame with no grass drawn at all, not just stale interaction data.
+        RenderGrassInstanceBatches();
 
         float currentTime = Time.time;
         float interactionStartTime = Time.realtimeSinceStartup;
@@ -415,9 +477,9 @@ public class GrassManager : MonoBehaviour
         return false;
     }
 
-#endregion
+    #endregion
 
-#region Interaction Map
+    #region Interaction Map
     private void ApplyInteractionMapSettings(bool force, bool clearData)
     {
         float mapSize = MapWorldSize;
@@ -501,11 +563,11 @@ public class GrassManager : MonoBehaviour
             for (int x = minX; x <= maxX; x++)
             {
                 float worldCellX = mapCenter.x - halfSize + (x + 0.5f) * CellSize;
-            float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
-            float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
-            float dx = closestX - worldPos.x;
-            float dz = closestZ - worldPos.z;
-            float distSqr = dx * dx + dz * dz;
+                float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
+                float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
+                float dx = closestX - worldPos.x;
+                float dz = closestZ - worldPos.z;
+                float distSqr = dx * dx + dz * dz;
 
                 if (distSqr < radiusSqr)
                 {
@@ -554,11 +616,11 @@ public class GrassManager : MonoBehaviour
             for (int x = minX; x <= maxX; x++)
             {
                 float worldCellX = mapCenter.x - halfSize + (x + 0.5f) * CellSize;
-            float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
-            float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
-            float dx = closestX - worldPos.x;
-            float dz = closestZ - worldPos.z;
-            float distSqr = dx * dx + dz * dz;
+                float closestX = Mathf.Clamp(worldPos.x, worldCellX - cellHalf, worldCellX + cellHalf);
+                float closestZ = Mathf.Clamp(worldPos.z, worldCellZ - cellHalf, worldCellZ + cellHalf);
+                float dx = closestX - worldPos.x;
+                float dz = closestZ - worldPos.z;
+                float distSqr = dx * dx + dz * dz;
 
                 if (distSqr < extRadiusSqr)
                 {
@@ -790,9 +852,9 @@ public class GrassManager : MonoBehaviour
 
         return Mathf.Max(Mathf.Max(t00, t10), Mathf.Max(t01, t11));
     }
-#endregion
+    #endregion
 
-#region Wind
+    #region Wind
     private static float NormalizeWindAngle(float angle)
     {
         angle %= 360f;
@@ -959,9 +1021,9 @@ public class GrassManager : MonoBehaviour
 
         Instance.SetGlobalWeather(firstWindMultiplier, secondWindMultiplier, yRotationDegrees, immediate);
     }
-#endregion
+    #endregion
 
-#region Interactors
+    #region Interactors
     public void RegisterInteractor(GrassInteractor interactor)
     {
         if (interactor != null && !interactors.Contains(interactor))
@@ -994,9 +1056,9 @@ public class GrassManager : MonoBehaviour
             interactionMap.Apply(false, false);
         }
     }
-#endregion
+    #endregion
 
-#region Culling And Usage
+    #region Culling And Usage
     private void UpdateRendererDistanceCulling()
     {
         if (!Application.isPlaying)
@@ -1006,12 +1068,13 @@ public class GrassManager : MonoBehaviour
         {
             if (rendererDistanceCullingWasEnabled)
             {
-                SetAllGrassRenderersEnabled(true);
+                SetAllLegacyGrassRenderersEnabled(true);
+                MarkAllGrassInstancesVisible();
                 ResetCullingCpuUsageStats();
             }
 
             rendererDistanceCullingWasEnabled = false;
-            lastTrackedRendererCount = grassRenderers.Count;
+            lastTrackedRendererCount = grassRendererInfos.Count + grassInstanceInfos.Count;
             lastCulledRendererCount = 0;
             return;
         }
@@ -1023,7 +1086,7 @@ public class GrassManager : MonoBehaviour
 
         nextRendererCullUpdateTime = Time.time + rendererCullUpdateInterval;
 
-        if (grassRenderers.Count == 0 || Time.time >= nextRendererCacheRefreshTime)
+        if ((grassRendererInfos.Count == 0 && grassInstanceInfos.Count == 0) || Time.time >= nextRendererCacheRefreshTime)
         {
             RefreshGrassRendererCache();
             nextRendererCacheRefreshTime = Time.time + rendererCacheRefreshInterval;
@@ -1032,26 +1095,28 @@ public class GrassManager : MonoBehaviour
         Camera mainCamera = Camera.main;
         if (mainCamera == null)
         {
-            SetAllGrassRenderersEnabled(true);
+            SetAllLegacyGrassRenderersEnabled(true);
+            MarkAllGrassInstancesVisible();
             return;
         }
 
         Vector3 camPos = mainCamera.transform.position;
         int culledCount = 0;
 
-        for (int i = grassRenderers.Count - 1; i >= 0; i--)
+        // Legacy (non-batchable) renderers: same enable/disable toggle as before.
+        for (int i = grassRendererInfos.Count - 1; i >= 0; i--)
         {
-            Renderer renderer = grassRenderers[i];
-            if (renderer == null)
+            GrassRendererInfo info = grassRendererInfos[i];
+            if (info.renderer == null)
             {
-                grassRenderers.RemoveAt(i);
+                grassRendererInfos.RemoveAt(i);
                 continue;
             }
 
-            bool shouldRender = ShouldRenderGrassRenderer(renderer, camPos, rendererCullPadding);
-            if (renderer.enabled != shouldRender)
+            bool shouldRender = ShouldRenderGrassRenderer(info, camPos, rendererCullPadding);
+            if (info.renderer.enabled != shouldRender)
             {
-                renderer.enabled = shouldRender;
+                info.renderer.enabled = shouldRender;
             }
 
             if (!shouldRender)
@@ -1060,7 +1125,33 @@ public class GrassManager : MonoBehaviour
             }
         }
 
-        lastTrackedRendererCount = grassRenderers.Count;
+        // Batched instanced renderers: rebuild each batch's visible-index list instead of
+        // touching any Renderer.enabled - the actual draw calls happen once a frame in
+        // RenderGrassInstanceBatches, called from LateUpdate.
+        for (int b = 0; b < grassInstanceBatches.Count; b++)
+        {
+            GrassInstanceBatch batch = grassInstanceBatches[b];
+            batch.visibleIndices.Clear();
+
+            for (int m = 0; m < batch.memberIndices.Count; m++)
+            {
+                int idx = batch.memberIndices[m];
+                GrassInstanceInfo info = grassInstanceInfos[idx];
+                if (info.renderer == null)
+                    continue; // pruned wholesale on the next full cache refresh
+
+                if (ShouldRenderGrassInstance(info, camPos, rendererCullPadding))
+                {
+                    batch.visibleIndices.Add(idx);
+                }
+                else
+                {
+                    culledCount++;
+                }
+            }
+        }
+
+        lastTrackedRendererCount = grassRendererInfos.Count + grassInstanceInfos.Count;
         lastCulledRendererCount = culledCount;
     }
 
@@ -1137,7 +1228,17 @@ public class GrassManager : MonoBehaviour
 
     private void RefreshGrassRendererCache()
     {
-        grassRenderers.Clear();
+        // Undo the previous cache generation before rebuilding: anything that was instanced
+        // last time (and therefore had its source Renderer disabled) needs that Renderer
+        // handed back to Unity's normal rendering in case it's no longer batchable (e.g. its
+        // material changed), and any legacy-path renderer should start visible again so the
+        // fresh distance-cull pass below isn't working from a stale enabled/disabled state.
+        SetAllLegacyGrassRenderersEnabled(true);
+        RestoreInstancedGrassRenderers();
+
+        grassRendererInfos.Clear();
+        grassInstanceInfos.Clear();
+
         Renderer[] sceneRenderers = FindObjectsByType<Renderer>(FindObjectsSortMode.None);
 
         for (int i = 0; i < sceneRenderers.Length; i++)
@@ -1146,34 +1247,62 @@ public class GrassManager : MonoBehaviour
             if (renderer == null)
                 continue;
 
-            if (HasGrassMaterial(renderer))
+            if (TryBuildGrassInstanceInfos(renderer, grassInstanceInfos))
             {
-                grassRenderers.Add(renderer);
+                // The instanced path owns this renderer now - Unity must never draw it
+                // directly again, only our manual DrawMeshInstanced calls should.
+                renderer.enabled = false;
+                continue;
+            }
+
+            if (TryBuildGrassRendererInfo(renderer, out var info))
+            {
+                grassRendererInfos.Add(info);
             }
         }
+
+        BuildGrassInstanceBatches();
     }
 
-    private static bool HasGrassMaterial(Renderer renderer)
+    // Groups every cached GrassInstanceInfo by (mesh, submeshIndex, material, shadow
+    // settings) into GrassInstanceBatch buckets, so grass patches sharing all of those get
+    // drawn together in as few Graphics.DrawMeshInstanced calls as possible.
+    private void BuildGrassInstanceBatches()
     {
-        Material[] materials = renderer.sharedMaterials;
-        for (int i = 0; i < materials.Length; i++)
+        grassInstanceBatches.Clear();
+        grassBatchLookup.Clear();
+
+        for (int i = 0; i < grassInstanceInfos.Count; i++)
         {
-            Material material = materials[i];
-            if (material == null || material.shader == null)
-                continue;
+            GrassInstanceInfo info = grassInstanceInfos[i];
+            var key = (info.mesh, info.submeshIndex, info.material, info.shadowCastingMode, info.receiveShadows);
 
-            if (material.shader.name == GrassShaderName)
-                return true;
+            if (!grassBatchLookup.TryGetValue(key, out var batch))
+            {
+                batch = new GrassInstanceBatch
+                {
+                    mesh = info.mesh,
+                    submeshIndex = info.submeshIndex,
+                    material = info.material,
+                    shadowCastingMode = info.shadowCastingMode,
+                    receiveShadows = info.receiveShadows
+                };
+                grassBatchLookup[key] = batch;
+                grassInstanceBatches.Add(batch);
+            }
+
+            batch.memberIndices.Add(i);
+            batch.visibleIndices.Add(i); // visible by default until the first cull pass narrows it
         }
-
-        return false;
     }
 
-    private static bool ShouldRenderGrassRenderer(Renderer renderer, Vector3 cameraPosition, float cullPadding)
+    // Shared by both the legacy and instanced builders: scans a renderer's materials once
+    // for the grass shader and the distance-fade properties that let us cull it, instead of
+    // redoing shader-name compares and HasProperty/GetFloat calls per renderer per builder.
+    private static bool TryComputeGrassCullInfo(Material[] materials, out bool allowsDistanceCull, out float cullDistance)
     {
-        Material[] materials = renderer.sharedMaterials;
         bool hasGrassMaterial = false;
-        bool allGrassMaterialsAllowDistanceCull = true;
+        allowsDistanceCull = true;
         float maxFadeEnd = 0f;
 
         for (int i = 0; i < materials.Length; i++)
@@ -1189,33 +1318,180 @@ public class GrassManager : MonoBehaviour
 
             if (!usesDistanceFade || !cullAtFadeEnd || !material.HasProperty(DistanceFadeEndID))
             {
-                allGrassMaterialsAllowDistanceCull = false;
+                allowsDistanceCull = false;
                 break;
             }
 
             maxFadeEnd = Mathf.Max(maxFadeEnd, material.GetFloat(DistanceFadeEndID));
         }
 
-        if (!hasGrassMaterial || !allGrassMaterialsAllowDistanceCull)
-            return true;
-
-        float cullDistance = Mathf.Max(0f, maxFadeEnd + cullPadding);
-        float cullDistanceSqr = cullDistance * cullDistance;
-        float distanceToRendererSqr = (renderer.bounds.center - cameraPosition).sqrMagnitude;
-        return distanceToRendererSqr <= cullDistanceSqr;
+        cullDistance = Mathf.Max(0f, maxFadeEnd);
+        return hasGrassMaterial;
     }
 
-    private void SetAllGrassRenderersEnabled(bool isEnabled)
+    // Legacy fallback path: used for anything the instanced path can't safely take (skinned
+    // meshes, missing MeshFilter, etc). Same enable/disable culling as before.
+    private static bool TryBuildGrassRendererInfo(Renderer renderer, out GrassRendererInfo info)
     {
-        if (grassRenderers.Count == 0)
+        info = default;
+
+        if (!TryComputeGrassCullInfo(renderer.sharedMaterials, out bool allowsDistanceCull, out float cullDistance))
+            return false;
+
+        info.renderer = renderer;
+        info.allowsDistanceCull = allowsDistanceCull;
+        info.cullDistance = cullDistance;
+        return true;
+    }
+
+    // Batchable path: a plain MeshRenderer+MeshFilter using the grass shader. Appends one
+    // GrassInstanceInfo per submesh whose material is the grass shader. Returns false (and
+    // appends nothing) for anything that can't be safely collapsed into DrawMeshInstanced -
+    // those fall back to TryBuildGrassRendererInfo above instead.
+    private static bool TryBuildGrassInstanceInfos(Renderer renderer, List<GrassInstanceInfo> results)
+    {
+        if (!(renderer is MeshRenderer))
+            return false;
+
+        if (!renderer.TryGetComponent(out MeshFilter filter) || filter.sharedMesh == null)
+            return false;
+
+        Material[] materials = renderer.sharedMaterials;
+        if (!TryComputeGrassCullInfo(materials, out bool allowsDistanceCull, out float cullDistance))
+            return false;
+
+        Mesh mesh = filter.sharedMesh;
+        Matrix4x4 matrix = renderer.transform.localToWorldMatrix;
+        UnityEngine.Rendering.ShadowCastingMode shadowMode = renderer.shadowCastingMode;
+        bool receiveShadows = renderer.receiveShadows;
+
+        int added = 0;
+        int submeshCount = mesh.subMeshCount;
+        for (int s = 0; s < submeshCount; s++)
+        {
+            Material mat = s < materials.Length ? materials[s] : (materials.Length > 0 ? materials[0] : null);
+            if (mat == null || mat.shader == null || mat.shader.name != GrassShaderName)
+                continue;
+
+            results.Add(new GrassInstanceInfo
+            {
+                renderer = renderer,
+                mesh = mesh,
+                submeshIndex = s,
+                material = mat,
+                matrix = matrix,
+                shadowCastingMode = shadowMode,
+                receiveShadows = receiveShadows,
+                allowsDistanceCull = allowsDistanceCull,
+                cullDistance = cullDistance
+            });
+            added++;
+        }
+
+        return added > 0;
+    }
+
+    // Hot-path test: just an add + multiply + bounds/distance check, no material lookups.
+    // rendererCullPadding is applied here (not baked into the cache) so tweaking it in the
+    // Inspector takes effect immediately without waiting for a cache refresh.
+    private static bool PassesDistanceCull(bool allowsDistanceCull, float cullDistance, Vector3 boundsCenter, Vector3 cameraPosition, float cullPadding)
+    {
+        if (!allowsDistanceCull)
+            return true;
+
+        float distance = cullDistance + cullPadding;
+        float distanceSqr = distance * distance;
+        float toCameraSqr = (boundsCenter - cameraPosition).sqrMagnitude;
+        return toCameraSqr <= distanceSqr;
+    }
+
+    private static bool ShouldRenderGrassRenderer(in GrassRendererInfo info, Vector3 cameraPosition, float cullPadding)
+    {
+        return PassesDistanceCull(info.allowsDistanceCull, info.cullDistance, info.renderer.bounds.center, cameraPosition, cullPadding);
+    }
+
+    private static bool ShouldRenderGrassInstance(in GrassInstanceInfo info, Vector3 cameraPosition, float cullPadding)
+    {
+        return PassesDistanceCull(info.allowsDistanceCull, info.cullDistance, info.renderer.bounds.center, cameraPosition, cullPadding);
+    }
+
+    private void MarkAllGrassInstancesVisible()
+    {
+        for (int b = 0; b < grassInstanceBatches.Count; b++)
+        {
+            GrassInstanceBatch batch = grassInstanceBatches[b];
+            batch.visibleIndices.Clear();
+            batch.visibleIndices.AddRange(batch.memberIndices);
+        }
+    }
+
+    // Issues the actual GPU-instanced draw calls, once per batch per frame - this is what
+    // replaces Unity drawing every grass patch's own Renderer individually. Must run every
+    // frame regardless of culling throttling; only the *visibility test* is throttled
+    // (rendererCullUpdateInterval), the draw itself has to happen every frame.
+    private void RenderGrassInstanceBatches()
+    {
+        if (grassInstanceBatches.Count == 0)
             return;
 
-        for (int i = grassRenderers.Count - 1; i >= 0; i--)
+        for (int b = 0; b < grassInstanceBatches.Count; b++)
         {
-            Renderer renderer = grassRenderers[i];
+            GrassInstanceBatch batch = grassInstanceBatches[b];
+            List<int> visible = batch.visibleIndices;
+            if (visible.Count == 0)
+                continue;
+
+            int bufferCount = 0;
+            for (int i = 0; i < visible.Count; i++)
+            {
+                grassScratchBuffer[bufferCount] = grassInstanceInfos[visible[i]].matrix;
+                bufferCount++;
+
+                if (bufferCount == MaxGrassInstancesPerDrawCall)
+                {
+                    FlushGrassDrawCall(batch, bufferCount);
+                    bufferCount = 0;
+                }
+            }
+
+            if (bufferCount > 0)
+            {
+                FlushGrassDrawCall(batch, bufferCount);
+            }
+        }
+    }
+
+    private void FlushGrassDrawCall(GrassInstanceBatch batch, int count)
+    {
+        Graphics.DrawMeshInstanced(
+            batch.mesh,
+            batch.submeshIndex,
+            batch.material,
+            grassScratchBuffer,
+            count,
+            null,
+            batch.shadowCastingMode,
+            batch.receiveShadows,
+            0,
+            null,
+            UnityEngine.Rendering.LightProbeUsage.BlendProbes
+        );
+    }
+
+    // Legacy fallback path only (renderers we couldn't safely instance). Never touches
+    // instanced-path renderers - those must stay disabled forever while the batch owns them;
+    // see RestoreInstancedGrassRenderers for the only case where they get re-enabled.
+    private void SetAllLegacyGrassRenderersEnabled(bool isEnabled)
+    {
+        if (grassRendererInfos.Count == 0)
+            return;
+
+        for (int i = grassRendererInfos.Count - 1; i >= 0; i--)
+        {
+            Renderer renderer = grassRendererInfos[i].renderer;
             if (renderer == null)
             {
-                grassRenderers.RemoveAt(i);
+                grassRendererInfos.RemoveAt(i);
                 continue;
             }
 
@@ -1225,12 +1501,28 @@ public class GrassManager : MonoBehaviour
             }
         }
     }
-#endregion
 
-#region Cleanup And Gizmos
+    // Hands instanced-path renderers back to Unity's normal rendering. Only called when
+    // GrassManager stops managing them entirely (cache rebuild, disable, destroy) - never
+    // called just to "cull" them, since disabling would fight with our manual draw calls.
+    private void RestoreInstancedGrassRenderers()
+    {
+        for (int i = 0; i < grassInstanceInfos.Count; i++)
+        {
+            Renderer renderer = grassInstanceInfos[i].renderer;
+            if (renderer != null)
+            {
+                renderer.enabled = true;
+            }
+        }
+    }
+    #endregion
+
+    #region Cleanup And Gizmos
     private void OnDestroy()
     {
-        SetAllGrassRenderersEnabled(true);
+        SetAllLegacyGrassRenderersEnabled(true);
+        RestoreInstancedGrassRenderers();
 
         if (interactionMap != null)
         {
@@ -1285,5 +1577,5 @@ public class GrassManager : MonoBehaviour
         Gizmos.DrawLine(tip2, tip2 + right2 * head2Length);
         Gizmos.DrawLine(tip2, tip2 + left2 * head2Length);
     }
-#endregion
+    #endregion
 }

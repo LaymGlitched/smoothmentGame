@@ -6,6 +6,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
     public class PrefabExtract
     {
         public Mesh mesh;
+        public int submeshIndex;
         public Material material;
         public Matrix4x4 localMatrix;
     }
@@ -22,15 +23,14 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                 return extracts;
             }
 
-            extracts = new List<PrefabExtract>();
             MeshRenderer[] renderers = prefab.GetComponentsInChildren<MeshRenderer>();
+            extracts = new List<PrefabExtract>(renderers.Length);
             foreach (var renderer in renderers)
             {
-                MeshFilter filter = renderer.GetComponent<MeshFilter>();
-                if (filter != null && filter.sharedMesh != null)
+                if (renderer.TryGetComponent(out MeshFilter filter) && filter.sharedMesh != null)
                 {
                     Matrix4x4 localMat = prefab.transform.worldToLocalMatrix * renderer.transform.localToWorldMatrix;
-                    
+
                     for (int i = 0; i < filter.sharedMesh.subMeshCount; i++)
                     {
                         Material mat = null;
@@ -42,10 +42,11 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                         {
                             mat = renderer.sharedMaterials[0];
                         }
-                        
+
                         extracts.Add(new PrefabExtract
                         {
                             mesh = filter.sharedMesh,
+                            submeshIndex = i,
                             material = mat,
                             localMatrix = localMat
                         });
