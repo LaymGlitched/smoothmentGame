@@ -64,6 +64,9 @@ namespace GameCode.Magic
         private bool hasPendingSpell = false;
         private GameObject[] instantiatedHandSpells;
 
+        public event Action<Spell> OnSpellEquippedEvent;
+        public event Action<Spell, bool> OnSpellCastedEvent;
+
         private void Awake()
         {
             if (mouseLook == null)
@@ -252,6 +255,7 @@ namespace GameCode.Magic
                 Debug.Log("Unequipped spell");
 
             UpdateHandVisuals();
+            OnSpellEquippedEvent?.Invoke(spell);
         }
 
         public void EquipSpellByIndex(int index)
@@ -443,6 +447,8 @@ namespace GameCode.Magic
             {
                 Debug.LogError($"Spell {pendingContext.Spell.Name} has no Shape assigned!");
             }
+
+            OnSpellCastedEvent?.Invoke(pendingContext.Spell, pendingContext.ChargeAmount > 0);
 
             hasPendingSpell = false;
             pendingContext = null;
