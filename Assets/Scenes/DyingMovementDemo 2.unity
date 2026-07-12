@@ -16267,7 +16267,7 @@ Light:
   serializedVersion: 13
   m_Type: 1
   m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_Intensity: 2
+  m_Intensity: 1
   m_Range: 10
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -54226,6 +54226,14 @@ MonoBehaviour:
       e31: 0
       e32: 0
       e33: 1
+  enableFrustumCulling: 1
+  cullingCamera: {fileID: 0}
+  cullCellSize: 10
+  cullUpdateInterval: 0.1
+  cullBoundsPadding: 0.5
+  enableDistanceCulling: 1
+  maxRenderDistance: 50
+  distanceCullPadding: 2
 --- !u!4 &1093978054
 Transform:
   m_ObjectHideFlags: 0
