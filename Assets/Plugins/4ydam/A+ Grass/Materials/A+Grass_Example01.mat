@@ -194,8 +194,8 @@ Material:
     - _GradientTopColor: {r: 0.5599147, g: 0.742257, b: 0.37429947, a: 1}
     - _InteractorPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _TrailTintColor: {r: 0.43329048, g: 0.9387682, b: 0.53817016, a: 1}
-    - _TrailTintTopColor: {r: 0.36158726, g: 0.5568628, b: 0.27058825, a: 1}
+    - _TrailTintColor: {r: 0.061140258, g: 0.10145956, b: 0.028624684, a: 1}
+    - _TrailTintTopColor: {r: 0.3016669, g: 0.40049845, b: 0.1985383, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
 --- !u!114 &7524604800078026123
