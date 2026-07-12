@@ -127,7 +127,7 @@ Material:
     - _ClearCoatMask: 0
     - _ClearCoatSmoothness: 0
     - _ColorNoiseScale: 0.2
-    - _ColorNoiseStrength: 0.8
+    - _ColorNoiseStrength: 0.5
     - _ColourmapBlendToBase: 0.3
     - _ColourmapStrength: 1
     - _Cull: 2
@@ -145,11 +145,11 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _GradientContrast: 0.34
+    - _GradientContrast: 0.43
     - _GradientOffset: 0.17
     - _InteractionMultiplier: 1
     - _InteractionRadius: 3
-    - _InteractionStrength: 0.2
+    - _InteractionStrength: 0.4
     - _Metallic: 0
     - _OcclusionStrength: 1
     - _Parallax: 0.005
@@ -190,11 +190,11 @@ Material:
     - _ColourmapCenter: {r: 0, g: 0, b: 0, a: 0}
     - _ColourmapSize: {r: 100, g: 100, b: 0, a: 0}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
-    - _GradientBottomColor: {r: 0.1395895, g: 0.25525087, b: 0.048024263, a: 1}
+    - _GradientBottomColor: {r: 0.17814259, g: 0.29797077, b: 0.07897447, a: 1}
     - _GradientTopColor: {r: 0.5599147, g: 0.742257, b: 0.37429947, a: 1}
     - _InteractorPosition: {r: 0, g: 0, b: 0, a: 0}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
-    - _TrailTintColor: {r: 0, g: 0, b: 0, a: 1}
+    - _TrailTintColor: {r: 0.43329048, g: 0.9387682, b: 0.53817016, a: 1}
     - _TrailTintTopColor: {r: 0.36158726, g: 0.5568628, b: 0.27058825, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
