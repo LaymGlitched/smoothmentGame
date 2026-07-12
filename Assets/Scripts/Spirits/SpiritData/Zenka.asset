@@ -14,5 +14,5 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritDefinition
   id: zenka
   displayName: Zenka
-  description: 
+  description: Logical/Cold
   identityProfile: {fileID: 11400000, guid: a63fb77c5997fd547acf6791688bd929, type: 2}
