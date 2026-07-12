@@ -45,12 +45,25 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
 
         private const int MaxInstancesPerDrawCall = 1023;
 
+        // One entry per prefab group contributing to a batch, since different groups can
+        // share the exact same mesh+material but need their own local pivot matrix and their
+        // own per-group visibility list.
+        private class DrawSource
+        {
+            public PrefabInstanceData group;
+            public Matrix4x4 localMatrix;
+        }
+
+        // Keyed by (mesh, material) so any painted prefabs that happen to share both get
+        // merged into the same draw call(s) instead of issuing a separate DrawMeshInstanced
+        // per prefab. Unity's DrawMeshInstanced still hard-caps at 1023 instances per call
+        // (a GPU constant-buffer limit), so a batch with more visible instances than that
+        // still needs multiple calls - merging only removes the *avoidable* extra calls.
         private class RenderBatch
         {
             public Mesh mesh;
             public Material material;
-            public Matrix4x4 localMatrix;
-            public PrefabInstanceData group;
+            public readonly List<DrawSource> sources = new List<DrawSource>();
         }
 
         // A spatial bucket of instance indices (into the owning group's matrices list) plus
@@ -70,6 +83,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
         }
 
         private readonly List<RenderBatch> cachedBatches = new List<RenderBatch>();
+        private readonly Dictionary<(Mesh mesh, Material material), RenderBatch> batchLookup = new Dictionary<(Mesh, Material), RenderBatch>();
         private readonly Dictionary<PrefabInstanceData, GroupCullData> cullDataByGroup = new Dictionary<PrefabInstanceData, GroupCullData>();
         private readonly Dictionary<PrefabInstanceData, List<int>> visibleIndicesByGroup = new Dictionary<PrefabInstanceData, List<int>>();
         private readonly List<PrefabInstanceData> staleGroupKeys = new List<PrefabInstanceData>();
@@ -128,6 +142,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
         private void RebuildBatches()
         {
             cachedBatches.Clear();
+            batchLookup.Clear();
             cullDataByGroup.Clear();
             isDirty = false;
 
@@ -144,13 +159,15 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                 {
                     if (extract.mesh == null || extract.material == null) continue;
 
-                    cachedBatches.Add(new RenderBatch
+                    var key = (extract.mesh, extract.material);
+                    if (!batchLookup.TryGetValue(key, out var batch))
                     {
-                        mesh = extract.mesh,
-                        material = extract.material,
-                        localMatrix = extract.localMatrix,
-                        group = group
-                    });
+                        batch = new RenderBatch { mesh = extract.mesh, material = extract.material };
+                        batchLookup[key] = batch;
+                        cachedBatches.Add(batch);
+                    }
+
+                    batch.sources.Add(new DrawSource { group = group, localMatrix = extract.localMatrix });
                 }
 
                 BuildGroupCullData(group, extracts);
@@ -392,47 +409,57 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
 
             foreach (var batch in cachedBatches)
             {
-                if (batch.mesh == null || batch.material == null || batch.group == null) continue;
-
-                if (!visibleIndicesByGroup.TryGetValue(batch.group, out var indices) || indices.Count == 0)
-                    continue;
-
-                DrawBatch(batch, indices);
+                if (batch.mesh == null || batch.material == null) continue;
+                DrawBatch(batch);
             }
         }
 
-        private void DrawBatch(RenderBatch batch, List<int> indices)
+        private void DrawBatch(RenderBatch batch)
         {
-            var sourceMatrices = batch.group.matrices;
-            int total = indices.Count;
-            int offset = 0;
+            int bufferCount = 0;
 
-            while (offset < total)
+            for (int s = 0; s < batch.sources.Count; s++)
             {
-                int count = Mathf.Min(MaxInstancesPerDrawCall, total - offset);
+                var source = batch.sources[s];
+                if (!visibleIndicesByGroup.TryGetValue(source.group, out var indices) || indices.Count == 0)
+                    continue;
 
-                for (int i = 0; i < count; i++)
+                var sourceMatrices = source.group.matrices;
+
+                for (int i = 0; i < indices.Count; i++)
                 {
-                    int srcIndex = indices[offset + i];
-                    scratchBuffer[i] = sourceMatrices[srcIndex] * batch.localMatrix;
+                    scratchBuffer[bufferCount] = sourceMatrices[indices[i]] * source.localMatrix;
+                    bufferCount++;
+
+                    if (bufferCount == MaxInstancesPerDrawCall)
+                    {
+                        FlushDrawCall(batch, bufferCount);
+                        bufferCount = 0;
+                    }
                 }
-
-                Graphics.DrawMeshInstanced(
-                    batch.mesh,
-                    0,
-                    batch.material,
-                    scratchBuffer,
-                    count,
-                    null,
-                    UnityEngine.Rendering.ShadowCastingMode.On,
-                    true,
-                    0,
-                    null,
-                    UnityEngine.Rendering.LightProbeUsage.BlendProbes
-                );
-
-                offset += count;
             }
+
+            if (bufferCount > 0)
+            {
+                FlushDrawCall(batch, bufferCount);
+            }
+        }
+
+        private void FlushDrawCall(RenderBatch batch, int count)
+        {
+            Graphics.DrawMeshInstanced(
+                batch.mesh,
+                0,
+                batch.material,
+                scratchBuffer,
+                count,
+                null,
+                UnityEngine.Rendering.ShadowCastingMode.On,
+                true,
+                0,
+                null,
+                UnityEngine.Rendering.LightProbeUsage.BlendProbes
+            );
         }
     }
 }
