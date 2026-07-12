@@ -160,7 +160,7 @@ Material:
     - _ZWrite: 1
     m_Colors:
     - _Albedo: {r: 0.6824492, g: 0.57634765, b: 0.46658733, a: 1}
-    - _BaseColor: {r: 0.509434, g: 0.0197455, b: 0, a: 1}
+    - _BaseColor: {r: 0.8020648, g: 0.5213228, b: 0.397606, a: 1}
     - _Color: {r: 0.509434, g: 0.0197455, b: 0, a: 1}
     - _Color1: {r: 1, g: 0, b: 0, a: 1}
     - _Color2: {r: 0, g: 1, b: 0, a: 1}
@@ -170,7 +170,7 @@ Material:
     - _Fresnel_Color: {r: 0.42326775, g: 0.2917707, b: 0.18447503, a: 1}
     - _MainColor: {r: 1, g: 0, b: 0, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
-    - _Scatter_Color: {r: 1, g: 0.454902, b: 0.43921572, a: 1}
+    - _Scatter_Color: {r: 1, g: 0.51788026, b: 0.50427204, a: 1}
     - _SpecColor: {r: 0.19999996, g: 0.19999996, b: 0.19999996, a: 1}
     - _Tiling: {r: 3, g: 2, b: 0, a: 0}
   m_BuildTextureStacks: []
