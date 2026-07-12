@@ -6,6 +6,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
     public class PrefabExtract
     {
         public Mesh mesh;
+        public int submeshIndex;
         public Material material;
         public Matrix4x4 localMatrix;
     }
@@ -45,6 +46,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                         extracts.Add(new PrefabExtract
                         {
                             mesh = filter.sharedMesh,
+                            submeshIndex = i,
                             material = mat,
                             localMatrix = localMat
                         });

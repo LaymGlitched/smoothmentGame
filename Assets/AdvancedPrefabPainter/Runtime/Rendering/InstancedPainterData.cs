@@ -54,14 +54,19 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
             public Matrix4x4 localMatrix;
         }
 
-        // Keyed by (mesh, material) so any painted prefabs that happen to share both get
-        // merged into the same draw call(s) instead of issuing a separate DrawMeshInstanced
-        // per prefab. Unity's DrawMeshInstanced still hard-caps at 1023 instances per call
-        // (a GPU constant-buffer limit), so a batch with more visible instances than that
-        // still needs multiple calls - merging only removes the *avoidable* extra calls.
+        // Keyed by (mesh, submeshIndex, material) so any painted prefabs that happen to share
+        // all three get merged into the same draw call(s) instead of issuing a separate
+        // DrawMeshInstanced per prefab. Submesh index has to be part of the key (not just
+        // mesh+material): a multi-submesh mesh needs one draw call per submesh regardless,
+        // and two submeshes that happen to share a material must stay separate batches or
+        // DrawMeshInstanced ends up rendering the wrong submesh's geometry for one of them.
+        // Unity's DrawMeshInstanced still hard-caps at 1023 instances per call (a GPU
+        // constant-buffer limit), so a batch with more visible instances than that still
+        // needs multiple calls - merging only removes the *avoidable* extra calls.
         private class RenderBatch
         {
             public Mesh mesh;
+            public int submeshIndex;
             public Material material;
             public readonly List<DrawSource> sources = new List<DrawSource>();
         }
@@ -83,7 +88,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
         }
 
         private readonly List<RenderBatch> cachedBatches = new List<RenderBatch>();
-        private readonly Dictionary<(Mesh mesh, Material material), RenderBatch> batchLookup = new Dictionary<(Mesh, Material), RenderBatch>();
+        private readonly Dictionary<(Mesh mesh, int submeshIndex, Material material), RenderBatch> batchLookup = new Dictionary<(Mesh, int, Material), RenderBatch>();
         private readonly Dictionary<PrefabInstanceData, GroupCullData> cullDataByGroup = new Dictionary<PrefabInstanceData, GroupCullData>();
         private readonly Dictionary<PrefabInstanceData, List<int>> visibleIndicesByGroup = new Dictionary<PrefabInstanceData, List<int>>();
         private readonly List<PrefabInstanceData> staleGroupKeys = new List<PrefabInstanceData>();
@@ -159,10 +164,10 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
                 {
                     if (extract.mesh == null || extract.material == null) continue;
 
-                    var key = (extract.mesh, extract.material);
+                    var key = (extract.mesh, extract.submeshIndex, extract.material);
                     if (!batchLookup.TryGetValue(key, out var batch))
                     {
-                        batch = new RenderBatch { mesh = extract.mesh, material = extract.material };
+                        batch = new RenderBatch { mesh = extract.mesh, submeshIndex = extract.submeshIndex, material = extract.material };
                         batchLookup[key] = batch;
                         cachedBatches.Add(batch);
                     }
@@ -449,7 +454,7 @@ namespace AdvancedPrefabPainter.Runtime.Rendering
         {
             Graphics.DrawMeshInstanced(
                 batch.mesh,
-                0,
+                batch.submeshIndex,
                 batch.material,
                 scratchBuffer,
                 count,
