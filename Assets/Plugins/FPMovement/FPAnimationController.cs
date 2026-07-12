@@ -19,22 +19,22 @@ namespace FPMovement
         [Header("Animation Rigging (IK)")]
         [Tooltip("Upper body IK rigs (arms/hands).")]
         public MonoBehaviour[] upperIkRigs;
-        
+
         [Tooltip("Lower body IK rigs (legs/feet). Can be disabled during Kicking.")]
         public MonoBehaviour[] lowerIkRigs;
 
         private IIKWeightTarget[] upperIkTargets;
         private IIKWeightTarget[] lowerIkTargets;
-        
+
         [Tooltip("Speed at which IK weights blend in and out.")]
         public float ikBlendSpeed = 5f;
-        
+
         [Tooltip("Enable this to completely disable IK during a wallrun.")]
         public bool disableIkDuringWallRun = true;
-        
+
         [Tooltip("Enable this to completely disable IK during a slide.")]
         public bool disableIkDuringSlide = true;
-        
+
         [Tooltip("Enable this to completely disable IK during traversal (vault, mantle, climb).")]
         public bool disableIkDuringTraversal = true;
 
@@ -57,11 +57,12 @@ namespace FPMovement
         public string isTraversingParam = "IsTraversing";
         public string kickTriggerParam = "Kick";
         public string spellCastTriggerParam = "SpellCast";
+        public string isHoldingSpellParam = "HoldingSpell";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
         private LedgeTraversalController traversalController;
-        
+
         // Parameter hashes for performance
         private int speedHash;
         private int verticalVelocityHash;
@@ -78,12 +79,13 @@ namespace FPMovement
         private int isTraversingHash;
         private int kickHash;
         private int spellCastHash;
+        private int isHoldingSpellHash;
 
         public event Action SpellCasted;
 
         private float targetUpperIkWeight = 1f;
         private float currentUpperIkWeight = 1f;
-        
+
         private float targetLowerIkWeight = 1f;
         private float currentLowerIkWeight = 1f;
 
@@ -111,6 +113,7 @@ namespace FPMovement
             isTraversingHash = Animator.StringToHash(isTraversingParam);
             kickHash = Animator.StringToHash(kickTriggerParam);
             spellCastHash = Animator.StringToHash(spellCastTriggerParam);
+            isHoldingSpellHash = Animator.StringToHash(isHoldingSpellParam);
 
             upperIkTargets = CacheIKTargets(upperIkRigs);
             lowerIkTargets = CacheIKTargets(lowerIkRigs);
@@ -197,6 +200,14 @@ namespace FPMovement
             }
         }
 
+        public void SetHoldingSpell(bool isHolding)
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetBool(isHoldingSpellHash, isHolding);
+            }
+        }
+
         private IEnumerator SpellCastDelayRoutine()
         {
             // Wait 10 frames
@@ -214,7 +225,7 @@ namespace FPMovement
                 animator.SetFloat(wallRunSideHash, isRightWall ? 1f : -1f);
             }
         }
-        
+
         private void OnClimbSmallStarted()
         {
             if (animator != null && animator.gameObject.activeInHierarchy)
@@ -273,7 +284,7 @@ namespace FPMovement
             float currentSpeed = controller.HorizontalVelocity.magnitude;
             float walkSpeed = controller.Settings != null ? controller.Settings.walkSpeed : 5f;
             float sprintSpeed = controller.Settings != null ? controller.Settings.sprintSpeed : 10f;
-            
+
             float animSpeed = 0f;
             if (currentSpeed > 0.1f)
             {
@@ -288,7 +299,7 @@ namespace FPMovement
                     animSpeed = Mathf.Lerp(0.5f, 1f, (currentSpeed - walkSpeed) / Mathf.Max(0.1f, sprintSpeed - walkSpeed));
                 }
             }
-            
+
             animator.SetFloat(speedHash, animSpeed);
 
             // 2. Vertical Velocity (Falling/Jumping)
@@ -316,7 +327,7 @@ namespace FPMovement
             // 6. Wall Running
             bool isWallRunning = wallRunController != null && wallRunController.IsWallRunning;
             animator.SetBool(isWallRunningHash, isWallRunning);
-            
+
             // 7. Traversal
             bool isTraversing = traversalController != null && traversalController.IsTraversing;
             animator.SetBool(isTraversingHash, isTraversing);
@@ -334,7 +345,7 @@ namespace FPMovement
             {
                 for (int i = 0; i < animator.layerCount; i++)
                 {
-                    if (animator.GetCurrentAnimatorStateInfo(i).IsTag("Kick") || 
+                    if (animator.GetCurrentAnimatorStateInfo(i).IsTag("Kick") ||
                         animator.GetNextAnimatorStateInfo(i).IsTag("Kick"))
                     {
                         isKicking = true;
@@ -344,7 +355,7 @@ namespace FPMovement
             }
 
             // Determine if IK should be overridden by a full body animation
-            bool disableAllIk = (isSliding && disableIkDuringSlide) || 
+            bool disableAllIk = (isSliding && disableIkDuringSlide) ||
                              (isWallRunning && disableIkDuringWallRun) ||
                              (isTraversing && disableIkDuringTraversal);
 

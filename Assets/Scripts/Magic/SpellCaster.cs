@@ -13,6 +13,7 @@ namespace GameCode.Magic
     {
         [Header("References")]
         public Transform CastOrigin;
+        public Transform HandTransform;
         public LayerMask HitMask = -1;
 
         [Header("FPMovement Integration")]
@@ -29,10 +30,11 @@ namespace GameCode.Magic
         private Camera playerCamera;
 
         [SerializeField]
-        private Transform cameraTransform; // Direct reference to camera transform
+        private Transform cameraTransform;
 
         [Header("Spells")]
         public Spell[] AvailableSpells;
+        public GameObject[] SpellHandPrefabs;
         private int currentSpellIndex = 0;
 
         [Header("Input Actions")]
@@ -54,16 +56,16 @@ namespace GameCode.Magic
         private float currentCooldown;
         private float chargeTime = 0f;
         private bool isCharging = false;
-        
+
         private string activeOverrideName = "";
         private float overrideDisplayTimer = 0f;
 
         private SpellContext pendingContext;
         private bool hasPendingSpell = false;
+        private GameObject[] instantiatedHandSpells;
 
         private void Awake()
         {
-            // Auto-find references
             if (mouseLook == null)
                 mouseLook = GetComponentInChildren<MouseLookController>();
 
@@ -76,13 +78,12 @@ namespace GameCode.Magic
             if (playerCamera == null)
                 playerCamera = Camera.main;
 
-            // CRITICAL: Get the actual camera transform
             if (cameraTransform == null && playerCamera != null)
                 cameraTransform = playerCamera.transform;
             else if (cameraTransform == null && mouseLook != null)
                 cameraTransform = mouseLook.transform;
             else if (cameraTransform == null)
-                cameraTransform = transform; // Fallback
+                cameraTransform = transform;
 
             if (manaSystem == null)
                 manaSystem = GetComponent<Mana>();
@@ -90,7 +91,21 @@ namespace GameCode.Magic
 
         private void Start()
         {
-            // Equip first spell if available
+            if (SpellHandPrefabs != null && HandTransform != null)
+            {
+                instantiatedHandSpells = new GameObject[SpellHandPrefabs.Length];
+                for (int i = 0; i < SpellHandPrefabs.Length; i++)
+                {
+                    if (SpellHandPrefabs[i] != null)
+                    {
+                        instantiatedHandSpells[i] = Instantiate(SpellHandPrefabs[i], HandTransform);
+                        instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
+                        instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
+                        instantiatedHandSpells[i].SetActive(false);
+                    }
+                }
+            }
+
             if (AvailableSpells.Length > 0)
             {
                 EquipSpell(AvailableSpells[0]);
@@ -99,7 +114,6 @@ namespace GameCode.Magic
 
         private void OnEnable()
         {
-            // Enable all actions manually
             if (CastAction != null)
                 CastAction.action.Enable();
 
@@ -112,7 +126,6 @@ namespace GameCode.Magic
             if (PreviousSpellAction != null)
                 PreviousSpellAction.action.Enable();
 
-            // Subscribe to input events
             if (CastAction != null)
                 CastAction.action.performed += OnCastPerformed;
 
@@ -134,7 +147,6 @@ namespace GameCode.Magic
 
         private void OnDisable()
         {
-            // Disable all actions manually
             if (CastAction != null)
                 CastAction.action.Disable();
 
@@ -147,7 +159,6 @@ namespace GameCode.Magic
             if (PreviousSpellAction != null)
                 PreviousSpellAction.action.Disable();
 
-            // Unsubscribe from input events
             if (CastAction != null)
                 CastAction.action.performed -= OnCastPerformed;
 
@@ -164,16 +175,20 @@ namespace GameCode.Magic
                 PreviousSpellAction.action.performed -= ctx => CycleSpell(-1);
 
             if (animationController != null)
+            {
                 animationController.SpellCasted -= OnAnimationSpellCasted;
+
+                // Safety net so the animator doesn't get stuck in the holding pose
+                // if this component is disabled mid-charge.
+                animationController.SetHoldingSpell(false);
+            }
         }
 
         private void Update()
         {
-            // Update cooldown
             if (currentCooldown > 0)
                 currentCooldown -= Time.deltaTime;
 
-            // Update charging
             if (isCharging)
             {
                 chargeTime += Time.deltaTime;
@@ -182,13 +197,12 @@ namespace GameCode.Magic
                 if (ShowDebugInfo && chargeTime % 0.5f < Time.deltaTime)
                     Debug.Log($"Charging: {chargeTime:F1}s");
             }
-            
+
             if (overrideDisplayTimer > 0)
             {
                 overrideDisplayTimer -= Time.deltaTime;
             }
 
-            // DEBUG: Visualize aim direction in real-time
             if (ShowDebugInfo)
             {
                 Vector3 aimDir = GetAimDirection();
@@ -202,7 +216,6 @@ namespace GameCode.Magic
 
         private void OnCastPerformed(InputAction.CallbackContext context)
         {
-            // Don't cast if dead or disabled
             if (controller != null && !controller.enabled)
                 return;
 
@@ -213,21 +226,32 @@ namespace GameCode.Magic
         {
             isCharging = true;
             chargeTime = 0f;
+
+            if (animationController != null)
+                animationController.SetHoldingSpell(true);
         }
 
         private void OnChargeCanceled(InputAction.CallbackContext context)
         {
             isCharging = false;
+
+            if (animationController != null)
+                animationController.SetHoldingSpell(false);
+
             ReleaseChargedSpell();
         }
 
         public void EquipSpell(Spell spell)
         {
             currentSpell = spell;
+            currentSpellIndex = Array.IndexOf(AvailableSpells, spell);
+
             if (spell != null)
                 Debug.Log($"Equipped spell: {spell.Name}");
             else
                 Debug.Log("Unequipped spell");
+
+            UpdateHandVisuals();
         }
 
         public void EquipSpellByIndex(int index)
@@ -244,9 +268,22 @@ namespace GameCode.Magic
             if (AvailableSpells.Length == 0)
                 return;
 
-            currentSpellIndex =
-                (currentSpellIndex + direction + AvailableSpells.Length) % AvailableSpells.Length;
+            currentSpellIndex = (currentSpellIndex + direction + AvailableSpells.Length) % AvailableSpells.Length;
             EquipSpell(AvailableSpells[currentSpellIndex]);
+        }
+
+        private void UpdateHandVisuals()
+        {
+            if (instantiatedHandSpells == null) return;
+
+            for (int i = 0; i < instantiatedHandSpells.Length; i++)
+            {
+                if (instantiatedHandSpells[i] != null)
+                {
+                    bool shouldBeActive = (currentSpell != null && i == currentSpellIndex);
+                    instantiatedHandSpells[i].SetActive(shouldBeActive);
+                }
+            }
         }
 
         public void CastSpell()
@@ -263,29 +300,24 @@ namespace GameCode.Magic
                 return;
             }
 
-            // Check mana
             if (manaSystem != null && currentSpell.Stats.ManaCost > manaSystem.CurrentMana)
             {
                 Debug.Log("Not enough mana!");
                 return;
             }
 
-            // Check if player is dead
             if (controller != null && !controller.enabled)
                 return;
 
-            // Get the direction from cast origin to aim point
             Vector3 aimDirection = GetAimDirection();
             Vector3 targetPoint = GetTargetPoint();
 
-            // DEBUG: Log aim direction
             if (ShowDebugInfo)
             {
                 Debug.Log($"Aim Direction: {aimDirection}");
                 Debug.Log($"Target Point: {targetPoint}");
             }
 
-            // Create context
             var context = new SpellContext
             {
                 Spell = currentSpell,
@@ -300,14 +332,11 @@ namespace GameCode.Magic
 
             EvaluateMovementOverrides(context);
 
-            // Deduct mana
             if (manaSystem != null)
                 manaSystem.TakeMana(currentSpell.Stats.ManaCost);
 
-            // Start cooldown
             currentCooldown = currentSpell.Stats.Cooldown;
 
-            // Trigger animation or cast immediately
             pendingContext = context;
             hasPendingSpell = true;
 
@@ -333,11 +362,9 @@ namespace GameCode.Magic
                 return;
             }
 
-            // Check if player is dead
             if (controller != null && !controller.enabled)
                 return;
 
-            // Check mana for charged spell (costs more)
             float chargedManaCost = currentSpell.Stats.ManaCost * (1 + chargeTime / 3f);
             if (manaSystem != null && chargedManaCost > manaSystem.CurrentMana)
             {
@@ -346,11 +373,9 @@ namespace GameCode.Magic
                 return;
             }
 
-            // Get the direction from cast origin to aim point
             Vector3 aimDirection = GetAimDirection();
             Vector3 targetPoint = GetTargetPoint();
 
-            // Create context with charge
             var context = new SpellContext
             {
                 Spell = currentSpell,
@@ -359,20 +384,17 @@ namespace GameCode.Magic
                 Direction = aimDirection,
                 TargetPoint = targetPoint,
                 HitMask = HitMask,
-                ChargeAmount = chargeTime / 3f, // Normalized 0-1
+                ChargeAmount = chargeTime / 3f,
                 ManaUsed = chargedManaCost,
             };
 
             EvaluateMovementOverrides(context);
 
-            // Deduct mana
             if (manaSystem != null)
                 manaSystem.TakeMana(chargedManaCost);
 
-            // Start cooldown (longer for charged spells)
             currentCooldown = currentSpell.Stats.Cooldown * (1 + chargeTime / 3f);
 
-            // Trigger animation or cast immediately
             pendingContext = context;
             hasPendingSpell = true;
 
@@ -405,14 +427,13 @@ namespace GameCode.Magic
             if (!hasPendingSpell || pendingContext == null)
                 return;
 
-            // Recompute aim direction and target point at the exact moment of casting
             pendingContext.Direction = GetAimDirection();
             pendingContext.TargetPoint = GetTargetPoint();
 
             if (pendingContext.ActiveShape != null)
             {
                 pendingContext.ActiveShape.Cast(pendingContext);
-                
+
                 if (pendingContext.ChargeAmount > 0)
                     Nanoshake.Shake(false, null, 1f, 0.4f, 1f);
                 else
@@ -446,15 +467,15 @@ namespace GameCode.Magic
                         {
                             context.ActiveModifiers.AddRange(overrideDef.AdditionalModifiers);
                         }
-                        
+
                         activeOverrideName = overrideDef.name;
                         overrideDisplayTimer = 2f;
-                        
+
                         if (ShowDebugInfo)
                         {
                             Debug.Log($"Applied Movement Override for {context.Spell.Name}");
                         }
-                        break; // Apply only the first matching override
+                        break;
                     }
                 }
             }
@@ -462,7 +483,6 @@ namespace GameCode.Magic
 
         private Vector3 GetAimDirection()
         {
-            // Get the camera's forward direction
             Camera cam = Camera.main;
             if (cam == null)
             {
@@ -471,21 +491,17 @@ namespace GameCode.Magic
 
             if (cam != null)
             {
-                // Return the camera's forward direction (this is where the player is looking)
                 return cam.transform.forward;
             }
 
-            // Fallback
             Debug.LogError("No camera found! Spells will fire in world forward direction!");
             return Vector3.forward;
         }
 
         private Vector3 GetTargetPoint()
         {
-            // Try using MouseLookController's camera
             Camera aimCamera = null;
 
-            // Find the camera through MouseLookController
             if (mouseLook != null)
             {
                 aimCamera = mouseLook.GetComponentInChildren<Camera>();
@@ -493,17 +509,14 @@ namespace GameCode.Magic
                     aimCamera = mouseLook.GetComponent<Camera>();
             }
 
-            // If not found, use playerCamera
             if (aimCamera == null && playerCamera != null)
                 aimCamera = playerCamera;
 
-            // If still not found, try to find any camera
             if (aimCamera == null)
                 aimCamera = Camera.main;
 
             if (aimCamera != null)
             {
-                // Use screen center for crosshair aiming
                 Ray ray = aimCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
                 RaycastHit hit;
                 if (Physics.Raycast(ray, out hit, 1000f, HitMask))
@@ -513,7 +526,6 @@ namespace GameCode.Magic
                 return ray.GetPoint(100f);
             }
 
-            // Fallback: use transform.forward (this shouldn't happen)
             Debug.LogWarning("No camera found for aiming! Using transform.forward");
             return transform.position + transform.forward * 100f;
         }
@@ -529,7 +541,6 @@ namespace GameCode.Magic
                 manaSystem.TakeMana(amount);
         }
 
-        // Visualize aim in editor
         private void OnDrawGizmos()
         {
             if (!ShowDebugInfo)
@@ -559,7 +570,7 @@ namespace GameCode.Magic
                 new Rect(0, 150, 200, 50),
                 $"health: {Math.Round(health.CurrentHealth, 2)} / {Math.Round(health.MaxHealth, 2)}"
             );
-            
+
             if (overrideDisplayTimer > 0)
             {
                 GUI.color = Color.yellow;

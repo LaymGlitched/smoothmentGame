@@ -82268,6 +82268,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: GameCode.Magic::GameCode.Magic.SpellCaster
   CastOrigin: {fileID: 330585546}
+  HandTransform: {fileID: 1875904548}
   HitMask:
     serializedVersion: 2
     m_Bits: 3639
@@ -82283,6 +82284,13 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 989a854f4b6e74449a3338165043b388, type: 2}
   - {fileID: 11400000, guid: c95b0fd9580e0e740a2c509a6ecae519, type: 2}
   - {fileID: 11400000, guid: 718737678670b764fa230b8f705569b4, type: 2}
+  SpellHandPrefabs:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 5770206729885987765, guid: 4d00dccaf463ec64282e6bda50eff271, type: 3}
+  - {fileID: 5770206729885987765, guid: 5087c383fb59bcb4191af53e20404057, type: 3}
   CastAction: {fileID: 5855723286075414326, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}
   ChargeAction: {fileID: 2867991060491498709, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}
   NextSpellAction: {fileID: 1255111134775505110, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}
@@ -82326,6 +82334,7 @@ MonoBehaviour:
   isTraversingParam: IsTraversing
   kickTriggerParam: Kick
   spellCastTriggerParam: SpellCast
+  isHoldingSpellParam: HoldingSpell
 --- !u!114 &1871250519
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -82361,6 +82370,37 @@ MonoBehaviour:
   detectionRadius: 1
   positionOffset: {x: 0, y: 0, z: 0}
   showGizmos: 1
+--- !u!1 &1875904547
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1875904548}
+  m_Layer: 0
+  m_Name: SpellTarget
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1875904548
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1875904547}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.000000029802326, y: -0, z: -0.0000001192093, w: -1}
+  m_LocalPosition: {x: 0.00071, y: 0.00072, z: -0.00023}
+  m_LocalScale: {x: 0.010000001, y: 0.010000001, z: 0.010000002}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6309027225666997689}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1883437486
 GameObject:
   m_ObjectHideFlags: 0
@@ -101590,6 +101630,7 @@ Transform:
   - {fileID: 4005253377870275322}
   - {fileID: 1623100959987149460}
   - {fileID: 208977077}
+  - {fileID: 1875904548}
   m_Father: {fileID: 6694666797506911924}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6334094934338910704
