@@ -79,6 +79,13 @@ namespace FPMovement
         public float minPitch = -89f;
         public float maxPitch = 89f;
 
+        [Header("Movement Tilt")]
+        [Tooltip("How much the camera tilts left/right when moving sideways (A/D).")]
+        public float movementTiltAngle = 1.5f;
+        
+        [Tooltip("How fast the camera transitions into and out of movement tilt.")]
+        public float movementTiltSpeed = 8f;
+
         [Header("Field of View")]
         public float baseFov = 90f;
         public float sprintFovAdd = 8f;

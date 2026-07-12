@@ -1,7 +1,7 @@
 fileFormatVersion: 2
 guid: cf718f6f008f8cc43aeea6676649775f
 ModelImporter:
-  serializedVersion: 24200
+  serializedVersion: 24500
   internalIDToNameTable: []
   externalObjects: {}
   materials:
@@ -62,6 +62,8 @@ ModelImporter:
     generateMeshLods: 0
     meshLodGenerationFlags: 0
     maximumMeshLod: -1
+    importUVs: -1
+    importVertexColors: 1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -81,6 +83,7 @@ ModelImporter:
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
     blendShapeNormalImportMode: 1
     normalSmoothingSource: 0
+    calculateBlendshapeNormalsDeltaFromImportedNormals: 1
   referencedClips: []
   importAnimation: 1
   humanDescription:

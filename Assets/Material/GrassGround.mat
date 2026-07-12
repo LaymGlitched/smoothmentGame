@@ -60,9 +60,9 @@ Material:
     m_Floats:
     - _Ambient_Occlusion: 2
     - _Blend: 5
-    - _Dither_In: 0.15
-    - _Dither_Multipler: 6.95
-    - _Fresnel_Power: 7
+    - _Dither_In: 0.68
+    - _Dither_Multipler: 2.5
+    - _Fresnel_Power: 25
     - _Lighting_Steps: 6
     - _Normal_Intensity: 0.5
     - _QueueControl: 0
@@ -70,9 +70,9 @@ Material:
     - _Scatter_Intensity: 0.04
     - _Smoothness: 0
     - _Step_Dither: 1
-    - _Step_Edge: 0.2
+    - _Step_Edge: 0.19
     - _Step_Edge_Dither: 0.5
-    - _Step_Fresnel: 0
+    - _Step_Fresnel: 1
     - _Tile: 0.5
     - _UseEmissionMap: 0
     - _Use_AO_Map: 1
@@ -86,7 +86,7 @@ Material:
     m_Colors:
     - _Albedo: {r: 0.77380866, g: 0.86187255, b: 0.12533824, a: 1}
     - _EmissionColor: {r: 1, g: 1, b: 1, a: 1}
-    - _Fresnel_Color: {r: 0.025736857, g: 0.050195813, b: 0.023167985, a: 1}
+    - _Fresnel_Color: {r: 0.0064342143, g: 0.012548953, b: 0.005791996, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
     - _Scatter_Color: {r: 0, g: 1, b: 0.05645162, a: 1}
     - _Tiling: {r: 4, g: 4, b: 0, a: 0}

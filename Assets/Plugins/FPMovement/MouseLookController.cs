@@ -32,6 +32,7 @@ namespace FPMovement
         private float currentYaw;
         private float currentPitch;
         private float currentRoll;
+        private float currentMovementRoll;
         private float yawVelocity;
         private float pitchVelocity;
         private float targetYaw;
@@ -70,6 +71,13 @@ namespace FPMovement
                 ref pitchVelocity,
                 settings.lookSmoothTime
             );
+            float targetMovementRoll = -input.MoveInput.x * settings.movementTiltAngle;
+            currentMovementRoll = Mathf.Lerp(
+                currentMovementRoll,
+                targetMovementRoll,
+                Time.deltaTime * settings.movementTiltSpeed
+            );
+
             currentRoll = Mathf.Lerp(
                 currentRoll,
                 TargetRoll,
@@ -77,7 +85,7 @@ namespace FPMovement
             );
 
             orientation.rotation = Quaternion.Euler(0f, currentYaw, 0f);
-            cameraTransform.localRotation = Quaternion.Euler(currentPitch, 0f, currentRoll);
+            cameraTransform.localRotation = Quaternion.Euler(currentPitch, 0f, currentRoll + currentMovementRoll);
 
             // Apply slide height offset to camera position
             if (controller != null)
