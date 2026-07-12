@@ -57,10 +57,13 @@ namespace FPMovement
         public string isTraversingParam = "IsTraversing";
         public string kickTriggerParam = "Kick";
         public string spellCastTriggerParam = "SpellCast";
+        public string dashTriggerParam = "Dash";
+        public string isDashingParam = "IsDashing";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
         private LedgeTraversalController traversalController;
+        private AirDashController airDashController;
         
         // Parameter hashes for performance
         private int speedHash;
@@ -78,6 +81,8 @@ namespace FPMovement
         private int isTraversingHash;
         private int kickHash;
         private int spellCastHash;
+        private int dashHash;
+        private int isDashingHash;
 
         public event Action SpellCasted;
 
@@ -94,6 +99,7 @@ namespace FPMovement
             controller = GetComponent<RigidbodyFPController>();
             wallRunController = GetComponent<WallRunController>(); // Might be null, that's okay
             traversalController = GetComponent<LedgeTraversalController>(); // Might be null
+            airDashController = GetComponent<AirDashController>(); // Might be null
 
             // Cache parameter hashes
             speedHash = Animator.StringToHash(speedParam);
@@ -111,6 +117,8 @@ namespace FPMovement
             isTraversingHash = Animator.StringToHash(isTraversingParam);
             kickHash = Animator.StringToHash(kickTriggerParam);
             spellCastHash = Animator.StringToHash(spellCastTriggerParam);
+            dashHash = Animator.StringToHash(dashTriggerParam);
+            isDashingHash = Animator.StringToHash(isDashingParam);
 
             upperIkTargets = CacheIKTargets(upperIkRigs);
             lowerIkTargets = CacheIKTargets(lowerIkRigs);
@@ -149,6 +157,10 @@ namespace FPMovement
                 traversalController.MantleStarted += OnMantleStarted;
                 traversalController.TraversalEnded += OnTraversalEnded;
             }
+            if (airDashController != null)
+            {
+                airDashController.OnAirDash += OnAirDashed;
+            }
         }
 
         private void OnDisable()
@@ -170,6 +182,10 @@ namespace FPMovement
                 traversalController.MantleStarted -= OnMantleStarted;
                 traversalController.TraversalEnded -= OnTraversalEnded;
             }
+            if (airDashController != null)
+            {
+                airDashController.OnAirDash -= OnAirDashed;
+            }
         }
 
         private void OnJumped()
@@ -177,6 +193,14 @@ namespace FPMovement
             if (animator != null && animator.gameObject.activeInHierarchy)
             {
                 animator.SetTrigger(jumpHash);
+            }
+        }
+
+        private void OnAirDashed()
+        {
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(dashHash);
             }
         }
 
@@ -320,6 +344,10 @@ namespace FPMovement
             // 7. Traversal
             bool isTraversing = traversalController != null && traversalController.IsTraversing;
             animator.SetBool(isTraversingHash, isTraversing);
+
+            // 8. Dashing
+            bool isDashing = airDashController != null && airDashController.IsDashing;
+            animator.SetBool(isDashingHash, isDashing);
         }
 
         private void UpdateIKWeights()

@@ -23,6 +23,8 @@ namespace FPMovement
 
         public event Action OnAirDash;
 
+        public bool IsDashing { get; private set; }
+
         private RigidbodyFPController controller;
         private Rigidbody rb;
         private PlayerInputHandler input;
@@ -157,6 +159,8 @@ namespace FPMovement
             // Trigger FOV boost
             currentFovOffset = settings.airDashFovAdd;
 
+            IsDashing = true;
+
             OnAirDash?.Invoke();
         }
 
@@ -181,6 +185,14 @@ namespace FPMovement
                 // In a more complex game, multiple systems might need a prioritized FOV system,
                 // but this works perfectly for a simple setup.
                 fovController.ExternalFovOffset = currentFovOffset;
+            }
+
+            if (IsDashing && controller != null)
+            {
+                if (controller.IsGrounded || controller.IsExternallyControlled)
+                {
+                    IsDashing = false;
+                }
             }
         }
     }

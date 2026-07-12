@@ -80515,6 +80515,8 @@ MonoBehaviour:
   isTraversingParam: IsTraversing
   kickTriggerParam: Kick
   spellCastTriggerParam: SpellCast
+  dashTriggerParam: Dash
+  isDashingParam: IsDashing
 --- !u!114 &1871250519
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93840,7 +93842,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.05259299, y: 1.4413303e-16, z: -1.1698311e-17, w: 0.99861604}
   m_LocalPosition: {x: -1.0587912e-24, y: 0.0003217595, z: 1.4901161e-10}
-  m_LocalScale: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 0, z: 0}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6988158010324711444}
