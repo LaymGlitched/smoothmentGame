@@ -60,5 +60,20 @@ namespace GameCode.Spirits.Relationships
             if (targetSpirit == null) return;
             AdjustAffinity(targetSpirit.Id, amount);
         }
+
+        /// <summary>
+        /// Read-only access to all tracked affinities for debugging and UI.
+        /// </summary>
+        public IReadOnlyDictionary<string, float> Bonds => affinities;
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Clears all relationships. For Editor/Debugging purposes only.
+        /// </summary>
+        public void DebugClear()
+        {
+            affinities.Clear();
+        }
+#endif
     }
 }

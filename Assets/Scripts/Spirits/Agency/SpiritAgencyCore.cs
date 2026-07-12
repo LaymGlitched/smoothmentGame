@@ -140,5 +140,15 @@ namespace GameCode.Spirits.Agency
                 _ => null
             };
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Clears all active concerns. For Editor/Debugging purposes only.
+        /// </summary>
+        public void DebugClear()
+        {
+            activeConcerns.Clear();
+        }
+#endif
     }
 }

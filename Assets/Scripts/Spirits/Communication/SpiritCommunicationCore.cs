@@ -18,6 +18,8 @@ namespace GameCode.Spirits.Communication
         // Cooldown to prevent the Spirit from spamming intent requests
         private float lastIntentTime;
         private const float DefaultCooldown = 3.0f;
+        
+        private CommunicationIntent? latestIntent;
 
         public SpiritCommunicationCore(Spirit owner)
         {
@@ -25,6 +27,16 @@ namespace GameCode.Spirits.Communication
             // Initialize so the spirit can speak immediately
             lastIntentTime = -DefaultCooldown; 
         }
+
+        /// <summary>
+        /// Read-only access to the last generated intent for debugging and UI.
+        /// </summary>
+        public CommunicationIntent? LatestIntent => latestIntent;
+
+        /// <summary>
+        /// Read-only access to the time the last intent was generated.
+        /// </summary>
+        public float LastIntentTime => lastIntentTime;
 
         /// <summary>
         /// Evaluates an internal impulse from the Agency system and decides whether 
@@ -52,7 +64,8 @@ namespace GameCode.Spirits.Communication
 
             lastIntentTime = currentTime;
 
-            return new CommunicationIntent(owner, topic, priority);
+            latestIntent = new CommunicationIntent(owner, topic, priority);
+            return latestIntent;
         }
 
         /// <summary>

@@ -53,6 +53,12 @@ namespace GameCode.Spirits.Runtime
         /// </summary>
         public SpiritRuntimeData RuntimeData { get; }
 
+        // Read-only access to cores for Editor debugging and UI
+        public SpiritMemoryCore Memory => memory;
+        public SpiritAgencyCore Agency => agency;
+        public SpiritRelationshipCore Relationships => relationships;
+        public SpiritCommunicationCore Communication => communication;
+
         /// <summary>
         /// Instantiates a new living Spirit.
         /// </summary>

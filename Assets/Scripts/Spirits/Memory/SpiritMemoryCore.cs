@@ -142,5 +142,16 @@ namespace GameCode.Spirits.Memory
             // If the event doesn't resonate strongly with the spirit's profile, it is deemed insignificant.
             return null;
         }
+
+#if UNITY_EDITOR
+        /// <summary>
+        /// Clears all memories. For Editor/Debugging purposes only.
+        /// </summary>
+        public void DebugClear()
+        {
+            immediateMemory.Clear();
+            recentMemory.Clear();
+        }
+#endif
     }
 }
