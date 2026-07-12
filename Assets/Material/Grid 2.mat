@@ -75,7 +75,7 @@ Material:
     - _Step_Fresnel: 0
     - _Tile: 1
     - _UseEmissionMap: 0
-    - _Use_AO_Map: 1
+    - _Use_AO_Map: 0
     - _Use_Albedo_Texture: 1
     - _Use_Dither: 1
     - _Use_Emission: 0
@@ -85,6 +85,7 @@ Material:
     - _Use_Subsurface_Scattering: 0
     m_Colors:
     - _Albedo: {r: 1, g: 1, b: 1, a: 1}
+    - _BaseColor: {r: 0.5773585, g: 0.5773585, b: 0.5773585, a: 1}
     - _EmissionColor: {r: 0, g: 0, b: 0, a: 1}
     - _Fresnel_Color: {r: 0.064079516, g: 0.064079516, b: 0.064079516, a: 1}
     - _Offset: {r: 0, g: 0, b: 0, a: 0}
