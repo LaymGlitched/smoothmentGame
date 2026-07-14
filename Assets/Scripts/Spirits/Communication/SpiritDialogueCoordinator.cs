@@ -1,4 +1,4 @@
-using System.Collections;
+using System;
 using System.Collections.Generic;
 using GameCode.Spirits.Core;
 using GameCode.Spirits.Runtime;
@@ -10,13 +10,62 @@ namespace GameCode.Spirits.Communication
     /// Global coordinator for Spirit Dialogue. 
     /// Manages the speaker channel, queues incoming dialogue requests, handles interruptions,
     /// and broadcasts DialogueHeardEvents to close the emergent conversation loop.
-    /// Crucially, this class contains NO decision-making logic regarding WHAT a spirit should say.
+    /// Uses a pure C# Resolver to translate Intents into Requests.
     /// </summary>
     public class SpiritDialogueCoordinator : MonoBehaviour
     {
         private readonly List<DialogueRequest> requestQueue = new List<DialogueRequest>();
         private DialogueRequest? currentSpeaker;
-        private Coroutine speakingCoroutine;
+        
+        private DialogueResolverService resolver;
+
+        public static SpiritDialogueCoordinator Instance { get; private set; }
+
+        public event Action<DialogueRequest> OnDialogueStarted;
+        public event Action<DialogueRequest> OnDialogueInterrupted;
+
+        private void Awake()
+        {
+            if (Instance == null)
+            {
+                Instance = this;
+                resolver = new DialogueResolverService();
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
+        }
+
+        private void Start()
+        {
+            if (SpiritManager.Instance != null)
+            {
+                SpiritManager.Instance.OnSpiritIntentGenerated += HandleIntentGenerated;
+            }
+        }
+
+        private void OnDestroy()
+        {
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+            if (SpiritManager.Instance != null)
+            {
+                SpiritManager.Instance.OnSpiritIntentGenerated -= HandleIntentGenerated;
+            }
+        }
+
+        private void HandleIntentGenerated(Spirit spirit, CommunicationIntent intent)
+        {
+            // The Resolver determines IF and HOW the intent becomes a concrete request.
+            var request = resolver.ResolveIntent(intent);
+            if (request.HasValue)
+            {
+                SubmitRequest(request.Value);
+            }
+        }
 
         /// <summary>
         /// Submits a fully resolved dialogue request to the global channel.
@@ -59,7 +108,9 @@ namespace GameCode.Spirits.Communication
         private void PlayDialogue(DialogueRequest request)
         {
             currentSpeaker = request;
-            speakingCoroutine = StartCoroutine(SimulateSpeaking(request));
+            
+            // Notify UI to display this line for 'request.Duration' seconds
+            OnDialogueStarted?.Invoke(request);
             
             // Critical Architecture Step: Complete the emergent conversation loop by 
             // broadcasting this dialogue back into the system as a gameplay stimulus.
@@ -69,29 +120,19 @@ namespace GameCode.Spirits.Communication
 
         private void InterruptCurrentSpeaker()
         {
-            if (speakingCoroutine != null)
+            if (currentSpeaker.HasValue)
             {
-                StopCoroutine(speakingCoroutine);
-                speakingCoroutine = null;
+                OnDialogueInterrupted?.Invoke(currentSpeaker.Value);
+                currentSpeaker = null;
             }
-            
-            // In a full implementation, we might requeue the interrupted line if it was Standard/Urgent.
-            // For now, it is simply dropped.
-            currentSpeaker = null;
         }
 
-        private IEnumerator SimulateSpeaking(DialogueRequest request)
+        /// <summary>
+        /// Called by the UI/Presentation layer when it has finished displaying the current dialogue.
+        /// </summary>
+        public void NotifyDialogueFinished()
         {
-            // Phase 3 Placeholder: Simulate UI/Audio delivery
-            Debug.Log($"[DIALOGUE] Spirit {request.SourceSpirit.Id} says: '{request.TextKey}' (Priority: {request.Priority})");
-            
-            // Simulate channel lock for 2.5 seconds
-            yield return new WaitForSeconds(2.5f);
-            
             currentSpeaker = null;
-            speakingCoroutine = null;
-            
-            // Auto-play the next item in the queue
             PlayNext();
         }
     }

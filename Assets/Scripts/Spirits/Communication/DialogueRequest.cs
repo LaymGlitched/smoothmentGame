@@ -26,15 +26,22 @@ namespace GameCode.Spirits.Communication
         public readonly PriorityTier Priority;
 
         /// <summary>
+        /// The precise length of time this dialogue should be displayed/played.
+        /// Resolved by the IDialogueResolver (e.g. from authored data or length calculation).
+        /// </summary>
+        public readonly float Duration;
+
+        /// <summary>
         /// Optional contextual data passed down from the intent (e.g., specific target listener).
         /// </summary>
         public readonly object Context;
 
-        public DialogueRequest(Spirit sourceSpirit, string textKey, PriorityTier priority, object context = null)
+        public DialogueRequest(Spirit sourceSpirit, string textKey, PriorityTier priority, float duration, object context = null)
         {
             SourceSpirit = sourceSpirit;
             TextKey = textKey;
             Priority = priority;
+            Duration = duration;
             Context = context;
         }
     }

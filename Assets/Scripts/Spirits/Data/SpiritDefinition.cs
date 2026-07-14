@@ -35,6 +35,10 @@ namespace GameCode.Spirits.Data
         [Tooltip("Defines the Spirit's temperament and psychological axes.")]
         [SerializeField] private SpiritIdentityProfile identityProfile;
 
+        [Header("Phase 4: Presentation")]
+        [Tooltip("Defines the dialogue lines available to this Spirit.")]
+        [SerializeField] private SpiritCommunicationProfile communicationProfile;
+
         /// <summary>
         /// Unique internal identifier for this Spirit.
         /// </summary>
@@ -54,6 +58,11 @@ namespace GameCode.Spirits.Data
         /// Defines the Spirit's temperament and psychological axes.
         /// </summary>
         public SpiritIdentityProfile IdentityProfile => identityProfile;
+
+        /// <summary>
+        /// Defines the authored dialogue entries for this Spirit.
+        /// </summary>
+        public SpiritCommunicationProfile CommunicationProfile => communicationProfile;
 
         private void OnValidate()
         {

@@ -16,3 +16,4 @@ MonoBehaviour:
   displayName: Zenka
   description: Logical/Cold
   identityProfile: {fileID: 11400000, guid: a63fb77c5997fd547acf6791688bd929, type: 2}
+  communicationProfile: {fileID: 11400000, guid: 045ca7ff416e58c4daa634f2119afb64, type: 2}
