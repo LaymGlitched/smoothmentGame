@@ -402,16 +402,6 @@ namespace FPMovement
                 rb.linearVelocity = currentVel;
                 Vector3 velAfterAssign = rb.linearVelocity;
 
-                Debug.Log($"[SlideDebug] " +
-                    $"VelBeforeProj: {velBeforeProj.magnitude:F2} | " +
-                    $"VelAfterProj: {velAfterProj.magnitude:F2} | " +
-                    $"VelAfterGrav: {velAfterGrav.magnitude:F2} | " +
-                    $"VelAfterDrag: {velAfterDrag.magnitude:F2} | " +
-                    $"VelAfterAssign: {velAfterAssign.magnitude:F2} | " +
-                    $"ColNormal: {lastCollisionNormal} | " +
-                    $"Contacts: {lastContactCount} | " +
-                    $"GroundNormal: {normal}");
-
                 Vector3 debugPos = transform.position + Vector3.up * 1f;
                 Debug.DrawRay(debugPos, currentVel.normalized * 2f, Color.green);
                 Debug.DrawRay(debugPos, normal * 2f, Color.blue);
