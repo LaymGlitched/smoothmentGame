@@ -9,5 +9,7 @@ EditorBuildSettings:
     path: Assets/Scenes/DyingMovementDemo 2.unity
     guid: a80d4e799a4c0784785ac0873ef525ad
   m_configObjects:
+    com.unity.addressableassets: {fileID: 11400000, guid: cb9568b2e8ddde4408b13bc8d08c7942, type: 2}
     com.unity.input.settings: {fileID: 11400000, guid: 92c47e76b022b5b4d97096854d0b8aa3, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}
+    com.unity.localization.settings: {fileID: 11400000, guid: ff28914b1f057f240b0858924c40deb9, type: 2}
