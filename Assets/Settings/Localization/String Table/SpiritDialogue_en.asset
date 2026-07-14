@@ -30,6 +30,14 @@ MonoBehaviour:
     m_Localized: You are vulnerable.
     m_Metadata:
       m_Items: []
+  - m_Id: 1223769133056
+    m_Localized: Strength exists to protect, not dominate.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 1589571162112
+    m_Localized: Strength exists to protect, not dominate.
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
