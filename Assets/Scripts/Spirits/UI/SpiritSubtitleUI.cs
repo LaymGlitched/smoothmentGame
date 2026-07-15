@@ -49,10 +49,9 @@ namespace GameCode.Spirits.UI
                 StopCoroutine(activeDisplayRoutine);
             }
 
-            // In Phase 4, TextKey is just the localization key. 
-            // In the future, this is where we query the Localization System.
+            // The request now contains the pre-resolved localized text, completely decoupled from the localization system.
             if (speakerNameText != null) speakerNameText.text = request.SourceSpirit.Definition.DisplayName;
-            if (subtitleText != null) subtitleText.text = request.TextKey; 
+            if (subtitleText != null) subtitleText.text = request.LocalizedText; 
 
             activeDisplayRoutine = StartCoroutine(DisplaySubtitleRoutine(request.Duration));
         }

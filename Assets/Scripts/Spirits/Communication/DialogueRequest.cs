@@ -15,10 +15,9 @@ namespace GameCode.Spirits.Communication
         public readonly Spirit SourceSpirit;
 
         /// <summary>
-        /// The localization key or direct text (depending on the game's localization setup) 
-        /// to be displayed or spoken.
+        /// The fully resolved localized text to be displayed or spoken.
         /// </summary>
-        public readonly string TextKey;
+        public readonly string LocalizedText;
 
         /// <summary>
         /// The urgency of the dialogue. Used by the Coordinator for sorting/interrupting.
@@ -36,10 +35,10 @@ namespace GameCode.Spirits.Communication
         /// </summary>
         public readonly object Context;
 
-        public DialogueRequest(Spirit sourceSpirit, string textKey, PriorityTier priority, float duration, object context = null)
+        public DialogueRequest(Spirit sourceSpirit, string localizedText, PriorityTier priority, float duration, object context = null)
         {
             SourceSpirit = sourceSpirit;
-            TextKey = textKey;
+            LocalizedText = localizedText;
             Priority = priority;
             Duration = duration;
             Context = context;

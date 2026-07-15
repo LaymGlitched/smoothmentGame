@@ -16,7 +16,21 @@ MonoBehaviour:
   - Topic: VesselSafety
     Priority: 3
     LocalizationKey: zenka.warning.vesselsafety.01
-    Duration: 3
+    Duration: 0
+    Weight: 0
+    CooldownGroup: 
+    Tags: []
+  - Topic: VesselSafety
+    Priority: 3
+    LocalizationKey: zenka.warning.vesselsafety.02
+    Duration: 0
+    Weight: 0
+    CooldownGroup: 
+    Tags: []
+  - Topic: VesselSafety
+    Priority: 3
+    LocalizationKey: zenka.warning.vesselsafety.03
+    Duration: 0
     Weight: 0
     CooldownGroup: 
     Tags: []

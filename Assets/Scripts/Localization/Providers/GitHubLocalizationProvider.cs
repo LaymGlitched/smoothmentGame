@@ -90,7 +90,11 @@ namespace Reiteki.Localization.Providers
                             {
                                 foreach (var kvp in entries)
                                 {
-                                    newEntries[kvp.Key] = kvp.Value;
+                                    if (!newEntries.TryAdd(kvp.Key, kvp.Value))
+                                    {
+                                        Debug.LogError($"[Localization] Duplicate key found in GitHub repo: {kvp.Key}. Overwriting.");
+                                        newEntries[kvp.Key] = kvp.Value;
+                                    }
                                 }
                             }
                         }

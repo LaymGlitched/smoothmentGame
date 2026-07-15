@@ -1,5 +1,6 @@
 using GameCode.Spirits.Core;
 using GameCode.Spirits.Runtime;
+using GameCode.Spirits.Data;
 
 namespace GameCode.Spirits.Communication
 {
@@ -19,7 +20,7 @@ namespace GameCode.Spirits.Communication
         /// <summary>
         /// The conceptual topic the Spirit wishes to express (e.g., "WarnAboutHealth", "BanterGreeting").
         /// </summary>
-        public readonly string Topic;
+        public readonly TopicId Topic;
 
         /// <summary>
         /// How urgently this intent must be expressed.
@@ -31,7 +32,7 @@ namespace GameCode.Spirits.Communication
         /// </summary>
         public readonly object Context;
 
-        public CommunicationIntent(Spirit sourceSpirit, string topic, PriorityTier priority, object context = null)
+        public CommunicationIntent(Spirit sourceSpirit, TopicId topic, PriorityTier priority, object context = null)
         {
             SourceSpirit = sourceSpirit;
             Topic = topic;

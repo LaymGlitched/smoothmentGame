@@ -48,17 +48,17 @@ namespace GameCode.Spirits.Agency
             DecayConcerns();
 
             // 2. Identify the relevant subject based on the memory's tag
-            string subject = DetermineConcernSubject(memory);
-            if (string.IsNullOrEmpty(subject))
+            Data.ConcernId subject = DetermineConcernSubject(memory);
+            if (string.IsNullOrEmpty(subject.Value))
             {
                 return null; // Memory doesn't map to a clear concern
             }
 
             // 3. Retrieve or create the concern
-            if (!activeConcerns.TryGetValue(subject, out Concern concern))
+            if (!activeConcerns.TryGetValue(subject.Value, out Concern concern))
             {
                 concern = new Concern(subject, 0f);
-                activeConcerns.Add(subject, concern);
+                activeConcerns.Add(subject.Value, concern);
             }
 
             // 4. Increase intensity based on the memory's significance and relationships
@@ -130,15 +130,16 @@ namespace GameCode.Spirits.Agency
         /// <summary>
         /// Maps an InterpretationTag to a specific subject of concern.
         /// </summary>
-        private string DetermineConcernSubject(MemoryRecord memory)
+        private Data.ConcernId DetermineConcernSubject(MemoryRecord memory)
         {
-            return memory.Tag switch
+            string value = memory.Tag switch
             {
                 InterpretationTag.Alarm or InterpretationTag.TacticalError => "VesselSafety",
                 InterpretationTag.Wasteful => "ResourceManagement",
                 InterpretationTag.LoreRecognition or InterpretationTag.Sacrilege => "AncientHistory",
                 _ => null
             };
+            return new Data.ConcernId(value);
         }
 
 #if UNITY_EDITOR

@@ -54,7 +54,7 @@ namespace Reiteki.Localization.Providers
                                     // Overwrite or ignore duplicate keys. We'll overwrite and log.
                                     if (!result.TryAdd(kvp.Key, kvp.Value))
                                     {
-                                        Debug.LogWarning($"[Localization] Duplicate key found in StreamingAssets: {kvp.Key}. Overwriting.");
+                                        Debug.LogError($"[Localization] Duplicate key found in StreamingAssets: {kvp.Key}. Overwriting.");
                                         result[kvp.Key] = kvp.Value;
                                     }
                                 }

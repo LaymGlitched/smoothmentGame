@@ -10,13 +10,13 @@ namespace GameCode.Spirits.Agency
     [System.Serializable]
     public class Concern
     {
-        [SerializeField] private string subject;
+        [SerializeField] private Data.ConcernId subject;
         [SerializeField] private float intensity;
 
         /// <summary>
         /// The topic or focus of this concern (e.g., "VesselHealth", "ManaWaste", "LoreMystery").
         /// </summary>
-        public string Subject => subject;
+        public Data.ConcernId Subject => subject;
 
         /// <summary>
         /// How strongly the Spirit feels about this concern (0.0 to 1.0).
@@ -26,7 +26,7 @@ namespace GameCode.Spirits.Agency
         /// <summary>
         /// Creates a new active concern.
         /// </summary>
-        public Concern(string subject, float initialIntensity)
+        public Concern(Data.ConcernId subject, float initialIntensity)
         {
             this.subject = subject;
             this.intensity = Mathf.Clamp01(initialIntensity);

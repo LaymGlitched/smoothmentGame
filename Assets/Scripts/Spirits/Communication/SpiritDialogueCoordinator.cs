@@ -29,12 +29,17 @@ namespace GameCode.Spirits.Communication
             if (Instance == null)
             {
                 Instance = this;
-                resolver = new DialogueResolverService();
+                // Resolver will be instantiated when InitializeLocalization is called.
             }
             else
             {
                 Destroy(gameObject);
             }
+        }
+
+        public void InitializeLocalization(Reiteki.Localization.Core.LocalizationManager localizationManager)
+        {
+            resolver = new DialogueResolverService(localizationManager);
         }
 
         private void Start()
@@ -59,6 +64,12 @@ namespace GameCode.Spirits.Communication
 
         private void HandleIntentGenerated(Spirit spirit, CommunicationIntent intent)
         {
+            if (resolver == null)
+            {
+                Debug.LogWarning("[SpiritDialogueCoordinator] Ignored intent because LocalizationManager is not yet initialized.");
+                return;
+            }
+
             // The Resolver determines IF and HOW the intent becomes a concrete request.
             var request = resolver.ResolveIntent(intent);
             if (request.HasValue)
@@ -114,7 +125,7 @@ namespace GameCode.Spirits.Communication
             
             // Critical Architecture Step: Complete the emergent conversation loop by 
             // broadcasting this dialogue back into the system as a gameplay stimulus.
-            var heardEvent = new DialogueHeardEventData(request.SourceSpirit, request.TextKey);
+            var heardEvent = new DialogueHeardEventData(request.SourceSpirit, request.LocalizedText);
             SpiritManager.Instance?.BroadcastEvent(heardEvent);
         }
 

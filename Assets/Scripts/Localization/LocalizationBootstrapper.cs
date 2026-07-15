@@ -37,6 +37,15 @@ namespace Reiteki.Localization
             await Instance.LoadLocale(defaultLocale);
         }
 
+        private void Start()
+        {
+            // Wire dependencies to the Spirit System in Start to ensure SpiritDialogueCoordinator's Awake has finished.
+            if (GameCode.Spirits.Communication.SpiritDialogueCoordinator.Instance != null)
+            {
+                GameCode.Spirits.Communication.SpiritDialogueCoordinator.Instance.InitializeLocalization(Instance);
+            }
+        }
+
         private void OnLocaleChanged()
         {
             Debug.Log($"[LocalizationBootstrapper] Locale data is ready or was just updated!");

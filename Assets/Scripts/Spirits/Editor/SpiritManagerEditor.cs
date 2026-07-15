@@ -11,7 +11,7 @@ using GameCode.Spirits.Core;
 namespace GameCode.Spirits.EditorScripts
 {
     [CustomEditor(typeof(SpiritManager))]
-    public class SpiritManagerEditor : Editor
+    public class SpiritManagerEditor : UnityEditor.Editor
     {
         public override bool RequiresConstantRepaint()
         {

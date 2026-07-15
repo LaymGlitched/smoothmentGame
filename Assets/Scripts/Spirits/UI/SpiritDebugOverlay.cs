@@ -80,7 +80,7 @@ namespace GameCode.Spirits.UI
                 GUILayout.Label($"Intent ➔ Topic: {request.Priority}");
                 
                 // 4. Resolution
-                GUILayout.Label($"Dialogue Key ➔ {request.TextKey}");
+                GUILayout.Label($"Dialogue ➔ {request.LocalizedText}");
                 
                 GUILayout.EndVertical();
             }

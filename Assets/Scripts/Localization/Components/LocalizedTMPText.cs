@@ -17,8 +17,17 @@ namespace Reiteki.Localization
         }
         private void RefreshText()
         {
-            uiText.text = LocalizationBootstrapper.Instance.Get(translationKey);
+            if (LocalizationBootstrapper.Instance.TryGet(translationKey, out string translatedText))
+            {
+                uiText.text = translatedText;
+            }
+            else
+            {
+                // Optionally set it to empty or a loading state until the event fires
+                uiText.text = "...";
+            }
         }
+
         private void OnDestroy()
         {
             if (LocalizationBootstrapper.Instance != null)

@@ -12,13 +12,13 @@ namespace GameCode.Spirits.Data
     public struct DialogueEntry
     {
         [Tooltip("The cognitive topic this line responds to (e.g., 'VesselSafety').")]
-        public string Topic;
+        public TopicId Topic;
 
         [Tooltip("The required urgency level for this line to be selected.")]
         public PriorityTier Priority;
 
         [Tooltip("The localization key used to fetch the actual text.")]
-        public string LocalizationKey;
+        public Reiteki.Localization.Core.LocalizationKey LocalizationKey;
 
         [Header("Presentation Metadata")]
         [Tooltip("How long this line should display. If 0, the Resolver calculates a fallback duration.")]

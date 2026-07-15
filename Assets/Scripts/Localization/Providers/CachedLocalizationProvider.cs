@@ -46,7 +46,7 @@ namespace Reiteki.Localization.Providers
                                 {
                                     if (!result.TryAdd(kvp.Key, kvp.Value))
                                     {
-                                        Debug.LogWarning($"[Localization] Duplicate key found in Cache: {kvp.Key}. Overwriting.");
+                                        Debug.LogError($"[Localization] Duplicate key found in Cache: {kvp.Key}. Overwriting.");
                                         result[kvp.Key] = kvp.Value;
                                     }
                                 }

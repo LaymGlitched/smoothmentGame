@@ -10,6 +10,13 @@ namespace GameCode.Spirits.Communication
     /// </summary>
     public class DialogueResolverService : IDialogueResolver
     {
+        private readonly Reiteki.Localization.Core.LocalizationManager _localizationManager;
+
+        public DialogueResolverService(Reiteki.Localization.Core.LocalizationManager localizationManager)
+        {
+            _localizationManager = localizationManager;
+        }
+
         public DialogueRequest? ResolveIntent(CommunicationIntent intent)
         {
             var profile = intent.SourceSpirit.Definition.CommunicationProfile;
@@ -37,19 +44,28 @@ namespace GameCode.Spirits.Communication
             // Pick a random valid entry (Future: Use Weights and CooldownGroups)
             var selectedEntry = validEntries[UnityEngine.Random.Range(0, validEntries.Count)];
 
+            // Resolve localization here
+            string localizedText = _localizationManager != null 
+                ? _localizationManager.Get(selectedEntry.LocalizationKey.Value) 
+                : selectedEntry.LocalizationKey.Value;
+
             // Calculate duration
             float duration = selectedEntry.Duration;
             if (duration <= 0f)
             {
-                // Fallback heuristic: 0.05s per character + 1s base. 
-                // Since we only have localization keys right now, we estimate based on the key length 
-                // or just use a standard default until localization is fully implemented.
-                duration = 3.0f; 
+                // Word count heuristic
+                int wordCount = localizedText.Split(new char[] { ' ', '\n', '\r' }, System.StringSplitOptions.RemoveEmptyEntries).Length;
+                
+                // Base time + time per word
+                float calculatedDuration = 1.0f + (wordCount * 0.4f);
+                
+                // Clamp to sensible minimum and maximum values
+                duration = Mathf.Clamp(calculatedDuration, 2.0f, 8.0f);
             }
 
             return new DialogueRequest(
                 intent.SourceSpirit, 
-                selectedEntry.LocalizationKey, 
+                localizedText, 
                 selectedEntry.Priority, 
                 duration
             );

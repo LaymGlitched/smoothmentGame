@@ -13,6 +13,7 @@ namespace Reiteki.Localization.Core
     {
         private Dictionary<string, LocalizedEntry> _currentLocaleData = new Dictionary<string, LocalizedEntry>();
         private string _currentLocale;
+        private HashSet<string> _missingKeys = new HashSet<string>();
 
         private readonly ILocalizationProvider _cachedProvider;
         private readonly ILocalizationProvider _streamingAssetsProvider;
@@ -54,6 +55,7 @@ namespace Reiteki.Localization.Core
         public async Task LoadLocale(string locale)
         {
             _currentLocale = locale;
+            _missingKeys.Clear();
             bool loadedOffline = false;
 
             // 1. Try Cache
@@ -122,8 +124,11 @@ namespace Reiteki.Localization.Core
                 return entry.Text;
             }
 
-            Debug.LogWarning($"[Localization] Missing translation for key: {key}");
-            return key;
+            if (_missingKeys.Add(key))
+            {
+                Debug.LogWarning($"[Localization] Missing translation for key: {key}");
+            }
+            return $"[MISSING] {key}";
         }
 
         /// <summary>

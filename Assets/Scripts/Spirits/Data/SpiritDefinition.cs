@@ -12,7 +12,7 @@ namespace GameCode.Spirits.Data
     {
         [Header("Identity")]
         [Tooltip("Unique internal identifier for this Spirit (e.g., 'ignis', 'zenka').")]
-        [SerializeField] private string id;
+        [SerializeField] private SpiritId id;
 
         [Tooltip("The localized, player-facing name of the Spirit.")]
         [SerializeField] private string displayName;
@@ -42,7 +42,7 @@ namespace GameCode.Spirits.Data
         /// <summary>
         /// Unique internal identifier for this Spirit.
         /// </summary>
-        public string Id => id;
+        public SpiritId Id => id;
 
         /// <summary>
         /// The localized, player-facing name of the Spirit.

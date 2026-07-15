@@ -60,7 +60,7 @@ namespace GameCode.Spirits.Communication
             }
 
             // The conceptual topic maps directly to what the Spirit is concerned about
-            string topic = impulse.DrivingConcern.Subject;
+            Data.TopicId topic = new Data.TopicId(impulse.DrivingConcern.Subject.Value);
 
             lastIntentTime = currentTime;
 
