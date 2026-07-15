@@ -84,9 +84,11 @@ namespace GameCode.Spirits.EditorScripts
             {
                 height += EditorGUI.GetPropertyHeight(iterator, true) + EditorGUIUtility.standardVerticalSpacing;
                 
-                if (iterator.name == "LocalizationKey")
+                if (iterator.name == "LocalizationKey" || iterator.name == "localizationKey")
                 {
-                    string key = iterator.stringValue;
+                    SerializedProperty valueProp = iterator.FindPropertyRelative("Value");
+                    string key = valueProp != null ? valueProp.stringValue : "";
+                    
                     if (string.IsNullOrWhiteSpace(key))
                     {
                         height += 30; // Height for warning box
@@ -139,9 +141,11 @@ namespace GameCode.Spirits.EditorScripts
                     EditorGUI.PropertyField(propRect, iterator, true);
                     currentY += propHeight + EditorGUIUtility.standardVerticalSpacing;
 
-                    if (iterator.name == "LocalizationKey")
+                    if (iterator.name == "LocalizationKey" || iterator.name == "localizationKey")
                     {
-                        string key = iterator.stringValue;
+                        SerializedProperty valueProp = iterator.FindPropertyRelative("Value");
+                        string key = valueProp != null ? valueProp.stringValue : "";
+                        
                         if (string.IsNullOrWhiteSpace(key))
                         {
                             Rect warningRect = new Rect(position.x + 15, currentY, position.width - 15, 30);
