@@ -10,10 +10,11 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 098aa0ec54b374b4db308bbd3af772c3, type: 3}
-  m_Name: Zenka
+  m_Name: Definition
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritDefinition
-  id: zenka
+  id:
+    Value: zenka
   displayName: Zenka
   description: Logical/Cold
-  identityProfile: {fileID: 11400000, guid: a63fb77c5997fd547acf6791688bd929, type: 2}
-  communicationProfile: {fileID: 11400000, guid: 045ca7ff416e58c4daa634f2119afb64, type: 2}
+  identityProfile: {fileID: 11400000, guid: 3f6bdd3d9e4487d41bed95ef0aeb6830, type: 2}
+  communicationProfile: {fileID: 11400000, guid: ff1d3af2df41ac948b40c4e473e03ee8, type: 2}

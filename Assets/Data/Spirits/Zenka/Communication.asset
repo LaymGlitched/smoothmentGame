@@ -10,26 +10,32 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: c9aa2c18cc840b543ad8a5a699543697, type: 3}
-  m_Name: Zenka Communication
+  m_Name: Communication
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritCommunicationProfile
   entries:
-  - Topic: VesselSafety
+  - Topic:
+      Value: VesselSafety
     Priority: 3
-    LocalizationKey: zenka.warning.vesselsafety.01
+    LocalizationKey:
+      Value: zenka.warning.vesselsafety.01
     Duration: 0
     Weight: 0
     CooldownGroup: 
     Tags: []
-  - Topic: VesselSafety
+  - Topic:
+      Value: VesselSafety
     Priority: 3
-    LocalizationKey: zenka.warning.vesselsafety.02
+    LocalizationKey:
+      Value: zenka.warning.vesselsafety.02
     Duration: 0
     Weight: 0
     CooldownGroup: 
     Tags: []
-  - Topic: VesselSafety
+  - Topic:
+      Value: VesselSafety
     Priority: 3
-    LocalizationKey: zenka.warning.vesselsafety.03
+    LocalizationKey:
+      Value: zenka.warning.vesselsafety.03
     Duration: 0
     Weight: 0
     CooldownGroup: 

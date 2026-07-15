@@ -10,8 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 9c8a8cea7aadf8d40a8fc670ec26c7ab, type: 3}
-  m_Name: Zenka Identity
+  m_Name: Identity
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritIdentityProfile
   empathy: 0.5
-  caution: 0.7
-  aggression: 0.3
+  caution: 0.5
+  aggression: 0.5
