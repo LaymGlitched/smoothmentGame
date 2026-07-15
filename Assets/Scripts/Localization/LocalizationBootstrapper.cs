@@ -20,7 +20,7 @@ namespace Reiteki.Localization
         private async void Awake()
         {
             // Ensure only one instance exists if the scene reloads
-            if (Instance != null && Instance != this)
+            if (Instance != null)
             {
                 Destroy(gameObject);
                 return;
