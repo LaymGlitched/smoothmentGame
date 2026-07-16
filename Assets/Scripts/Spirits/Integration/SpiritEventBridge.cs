@@ -22,11 +22,21 @@ namespace GameCode.Spirits.Integration
         [Tooltip("Reference to the player's SpellCaster component.")]
         [SerializeField] private SpellCaster spellCaster;
 
+        [Tooltip("Reference to the player's Mana component.")]
+        [SerializeField] private Mana playerMana;
+
         private void OnEnable()
         {
             if (playerHealth != null)
             {
                 playerHealth.OnDamaged.AddListener(HandlePlayerDamaged);
+            }
+
+            if (playerMana != null)
+            {
+                playerMana.OnManaChanged.AddListener(HandlePlayerManaChange);
+                playerMana.OnManaUsed.AddListener(HandlePlayerManaUsed);
+                playerMana.OnManaDepleted.AddListener(HandlePlayerManaDepletion);
             }
 
             if (spellCaster != null)
@@ -57,6 +67,24 @@ namespace GameCode.Spirits.Integration
         private void HandlePlayerDamaged(float amount, DamageType type)
         {
             var eventData = new DamageEventData(amount, type);
+            SpiritManager.Instance?.BroadcastEvent(eventData);
+        }
+
+        private void HandlePlayerManaChange(float current, float max)
+        {
+            var eventData = new ManaChangeEventData(current, max);
+            SpiritManager.Instance?.BroadcastEvent(eventData);
+        }
+
+        private void HandlePlayerManaUsed(float amount)
+        {
+            var eventData = new ManaUsedEventData(amount);
+            SpiritManager.Instance?.BroadcastEvent(eventData);
+        }
+
+        private void HandlePlayerManaDepletion()
+        {
+            var eventData = new ManaDepletedEventData();
             SpiritManager.Instance?.BroadcastEvent(eventData);
         }
 

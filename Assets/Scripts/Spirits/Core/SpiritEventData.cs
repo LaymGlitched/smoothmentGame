@@ -37,6 +37,43 @@ namespace GameCode.Spirits.Core
     }
 
     /// <summary>
+    /// Event dispatched when the player's mana changes.
+    /// </summary>
+    public class ManaChangeEventData : SpiritEventData
+    {
+        public float Current { get; }
+        public float Max { get; }
+
+        public ManaChangeEventData(float current, float max)
+        {
+            Current = current;
+            Max = max;
+        }
+    }
+
+    /// <summary>
+    /// Event dispatched when the player's mana is used.
+    /// </summary>
+    public class ManaUsedEventData : SpiritEventData
+    {
+        public float Amount { get; }
+
+        public ManaUsedEventData(float amount)
+        {
+            Amount = amount;
+        }
+    }
+
+    /// <summary>
+    /// Event dispatched when the player's mana is used.
+    /// </summary>
+    public class ManaDepletedEventData : SpiritEventData
+    {
+        public ManaDepletedEventData()
+        {}
+    }
+
+    /// <summary>
     /// Event dispatched when the player equips a new spell affinity.
     /// </summary>
     public class SpellEquippedEventData : SpiritEventData
