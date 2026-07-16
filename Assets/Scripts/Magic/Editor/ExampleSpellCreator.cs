@@ -1,7 +1,9 @@
+#if UNITY_EDITOR
 using GameCode.Magic;
 using GameCode.Shared;
 using UnityEditor;
 using UnityEngine;
+
 
 public class ExampleSpellCreator : EditorWindow
 {
@@ -98,3 +100,4 @@ public class ExampleSpellCreator : EditorWindow
         return spell;
     }
 }
+#endif

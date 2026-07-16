@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 098aa0ec54b374b4db308bbd3af772c3, type: 3}
+  m_Name: Definition
+  m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritDefinition
+  id:
+    Value: zenka
+  displayName: Zenka
+  description: Logical/Cold
+  identityProfile: {fileID: 11400000, guid: 3f6bdd3d9e4487d41bed95ef0aeb6830, type: 2}
+  communicationProfile: {fileID: 11400000, guid: ff1d3af2df41ac948b40c4e473e03ee8, type: 2}
