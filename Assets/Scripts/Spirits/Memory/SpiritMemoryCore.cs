@@ -129,6 +129,27 @@ namespace GameCode.Spirits.Memory
                 return new MemoryRecord(eventData, personalSignificance, tag);
             }
 
+            if (eventData is ManaUsedEventData manaUsedEvent)
+            {
+                float baseSignificance = Mathf.Clamp01(manaUsedEvent.Amount / 100f);
+
+                float personalSignificance = baseSignificance * (1f + profile.Caution + profile.Empathy);
+                personalSignificance = Mathf.Clamp01(personalSignificance);
+
+                InterpretationTag tag = profile.Caution > 0.8f ? InterpretationTag.TacticalError : InterpretationTag.Alarm;
+
+                // Assign an emotional/tactical tag
+                return new MemoryRecord(eventData, personalSignificance, InterpretationTag.TacticalAdvantage);
+            }
+
+            if (eventData is ManaDepletedEventData manaDepletedEvent)
+            {
+                InterpretationTag tag = profile.Caution > 0.7f ? InterpretationTag.TacticalError : InterpretationTag.Alarm;
+
+                // Assign an emotional/tactical tag
+                return new MemoryRecord(eventData, 1, InterpretationTag.TacticalAdvantage);
+            }
+
             if (eventData is SpellCastEventData spellEvent)
             {
                 // An aggressive spirit finds charged spells significant/prideful.

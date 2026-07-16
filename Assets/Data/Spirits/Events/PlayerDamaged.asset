@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 692de922562e0ea4fa3a165b0d62a46c, type: 3}
   m_Name: PlayerDamaged
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.GameplayEventDefinition
-  id: PlayerDamaged
+  id: DamageEventData
   displayName: Player Damaged
   category: Health
   description: Triggered when the player takes any kind of damage.
