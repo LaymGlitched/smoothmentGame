@@ -86,6 +86,9 @@
         },
         {
             "m_Id": "9069f58270344ffeb8b6e3e2a097a2a0"
+        },
+        {
+            "m_Id": "dc3697445d1e43ccbaf5d996d6e15f7f"
         }
     ],
     "m_Keywords": [],
@@ -392,6 +395,9 @@
         },
         {
             "m_Id": "65f0e4fbb7ab4953a7124b2fed6a4c59"
+        },
+        {
+            "m_Id": "2ace2753df11466981776d947bffc103"
         }
     ],
     "m_GroupDatas": [],
@@ -591,6 +597,20 @@
                     "m_Id": "1eff5a118a1444f6880cdbee762d1114"
                 },
                 "m_SlotId": 1
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "2ace2753df11466981776d947bffc103"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "4fab9f3606dc4eb6bcc485e82367791e"
+                },
+                "m_SlotId": 0
             }
         },
         {
@@ -3435,6 +3455,42 @@
     },
     "isMainColor": false,
     "m_ColorMode": 1
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "2ace2753df11466981776d947bffc103",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": 1495.5361328125,
+            "y": 505.7368469238281,
+            "width": 0.0,
+            "height": 0.0
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "9527d741b69741f29fb11a2a8c1de4bc"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": true,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "dc3697445d1e43ccbaf5d996d6e15f7f"
+    }
 }
 
 {
@@ -7630,6 +7686,23 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "9527d741b69741f29fb11a2a8c1de4bc",
+    "m_Id": 0,
+    "m_DisplayName": "Metalic",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_HideConnector": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 3,
+    "m_Value": 0.0,
+    "m_DefaultValue": 0.0,
+    "m_Labels": [],
+    "m_LiteralMode": false
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.DynamicVectorMaterialSlot",
     "m_ObjectId": "95bee47357304f9f9bc661bc7871090b",
     "m_Id": 2,
@@ -9469,6 +9542,9 @@
     "m_ChildObjectList": [
         {
             "m_Id": "9d04fae9c1b44211a200f5e4a778406f"
+        },
+        {
+            "m_Id": "dc3697445d1e43ccbaf5d996d6e15f7f"
         }
     ]
 }
@@ -10715,6 +10791,51 @@
         "w": 0.0
     },
     "m_Labels": []
+}
+
+{
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "dc3697445d1e43ccbaf5d996d6e15f7f",
+    "m_Guid": {
+        "m_GuidSerialized": "5dd9f64c-24b4-4ac5-9396-25c6d358b19a"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Metalic",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Metalic",
+    "m_DefaultReferenceName": "_Metalic",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "hideConnector": false,
+    "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": 0.0,
+    "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
+    "m_RangeValues": {
+        "x": 0.0,
+        "y": 1.0
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
 }
 
 {
