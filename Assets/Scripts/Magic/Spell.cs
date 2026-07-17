@@ -12,6 +12,9 @@ public class Spell : ScriptableObject
 
     public AffinityDefinition Affinity;
 
+    [Tooltip("Optional. If not set, falls back to the shape's projectile prefab if available.")]
+    public GameObject HandVisualPrefab;
+
     public List<SpellModifierDefinition> Modifiers = new();
 
     public List<MovementSpellOverride> MovementOverrides = new();

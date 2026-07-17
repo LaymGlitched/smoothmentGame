@@ -94,14 +94,33 @@ namespace GameCode.Magic
 
         private void Start()
         {
-            if (SpellHandPrefabs != null && HandTransform != null)
+            if (AvailableSpells != null && HandTransform != null)
             {
-                instantiatedHandSpells = new GameObject[SpellHandPrefabs.Length];
-                for (int i = 0; i < SpellHandPrefabs.Length; i++)
+                instantiatedHandSpells = new GameObject[AvailableSpells.Length];
+                for (int i = 0; i < AvailableSpells.Length; i++)
                 {
-                    if (SpellHandPrefabs[i] != null)
+                    GameObject prefabToUse = null;
+
+                    if (AvailableSpells[i] != null)
                     {
-                        instantiatedHandSpells[i] = Instantiate(SpellHandPrefabs[i], HandTransform);
+                        if (AvailableSpells[i].HandVisualPrefab != null)
+                        {
+                            prefabToUse = AvailableSpells[i].HandVisualPrefab;
+                        }
+                        else if (AvailableSpells[i].Shape is SphereShape sphereShape && sphereShape.ProjectilePrefab != null)
+                        {
+                            prefabToUse = sphereShape.ProjectilePrefab;
+                        }
+                    }
+
+                    if (prefabToUse == null && SpellHandPrefabs != null && i < SpellHandPrefabs.Length)
+                    {
+                        prefabToUse = SpellHandPrefabs[i];
+                    }
+
+                    if (prefabToUse != null)
+                    {
+                        instantiatedHandSpells[i] = Instantiate(prefabToUse, HandTransform);
                         instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
                         instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
                         instantiatedHandSpells[i].SetActive(false);
@@ -227,6 +246,9 @@ namespace GameCode.Magic
 
         private void OnChargeStarted(InputAction.CallbackContext context)
         {
+            if (currentCooldown > 0)
+                return;
+
             isCharging = true;
             chargeTime = 0f;
 
@@ -236,6 +258,8 @@ namespace GameCode.Magic
 
         private void OnChargeCanceled(InputAction.CallbackContext context)
         {
+            if (!isCharging) return;
+
             isCharging = false;
 
             if (animationController != null)
@@ -360,6 +384,12 @@ namespace GameCode.Magic
 
         public void ReleaseChargedSpell()
         {
+            if (currentCooldown > 0)
+            {
+                chargeTime = 0f;
+                return;
+            }
+
             if (currentSpell == null || chargeTime < 0.1f)
             {
                 chargeTime = 0f;
