@@ -122,13 +122,18 @@ namespace GameCode.Magic
                         }
                         
                         instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
-                        instantiatedHandSpells[i].transform.localScale = new Vector3(0.00125f, 0.00125f, 0.00125f);
+                        instantiatedHandSpells[i].transform.localScale = Vector3.zero;
 
-                        // Scale child particle systems
+                        // Scale child particle systems and reset shape positions
                         ParticleSystem[] particleSystems = instantiatedHandSpells[i].GetComponentsInChildren<ParticleSystem>(true);
                         foreach (var ps in particleSystems)
                         {
                             ps.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
+                            var shape = ps.shape;
+                            if (shape.enabled)
+                            {
+                                shape.position = Vector3.zero;
+                            }
                         }
 
                         // Strip physics components
@@ -238,6 +243,21 @@ namespace GameCode.Magic
             if (overrideDisplayTimer > 0)
             {
                 overrideDisplayTimer -= Time.deltaTime;
+            }
+
+            if (instantiatedHandSpells != null && currentSpellIndex >= 0 && currentSpellIndex < instantiatedHandSpells.Length)
+            {
+                GameObject activeVisual = instantiatedHandSpells[currentSpellIndex];
+                if (activeVisual != null)
+                {
+                    float targetScale = 0f;
+                    if (isCharging)
+                    {
+                        float chargePercent = Mathf.Clamp01(chargeTime / 3f);
+                        targetScale = Mathf.Lerp(0f, 0.00115f, chargePercent);
+                    }
+                    activeVisual.transform.localScale = new Vector3(targetScale, targetScale, targetScale);
+                }
             }
 
             if (ShowDebugInfo)
