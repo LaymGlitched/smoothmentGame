@@ -100,12 +100,10 @@ namespace GameCode.Magic
                 for (int i = 0; i < AvailableSpells.Length; i++)
                 {
                     GameObject prefabToUse = null;
-                    bool fromShape = false;
 
                     if (AvailableSpells[i] != null && AvailableSpells[i].Shape != null)
                     {
                         prefabToUse = AvailableSpells[i].Shape.ProjectilePrefab;
-                        fromShape = prefabToUse != null;
                     }
 
                     if (prefabToUse == null && SpellHandPrefabs != null && i < SpellHandPrefabs.Length)
@@ -116,23 +114,29 @@ namespace GameCode.Magic
                     if (prefabToUse != null)
                     {
                         instantiatedHandSpells[i] = Instantiate(prefabToUse, HandTransform);
+                        
+                        Transform[] allTransforms = instantiatedHandSpells[i].GetComponentsInChildren<Transform>(true);
+                        foreach (var t in allTransforms)
+                        {
+                            t.localPosition = Vector3.zero;
+                        }
+                        
+                        instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
+                        instantiatedHandSpells[i].transform.localScale = new Vector3(0.00125f, 0.00125f, 0.00125f);
 
-                        if (fromShape)
+                        // Scale child particle systems
+                        ParticleSystem[] particleSystems = instantiatedHandSpells[i].GetComponentsInChildren<ParticleSystem>(true);
+                        foreach (var ps in particleSystems)
                         {
-                            instantiatedHandSpells[i].transform.localPosition = AvailableSpells[i].Shape.HandPositionOffset;
-                            instantiatedHandSpells[i].transform.localRotation = Quaternion.Euler(AvailableSpells[i].Shape.HandRotationOffset);
-                            
-                            Vector3 scale = AvailableSpells[i].Shape.HandScale;
-                            if (scale != Vector3.zero)
-                            {
-                                instantiatedHandSpells[i].transform.localScale = scale;
-                            }
+                            ps.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
                         }
-                        else
-                        {
-                            instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
-                            instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
-                        }
+
+                        // Strip physics components
+                        Rigidbody[] rbs = instantiatedHandSpells[i].GetComponentsInChildren<Rigidbody>(true);
+                        foreach (var rb in rbs) Destroy(rb);
+
+                        Collider[] cols = instantiatedHandSpells[i].GetComponentsInChildren<Collider>(true);
+                        foreach (var col in cols) Destroy(col);
 
                         instantiatedHandSpells[i].SetActive(false);
                     }
