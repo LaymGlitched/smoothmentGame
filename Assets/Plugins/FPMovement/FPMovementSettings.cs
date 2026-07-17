@@ -73,8 +73,9 @@ namespace FPMovement
         [Tooltip("Minimum stamina required to START a sprint.")]
         public float minStaminaToSprint = 5f;
 
-        [Header("Mouse Look")]
+        [Header("Look Sensitivity")]
         public float mouseSensitivity = 22f;
+        public float gamepadSensitivity = 150f;
         public float lookSmoothTime = 0.03f;
         public float minPitch = -89f;
         public float maxPitch = 89f;

@@ -53,7 +53,8 @@ namespace FPMovement
             if (!enableLook || input == null)
                 return;
 
-            Vector2 look = input.LookInput * settings.mouseSensitivity * Time.deltaTime;
+            float sensitivity = input.IsGamepadLook ? settings.gamepadSensitivity : settings.mouseSensitivity;
+            Vector2 look = input.LookInput * sensitivity * Time.deltaTime;
 
             targetYaw += look.x;
             targetPitch -= look.y;

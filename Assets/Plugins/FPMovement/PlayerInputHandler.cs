@@ -36,6 +36,7 @@ namespace FPMovement
 
         public Vector2 MoveInput { get; private set; }
         public Vector2 LookInput { get; private set; }
+        public bool IsGamepadLook { get; private set; }
         public bool SprintHeld { get; private set; }
         public bool CrouchHeld { get; private set; }
 
@@ -107,10 +108,18 @@ namespace FPMovement
                     ? moveAction.action.ReadValue<Vector2>()
                     : Vector2.zero;
 
-            LookInput =
-                lookAction != null && lookAction.action != null
-                    ? lookAction.action.ReadValue<Vector2>()
-                    : Vector2.zero;
+            if (lookAction != null && lookAction.action != null)
+            {
+                LookInput = lookAction.action.ReadValue<Vector2>();
+                if (lookAction.action.activeControl != null)
+                {
+                    IsGamepadLook = lookAction.action.activeControl.device is Gamepad;
+                }
+            }
+            else
+            {
+                LookInput = Vector2.zero;
+            }
 
             SprintHeld =
                 sprintAction != null
