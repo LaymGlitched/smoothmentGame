@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: Wind Blast Shape
   m_EditorClassIdentifier: GameCode.Magic::WindBlastShape
   DisplayName: Wind Blast Shape
+  ProjectilePrefab: {fileID: 5770206729885987765, guid: 26580679f75c2134a97b75e3f2db2443, type: 3}
   WindEffectPrefab: {fileID: 3050255066612082055, guid: 0d99249cc61257540a705209a2bcca45, type: 3}
   BlastRadius: 10
   BlastForce: 20

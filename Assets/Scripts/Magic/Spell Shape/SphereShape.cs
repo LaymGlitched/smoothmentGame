@@ -4,8 +4,6 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Magic/Shapes/Sphere")]
 public class SphereShape : ShapeDefinition
 {
-    public GameObject ProjectilePrefab;
-
     public override void Cast(SpellContext context)
     {
         if (ProjectilePrefab == null)

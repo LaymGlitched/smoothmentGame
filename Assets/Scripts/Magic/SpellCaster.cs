@@ -100,17 +100,12 @@ namespace GameCode.Magic
                 for (int i = 0; i < AvailableSpells.Length; i++)
                 {
                     GameObject prefabToUse = null;
+                    bool fromShape = false;
 
-                    if (AvailableSpells[i] != null)
+                    if (AvailableSpells[i] != null && AvailableSpells[i].Shape != null)
                     {
-                        if (AvailableSpells[i].HandVisualPrefab != null)
-                        {
-                            prefabToUse = AvailableSpells[i].HandVisualPrefab;
-                        }
-                        else if (AvailableSpells[i].Shape is SphereShape sphereShape && sphereShape.ProjectilePrefab != null)
-                        {
-                            prefabToUse = sphereShape.ProjectilePrefab;
-                        }
+                        prefabToUse = AvailableSpells[i].Shape.ProjectilePrefab;
+                        fromShape = prefabToUse != null;
                     }
 
                     if (prefabToUse == null && SpellHandPrefabs != null && i < SpellHandPrefabs.Length)
@@ -121,8 +116,24 @@ namespace GameCode.Magic
                     if (prefabToUse != null)
                     {
                         instantiatedHandSpells[i] = Instantiate(prefabToUse, HandTransform);
-                        instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
-                        instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
+
+                        if (fromShape)
+                        {
+                            instantiatedHandSpells[i].transform.localPosition = AvailableSpells[i].Shape.HandPositionOffset;
+                            instantiatedHandSpells[i].transform.localRotation = Quaternion.Euler(AvailableSpells[i].Shape.HandRotationOffset);
+                            
+                            Vector3 scale = AvailableSpells[i].Shape.HandScale;
+                            if (scale != Vector3.zero)
+                            {
+                                instantiatedHandSpells[i].transform.localScale = scale;
+                            }
+                        }
+                        else
+                        {
+                            instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
+                            instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
+                        }
+
                         instantiatedHandSpells[i].SetActive(false);
                     }
                 }
