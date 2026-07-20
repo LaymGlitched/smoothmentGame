@@ -50,6 +50,10 @@ namespace GameCode.Magic
         [SerializeField]
         private Mana manaSystem;
 
+        [Header("Visuals")]
+        public float MinChargeScale = 0f;
+        public float MaxChargeScale = 1f;
+
         [Header("Debug")]
         public bool ShowDebugInfo = true;
 
@@ -92,48 +96,28 @@ namespace GameCode.Magic
 
             if (manaSystem == null)
                 manaSystem = GetComponent<Mana>();
+
+            // Process spells assigned via the inspector through the proper AddSpell pipeline
+            // This prevents array size desyncs and duplicate prefab instantiations
+            var initialSpells = AvailableSpells;
+            AvailableSpells = new Spell[0];
+            instantiatedHandSpells = new GameObject[0];
+
+            if (initialSpells != null)
+            {
+                foreach (var spell in initialSpells)
+                {
+                    if (spell != null)
+                    {
+                        AddSpell(spell);
+                    }
+                }
+            }
         }
 
         private void Start()
         {
-            if (AvailableSpells != null && HandTransform != null)
-            {
-                instantiatedHandSpells = new GameObject[AvailableSpells.Length];
-                for (int i = 0; i < AvailableSpells.Length; i++)
-                {
-                    GameObject prefabToUse = null;
-
-                    if (AvailableSpells[i] != null && AvailableSpells[i].Shape != null)
-                    {
-                        prefabToUse = AvailableSpells[i].Shape.ProjectilePrefab;
-                    }
-
-                    if (prefabToUse == null && SpellHandPrefabs != null && i < SpellHandPrefabs.Length)
-                    {
-                        prefabToUse = SpellHandPrefabs[i];
-                    }
-
-                    if (prefabToUse != null)
-                    {
-                        instantiatedHandSpells[i] = Instantiate(prefabToUse, HandTransform);
-                        
-                        instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
-                        instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
-                        instantiatedHandSpells[i].transform.localScale = Vector3.zero;
-
-                        // Strip physics components
-                        Rigidbody[] rbs = instantiatedHandSpells[i].GetComponentsInChildren<Rigidbody>(true);
-                        foreach (var rb in rbs) Destroy(rb);
-
-                        Collider[] cols = instantiatedHandSpells[i].GetComponentsInChildren<Collider>(true);
-                        foreach (var col in cols) Destroy(col);
-
-                        instantiatedHandSpells[i].SetActive(false);
-                    }
-                }
-            }
-
-            // Fire an event so that external systems (like SpiritManager) can sync their state
+            // Sync with SpiritManager if the player respawns or a new SpellCaster is created
             OnSpellCasterCreated?.Invoke(this);
 
             if (currentSpell == null && AvailableSpells != null && AvailableSpells.Length > 0)
@@ -171,7 +155,11 @@ namespace GameCode.Magic
                     newHandSpell.transform.localScale = Vector3.zero;
 
                     Rigidbody[] rbs = newHandSpell.GetComponentsInChildren<Rigidbody>(true);
-                    foreach (var rb in rbs) Destroy(rb);
+                    foreach (var rb in rbs)
+                    {
+                        rb.isKinematic = true;
+                        Destroy(rb);
+                    }
 
                     Collider[] cols = newHandSpell.GetComponentsInChildren<Collider>(true);
                     foreach (var col in cols) Destroy(col);
@@ -338,11 +326,11 @@ namespace GameCode.Magic
                 GameObject activeVisual = instantiatedHandSpells[currentSpellIndex];
                 if (activeVisual != null)
                 {
-                    float targetScale = 0f;
+                    float targetScale = MinChargeScale;
                     if (isCharging)
                     {
                         float chargePercent = Mathf.Clamp01(chargeTime / 3f);
-                        targetScale = Mathf.Lerp(0f, 1f, chargePercent);
+                        targetScale = Mathf.Lerp(MinChargeScale, MaxChargeScale, chargePercent);
                     }
                     activeVisual.transform.localScale = new Vector3(targetScale, targetScale, targetScale);
 
