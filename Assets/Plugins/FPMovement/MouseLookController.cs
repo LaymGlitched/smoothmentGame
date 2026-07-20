@@ -44,8 +44,7 @@ namespace FPMovement
             currentYaw = targetYaw = orientation.eulerAngles.y;
             currentPitch = targetPitch = cameraTransform.localEulerAngles.x;
             defaultCameraLocalPosition = cameraTransform.localPosition;
-            Cursor.lockState = CursorLockMode.Locked;
-            Cursor.visible = false;
+            CursorManager.SetState(CursorManager.CursorState.Gameplay);
         }
 
         private void Update()
