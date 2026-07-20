@@ -39,6 +39,10 @@ namespace GameCode.Spirits.Data
         [Tooltip("Defines the dialogue lines available to this Spirit.")]
         [SerializeField] private SpiritCommunicationProfile communicationProfile;
 
+        [Header("Magic Integration")]
+        [Tooltip("Defines the Spells this Spirit grants to the player.")]
+        [SerializeField] private SpiritSpells grantedSpells;
+
         /// <summary>
         /// Unique internal identifier for this Spirit.
         /// </summary>
@@ -63,6 +67,11 @@ namespace GameCode.Spirits.Data
         /// Defines the authored dialogue entries for this Spirit.
         /// </summary>
         public SpiritCommunicationProfile CommunicationProfile => communicationProfile;
+
+        /// <summary>
+        /// Defines the Spells this Spirit grants to the player.
+        /// </summary>
+        public SpiritSpells GrantedSpells => grantedSpells;
 
         private void OnValidate()
         {

@@ -26,7 +26,8 @@ namespace GameCode.Magic
                 Settings,
                 projectile.Damage,
                 DamageMultiplier,
-                Radius
+                Radius,
+                projectile.Caster
             );
         }
 

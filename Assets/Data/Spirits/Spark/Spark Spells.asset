@@ -1,0 +1,19 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 36aa300f3318ab5489df1a98cee754ab, type: 3}
+  m_Name: Spark Spells
+  m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritSpells
+  Spells:
+  - {fileID: 11400000, guid: 4f1b759113ddb0847bd9ea4296c53a2c, type: 2}
+  - {fileID: 11400000, guid: e5bb8ee0b419af642b2f0dfa2fa1c288, type: 2}
+  MovementOverrides:
+  - {fileID: 11400000, guid: e92980b11b0ea87469ed897611ca5e2c, type: 2}

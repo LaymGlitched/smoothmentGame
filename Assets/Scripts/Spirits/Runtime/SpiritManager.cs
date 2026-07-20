@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using GameCode.Spirits.Core;
 using GameCode.Spirits.Data;
+using GameCode.Magic;
 using UnityEngine;
 
 namespace GameCode.Spirits.Runtime
@@ -60,9 +61,19 @@ namespace GameCode.Spirits.Runtime
             }
         }
 
+        private SpellCaster cachedSpellCaster;
+
         private void Start()
         {
             InitializeSpirits();
+            cachedSpellCaster = FindObjectOfType<SpellCaster>();
+            
+            // Automatically equip the first spirit on startup so the player gets their spells
+            if (GetForegroundedSpirit() == null && activeSpirits.Count > 0)
+            {
+                var firstSpirit = activeSpirits.Values.First();
+                firstSpirit.TransitionPresence(PresenceMode.Foregrounded);
+            }
         }
 
         private void OnDestroy()
@@ -109,6 +120,49 @@ namespace GameCode.Spirits.Runtime
         private void HandlePresenceChanged(Spirit sourceSpirit, PresenceMode oldMode, PresenceMode newMode)
         {
             OnSpiritPresenceChanged?.Invoke(sourceSpirit, oldMode, newMode);
+
+            if (cachedSpellCaster == null)
+            {
+                cachedSpellCaster = FindObjectOfType<SpellCaster>();
+            }
+
+            if (cachedSpellCaster != null && sourceSpirit.Definition.GrantedSpells != null)
+            {
+                if (newMode == PresenceMode.Foregrounded)
+                {
+                    if (sourceSpirit.Definition.GrantedSpells.Spells != null)
+                    {
+                        foreach (var spell in sourceSpirit.Definition.GrantedSpells.Spells)
+                        {
+                            cachedSpellCaster.AddSpell(spell);
+                        }
+                    }
+                    if (sourceSpirit.Definition.GrantedSpells.MovementOverrides != null)
+                    {
+                        foreach (var overrideDef in sourceSpirit.Definition.GrantedSpells.MovementOverrides)
+                        {
+                            cachedSpellCaster.AddGlobalMovementOverride(overrideDef);
+                        }
+                    }
+                }
+                else if (oldMode == PresenceMode.Foregrounded)
+                {
+                    if (sourceSpirit.Definition.GrantedSpells.Spells != null)
+                    {
+                        foreach (var spell in sourceSpirit.Definition.GrantedSpells.Spells)
+                        {
+                            cachedSpellCaster.RemoveSpell(spell);
+                        }
+                    }
+                    if (sourceSpirit.Definition.GrantedSpells.MovementOverrides != null)
+                    {
+                        foreach (var overrideDef in sourceSpirit.Definition.GrantedSpells.MovementOverrides)
+                        {
+                            cachedSpellCaster.RemoveGlobalMovementOverride(overrideDef);
+                        }
+                    }
+                }
+            }
         }
 
         private void HandleBehaviorChanged(Spirit sourceSpirit, BehavioralLayer layer, bool isActive)

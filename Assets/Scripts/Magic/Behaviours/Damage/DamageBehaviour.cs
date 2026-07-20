@@ -16,6 +16,10 @@ namespace GameCode.Magic
             if (projectile == null)
                 return;
 
+            // Prevent self-damage
+            if (projectile.Caster != null && collision.gameObject.transform.IsChildOf(projectile.Caster.transform))
+                return;
+
             // Apply damage using IDamageable interface from Shared assembly
             var damageable = collision.gameObject.GetComponent<IDamageable>();
             if (damageable != null)

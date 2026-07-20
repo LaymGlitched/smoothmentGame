@@ -23,6 +23,8 @@ namespace GameCode.Magic
             
             Vector3 hitPoint = collision.contacts.Length > 0 ? collision.contacts[0].point : projectile.transform.position;
 
+            if (CasterRb != null && target.transform.IsChildOf(CasterRb.transform)) return;
+
             if (damageable != null || targetRb != null)
             {
                 // Hit an enemy or dynamic physics object -> Pull them to caster

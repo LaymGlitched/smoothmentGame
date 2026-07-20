@@ -129,6 +129,8 @@ public class WindBlastShape : ShapeDefinition
 
         foreach (var obj in objects)
         {
+            if (context.Caster != null && obj.transform.IsChildOf(context.Caster.transform)) continue;
+
             Rigidbody rb = obj.GetComponent<Rigidbody>();
             if (rb != null)
             {

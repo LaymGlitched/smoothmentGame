@@ -35,6 +35,7 @@ namespace GameCode.Magic
         [Header("Spells")]
         public Spell[] AvailableSpells;
         public GameObject[] SpellHandPrefabs;
+        public System.Collections.Generic.List<MovementSpellOverride> GlobalMovementOverrides = new();
         private int currentSpellIndex = 0;
 
         [Header("Input Actions")]
@@ -115,26 +116,9 @@ namespace GameCode.Magic
                     {
                         instantiatedHandSpells[i] = Instantiate(prefabToUse, HandTransform);
                         
-                        Transform[] allTransforms = instantiatedHandSpells[i].GetComponentsInChildren<Transform>(true);
-                        foreach (var t in allTransforms)
-                        {
-                            t.localPosition = Vector3.zero;
-                        }
-                        
+                        instantiatedHandSpells[i].transform.localPosition = Vector3.zero;
                         instantiatedHandSpells[i].transform.localRotation = Quaternion.identity;
                         instantiatedHandSpells[i].transform.localScale = Vector3.zero;
-
-                        // Scale child particle systems and reset shape positions
-                        ParticleSystem[] particleSystems = instantiatedHandSpells[i].GetComponentsInChildren<ParticleSystem>(true);
-                        foreach (var ps in particleSystems)
-                        {
-                            ps.transform.localScale = new Vector3(0.3f, 0.3f, 0.3f);
-                            var shape = ps.shape;
-                            if (shape.enabled)
-                            {
-                                shape.position = Vector3.zero;
-                            }
-                        }
 
                         // Strip physics components
                         Rigidbody[] rbs = instantiatedHandSpells[i].GetComponentsInChildren<Rigidbody>(true);
@@ -148,10 +132,133 @@ namespace GameCode.Magic
                 }
             }
 
-            if (AvailableSpells.Length > 0)
+            // Sync with SpiritManager if the player respawns or a new SpellCaster is created
+            if (GameCode.Spirits.Runtime.SpiritManager.Instance != null)
             {
-                EquipSpell(AvailableSpells[0]);
+                var foregrounded = GameCode.Spirits.Runtime.SpiritManager.Instance.GetForegroundedSpirit();
+                if (foregrounded != null && foregrounded.Definition.GrantedSpells != null)
+                {
+                    if (foregrounded.Definition.GrantedSpells.Spells != null)
+                    {
+                        foreach (var spell in foregrounded.Definition.GrantedSpells.Spells)
+                        {
+                            AddSpell(spell);
+                        }
+                    }
+                    if (foregrounded.Definition.GrantedSpells.MovementOverrides != null)
+                    {
+                        foreach (var overrideDef in foregrounded.Definition.GrantedSpells.MovementOverrides)
+                        {
+                            AddGlobalMovementOverride(overrideDef);
+                        }
+                    }
+                }
             }
+
+            if (currentSpell == null && AvailableSpells != null && AvailableSpells.Length > 0)
+            {
+                foreach (var spell in AvailableSpells)
+                {
+                    if (spell != null)
+                    {
+                        EquipSpell(spell);
+                        break;
+                    }
+                }
+            }
+        }
+
+        public void AddSpell(Spell spell)
+        {
+            if (spell == null) return;
+            if (AvailableSpells == null) AvailableSpells = new Spell[0];
+            if (Array.IndexOf(AvailableSpells, spell) >= 0) return;
+
+            Array.Resize(ref AvailableSpells, AvailableSpells.Length + 1);
+            AvailableSpells[^1] = spell;
+
+            if (instantiatedHandSpells == null) instantiatedHandSpells = new GameObject[0];
+            Array.Resize(ref instantiatedHandSpells, instantiatedHandSpells.Length + 1);
+            
+            GameObject prefabToUse = spell.Shape?.ProjectilePrefab;
+                if (prefabToUse != null && HandTransform != null)
+                {
+                    var newHandSpell = Instantiate(prefabToUse, HandTransform);
+                    
+                    newHandSpell.transform.localPosition = Vector3.zero;
+                    newHandSpell.transform.localRotation = Quaternion.identity;
+                    newHandSpell.transform.localScale = Vector3.zero;
+
+                    Rigidbody[] rbs = newHandSpell.GetComponentsInChildren<Rigidbody>(true);
+                    foreach (var rb in rbs) Destroy(rb);
+
+                    Collider[] cols = newHandSpell.GetComponentsInChildren<Collider>(true);
+                    foreach (var col in cols) Destroy(col);
+
+                    newHandSpell.SetActive(false);
+                    instantiatedHandSpells[^1] = newHandSpell;
+                }
+
+            if (currentSpell == null)
+            {
+                EquipSpell(spell);
+            }
+        }
+
+        public void RemoveSpell(Spell spell)
+        {
+            if (AvailableSpells == null) return;
+            
+            int index = Array.IndexOf(AvailableSpells, spell);
+            if (index < 0) return;
+
+            var listSpells = new System.Collections.Generic.List<Spell>(AvailableSpells);
+            listSpells.RemoveAt(index);
+            AvailableSpells = listSpells.ToArray();
+
+            if (instantiatedHandSpells != null && index < instantiatedHandSpells.Length)
+            {
+                if (instantiatedHandSpells[index] != null)
+                {
+                    Destroy(instantiatedHandSpells[index]);
+                }
+                var listHands = new System.Collections.Generic.List<GameObject>(instantiatedHandSpells);
+                listHands.RemoveAt(index);
+                instantiatedHandSpells = listHands.ToArray();
+            }
+
+            if (currentSpell == spell)
+            {
+                if (AvailableSpells.Length > 0)
+                {
+                    EquipSpell(AvailableSpells[0]);
+                }
+                else
+                {
+                    EquipSpell(null);
+                }
+            }
+            else
+            {
+                currentSpellIndex = Array.IndexOf(AvailableSpells, currentSpell);
+                UpdateHandVisuals();
+            }
+        }
+
+        public void AddGlobalMovementOverride(MovementSpellOverride overrideDef)
+        {
+            if (overrideDef == null) return;
+            if (GlobalMovementOverrides == null) GlobalMovementOverrides = new System.Collections.Generic.List<MovementSpellOverride>();
+            if (!GlobalMovementOverrides.Contains(overrideDef))
+            {
+                GlobalMovementOverrides.Add(overrideDef);
+            }
+        }
+
+        public void RemoveGlobalMovementOverride(MovementSpellOverride overrideDef)
+        {
+            if (overrideDef == null || GlobalMovementOverrides == null) return;
+            GlobalMovementOverrides.Remove(overrideDef);
         }
 
         private void OnEnable()
@@ -254,9 +361,20 @@ namespace GameCode.Magic
                     if (isCharging)
                     {
                         float chargePercent = Mathf.Clamp01(chargeTime / 3f);
-                        targetScale = Mathf.Lerp(0f, 0.00115f, chargePercent);
+                        targetScale = Mathf.Lerp(0f, 1f, chargePercent);
                     }
                     activeVisual.transform.localScale = new Vector3(targetScale, targetScale, targetScale);
+
+                    bool shouldEmit = targetScale > 0.01f;
+                    ParticleSystem[] particleSystems = activeVisual.GetComponentsInChildren<ParticleSystem>(true);
+                    foreach (var ps in particleSystems)
+                    {
+                        var emission = ps.emission;
+                        if (emission.enabled != shouldEmit)
+                        {
+                            emission.enabled = shouldEmit;
+                        }
+                    }
                 }
             }
 
@@ -524,9 +642,13 @@ namespace GameCode.Magic
             context.ActiveShape = context.Spell.Shape;
             context.ActiveModifiers.AddRange(context.Spell.Modifiers);
 
-            if (controller != null && context.Spell.MovementOverrides != null)
+            if (controller != null)
             {
-                foreach (var overrideDef in context.Spell.MovementOverrides)
+                var allOverrides = new System.Collections.Generic.List<MovementSpellOverride>();
+                if (GlobalMovementOverrides != null) allOverrides.AddRange(GlobalMovementOverrides);
+                if (context.Spell.MovementOverrides != null) allOverrides.AddRange(context.Spell.MovementOverrides);
+
+                foreach (var overrideDef in allOverrides)
                 {
                     if (overrideDef.IsConditionMet(controller))
                     {
@@ -631,7 +753,8 @@ namespace GameCode.Magic
         void OnGUI()
         {
             Health health = GetComponent<Health>();
-            GUI.Label(new Rect(0, 0, 200, 50), $"spell: {currentSpell.Name}");
+            string spellName = currentSpell != null ? currentSpell.Name : "None";
+            GUI.Label(new Rect(0, 0, 200, 50), $"spell: {spellName}");
             GUI.Label(new Rect(0, 50, 200, 50), $"cooldown: {Math.Round(currentCooldown, 2)}s");
             GUI.Label(
                 new Rect(0, 100, 200, 50),

@@ -11,11 +11,12 @@ namespace GameCode.Magic
             ExplosionSettings settings,
             float damage,
             float damageMultiplier,
-            float radius
+            float radius,
+            GameObject caster = null
         )
         {
             // 1. Apply damage immediately
-            ApplyDamage(position, radius, damage, damageMultiplier);
+            ApplyDamage(position, radius, damage, damageMultiplier, caster);
 
             // 2. Apply forces using the API (this handles rigidbodies)
             if (settings != null)
@@ -29,7 +30,8 @@ namespace GameCode.Magic
             Vector3 position,
             float radius,
             float baseDamage,
-            float damageMultiplier
+            float damageMultiplier,
+            GameObject caster
         )
         {
             Collider[] colliders = Physics.OverlapSphere(position, radius);
@@ -37,6 +39,9 @@ namespace GameCode.Magic
             foreach (var collider in colliders)
             {
                 if (collider == null)
+                    continue;
+
+                if (caster != null && collider.transform.IsChildOf(caster.transform))
                     continue;
 
                 float distance = Vector3.Distance(position, collider.transform.position);
