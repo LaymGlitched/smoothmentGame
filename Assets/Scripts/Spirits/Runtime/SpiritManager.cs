@@ -54,6 +54,7 @@ namespace GameCode.Spirits.Runtime
             if (Instance == null)
             {
                 Instance = this;
+                SpellCaster.OnSpellCasterCreated += HandleSpellCasterCreated;
             }
             else
             {
@@ -81,6 +82,7 @@ namespace GameCode.Spirits.Runtime
             if (Instance == this)
             {
                 Instance = null;
+                SpellCaster.OnSpellCasterCreated -= HandleSpellCasterCreated;
             }
 
             // Clean up event subscriptions to prevent memory leaks
@@ -176,6 +178,30 @@ namespace GameCode.Spirits.Runtime
             UnityEngine.Debug.Log($"[SpiritSystem] Spirit '{intent.SourceSpirit.Id}' generated a {intent.Priority} intent to talk about: {intent.Topic}");
             
             OnSpiritIntentGenerated?.Invoke(intent.SourceSpirit, intent);
+        }
+
+        private void HandleSpellCasterCreated(SpellCaster newCaster)
+        {
+            cachedSpellCaster = newCaster;
+
+            var foregrounded = GetForegroundedSpirit();
+            if (foregrounded != null && foregrounded.Definition.GrantedSpells != null)
+            {
+                if (foregrounded.Definition.GrantedSpells.Spells != null)
+                {
+                    foreach (var spell in foregrounded.Definition.GrantedSpells.Spells)
+                    {
+                        cachedSpellCaster.AddSpell(spell);
+                    }
+                }
+                if (foregrounded.Definition.GrantedSpells.MovementOverrides != null)
+                {
+                    foreach (var overrideDef in foregrounded.Definition.GrantedSpells.MovementOverrides)
+                    {
+                        cachedSpellCaster.AddGlobalMovementOverride(overrideDef);
+                    }
+                }
+            }
         }
 
         // ----------------------------------------------------------------------

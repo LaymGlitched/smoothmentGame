@@ -67,6 +67,7 @@ namespace GameCode.Magic
 
         public event Action<Spell> OnSpellEquippedEvent;
         public event Action<Spell, bool> OnSpellCastedEvent;
+        public static event Action<SpellCaster> OnSpellCasterCreated;
 
         private void Awake()
         {
@@ -132,28 +133,8 @@ namespace GameCode.Magic
                 }
             }
 
-            // Sync with SpiritManager if the player respawns or a new SpellCaster is created
-            if (GameCode.Spirits.Runtime.SpiritManager.Instance != null)
-            {
-                var foregrounded = GameCode.Spirits.Runtime.SpiritManager.Instance.GetForegroundedSpirit();
-                if (foregrounded != null && foregrounded.Definition.GrantedSpells != null)
-                {
-                    if (foregrounded.Definition.GrantedSpells.Spells != null)
-                    {
-                        foreach (var spell in foregrounded.Definition.GrantedSpells.Spells)
-                        {
-                            AddSpell(spell);
-                        }
-                    }
-                    if (foregrounded.Definition.GrantedSpells.MovementOverrides != null)
-                    {
-                        foreach (var overrideDef in foregrounded.Definition.GrantedSpells.MovementOverrides)
-                        {
-                            AddGlobalMovementOverride(overrideDef);
-                        }
-                    }
-                }
-            }
+            // Fire an event so that external systems (like SpiritManager) can sync their state
+            OnSpellCasterCreated?.Invoke(this);
 
             if (currentSpell == null && AvailableSpells != null && AvailableSpells.Length > 0)
             {
