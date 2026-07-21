@@ -11,8 +11,8 @@ namespace Reiteki.Localization.Core
     /// </summary>
     public class LocalizationManager
     {
-        private Dictionary<string, LocalizedEntry> _currentLocaleData = new Dictionary<string, LocalizedEntry>();
-        private Dictionary<string, LocalizedEntry> _fallbackLocaleData = new Dictionary<string, LocalizedEntry>();
+        private Dictionary<string, LocalizedEntry> _currentLocaleData = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, LocalizedEntry> _fallbackLocaleData = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
         private string _currentLocale;
         private string _defaultLocale = "en-US";
         private HashSet<string> _missingKeys = new HashSet<string>();
@@ -85,7 +85,7 @@ namespace Reiteki.Localization.Core
             _missingKeys.Clear();
 
             // Reset current locale data so entries from previous language don't persist
-            _currentLocaleData = new Dictionary<string, LocalizedEntry>();
+            _currentLocaleData = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
             LocaleChanged?.Invoke();
 
             bool loadedOffline = false;

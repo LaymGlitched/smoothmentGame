@@ -17,7 +17,7 @@ namespace Reiteki.Localization.Providers
     {
         public async Task<Dictionary<string, LocalizedEntry>> LoadLocaleAsync(string locale)
         {
-            var result = new Dictionary<string, LocalizedEntry>();
+            var result = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
             string basePath = Path.Combine(Application.streamingAssetsPath, "Localization", locale);
 
             // Note: On Android/WebGL, Directory.Exists and Directory.GetFiles do not work for StreamingAssets.
@@ -45,7 +45,7 @@ namespace Reiteki.Localization.Providers
                         try
                         {
                             string json = File.ReadAllText(file);
-                            var entries = JsonConvert.DeserializeObject<Dictionary<string, LocalizedEntry>>(json);
+                            var entries = LocalizationJsonParser.Parse(json);
 
                             if (entries != null)
                             {

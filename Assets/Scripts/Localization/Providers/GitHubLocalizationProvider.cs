@@ -72,7 +72,7 @@ namespace Reiteki.Localization.Providers
                 Debug.Log($"[Localization] New localization version found for {locale} (Remote: {remoteInfo.Version}, Local: {localVersion}). Downloading update...");
 
                 // Download all files specified in the remote locale.json
-                var newEntries = new Dictionary<string, LocalizedEntry>();
+                var newEntries = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
 
                 if (remoteInfo.Files != null && remoteInfo.Files.Length > 0)
                 {
@@ -90,7 +90,7 @@ namespace Reiteki.Localization.Providers
                         // Parse immediately to populate the dictionary
                         try
                         {
-                            var entries = await Task.Run(() => JsonConvert.DeserializeObject<Dictionary<string, LocalizedEntry>>(fileContent));
+                            var entries = await Task.Run(() => LocalizationJsonParser.Parse(fileContent));
                             if (entries != null)
                             {
                                 foreach (var kvp in entries)
