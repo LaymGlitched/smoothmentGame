@@ -5,7 +5,9 @@
         "GUID:9390958e4d73c134384a9b9a1fed0ba3",
         "GUID:6055be8ebefd69e48b49212b09b47b2f",
         "GUID:43b4fba25204c094bbe032fee351f242",
-        "GUID:1d0d9034387857c47ae74436f8206965"
+        "GUID:1d0d9034387857c47ae74436f8206965",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

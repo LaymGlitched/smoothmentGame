@@ -2,6 +2,8 @@ using System.Collections;
 using GameCode.PlayerScripts;
 using GameCode.Shared;
 using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
 
 namespace GameCode.UI
@@ -44,8 +46,34 @@ namespace GameCode.UI
         [SerializeField]
         private float vignetteMaxPulseAlpha = 0.5f;
 
+        [Header("Post Processing Desaturation Settings")]
+        [Tooltip("Optional post-processing Volume reference. Will auto-find or create if unassigned.")]
+        [SerializeField]
+        private Volume postProcessVolume;
+
+        [SerializeField]
+        private bool enableLowHealthDesaturation = true;
+
+        [Tooltip("Health threshold below which screen desaturation starts.")]
+        [SerializeField]
+        private float desaturationStartHealth = 30f;
+
+        [Tooltip("Health threshold at which maximum desaturation is reached.")]
+        [SerializeField]
+        private float desaturationMaxHealth = 5f;
+
+        [Tooltip("Saturation value at maximum desaturation (-100 is complete grayscale).")]
+        [Range(-100f, 0f)]
+        [SerializeField]
+        private float maxDesaturationValue = -100f;
+
+        [Tooltip("Normal saturation value when health is above the desaturation start threshold.")]
+        [SerializeField]
+        private float defaultSaturationValue = 0f;
+
         private float currentFlashAlpha = 0f;
         private Coroutine vignetteFlashCoroutine;
+        private ColorAdjustments colorAdjustments;
 
         private void Start()
         {
@@ -64,6 +92,13 @@ namespace GameCode.UI
                 damageVignetteImage.color = new Color(flashColor.r, flashColor.g, flashColor.b, 0f);
                 damageVignetteImage.enabled = true;
             }
+
+            EnsureVolumeAndColorAdjustments();
+        }
+
+        private void OnDisable()
+        {
+            ResetDesaturation();
         }
 
         private void OnDestroy()
@@ -72,6 +107,8 @@ namespace GameCode.UI
             {
                 healthComponent.OnDamaged.RemoveListener(OnPlayerDamaged);
             }
+
+            ResetDesaturation();
         }
 
         private void OnPlayerDamaged(float damage, DamageType type)
@@ -103,6 +140,7 @@ namespace GameCode.UI
         private void Update()
         {
             UpdateVignetteOverlay();
+            UpdateDesaturation();
         }
 
         private void UpdateVignetteOverlay()
@@ -152,6 +190,81 @@ namespace GameCode.UI
                 finalVignetteColor.b,
                 finalAlpha
             );
+        }
+
+        private void EnsureVolumeAndColorAdjustments()
+        {
+            if (!enableLowHealthDesaturation) return;
+
+            if (postProcessVolume == null)
+            {
+                postProcessVolume = GetComponent<Volume>();
+            }
+            if (postProcessVolume == null)
+            {
+                postProcessVolume = FindAnyObjectByType<Volume>();
+            }
+            if (postProcessVolume == null)
+            {
+                postProcessVolume = gameObject.AddComponent<Volume>();
+                postProcessVolume.isGlobal = true;
+                postProcessVolume.priority = 10f;
+            }
+
+            if (postProcessVolume != null)
+            {
+                if (postProcessVolume.profile == null)
+                {
+                    postProcessVolume.profile = ScriptableObject.CreateInstance<VolumeProfile>();
+                }
+
+                if (colorAdjustments == null)
+                {
+                    if (!postProcessVolume.profile.TryGet<ColorAdjustments>(out colorAdjustments))
+                    {
+                        colorAdjustments = postProcessVolume.profile.Add<ColorAdjustments>();
+                    }
+                }
+            }
+        }
+
+        private void UpdateDesaturation()
+        {
+            if (!enableLowHealthDesaturation) return;
+
+            EnsureVolumeAndColorAdjustments();
+
+            if (colorAdjustments == null) return;
+
+            float targetSaturation = defaultSaturationValue;
+
+            if (healthComponent != null)
+            {
+                if (healthComponent.IsDead)
+                {
+                    targetSaturation = maxDesaturationValue;
+                }
+                else
+                {
+                    float currentHealth = healthComponent.CurrentHealth;
+                    if (currentHealth < desaturationStartHealth)
+                    {
+                        float t = Mathf.InverseLerp(desaturationStartHealth, desaturationMaxHealth, currentHealth);
+                        targetSaturation = Mathf.Lerp(defaultSaturationValue, maxDesaturationValue, t);
+                    }
+                }
+            }
+
+            colorAdjustments.saturation.overrideState = true;
+            colorAdjustments.saturation.value = targetSaturation;
+        }
+
+        private void ResetDesaturation()
+        {
+            if (colorAdjustments != null)
+            {
+                colorAdjustments.saturation.value = defaultSaturationValue;
+            }
         }
     }
 }
