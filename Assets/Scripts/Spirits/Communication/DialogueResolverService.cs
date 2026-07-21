@@ -64,6 +64,12 @@ namespace GameCode.Spirits.Communication
                 ? _localizationManager.Get(selectedEntry.LocalizationKey.Value) 
                 : selectedEntry.LocalizationKey.Value;
 
+            if (!string.IsNullOrEmpty(localizedText))
+            {
+                localizedText = localizedText.Replace("[b]", "<b>").Replace("[/b]", "</b>");
+                localizedText = localizedText.Replace("[i]", "<i>").Replace("[/i]", "</i>");
+            }
+
             // Calculate duration
             float duration = selectedEntry.Duration;
             if (duration <= 0f)
