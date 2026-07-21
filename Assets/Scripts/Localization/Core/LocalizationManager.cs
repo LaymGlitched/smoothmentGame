@@ -141,7 +141,7 @@ namespace Reiteki.Localization.Core
                 Task<Dictionary<string, LocalizedEntry>> fetchTask;
                 if (_gitHubProvider is GitHubLocalizationProvider ghProvider)
                 {
-                    fetchTask = ghProvider.LoadLocaleAsync(locale, forceDownload: !loadedOffline);
+                    fetchTask = ghProvider.LoadLocaleAsync(locale, forceDownload: true);
                 }
                 else
                 {
