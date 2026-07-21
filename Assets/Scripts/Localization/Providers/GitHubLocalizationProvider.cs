@@ -19,6 +19,11 @@ namespace Reiteki.Localization.Providers
 
         public async Task<Dictionary<string, LocalizedEntry>> LoadLocaleAsync(string locale)
         {
+            return await LoadLocaleAsync(locale, forceDownload: false);
+        }
+
+        public async Task<Dictionary<string, LocalizedEntry>> LoadLocaleAsync(string locale, bool forceDownload)
+        {
             try
             {
                 string localeJsonUrl = $"{RepoBaseUrl}/{locale}/locale.json";
@@ -57,8 +62,8 @@ namespace Reiteki.Localization.Providers
                     }
                 }
 
-                // If remote version is not newer, we don't need to update.
-                if (remoteInfo.Version <= localVersion)
+                // If remote version is not newer and forceDownload is false, we don't need to update.
+                if (!forceDownload && remoteInfo.Version <= localVersion)
                 {
                     // Return null indicating no update was performed.
                     return null;

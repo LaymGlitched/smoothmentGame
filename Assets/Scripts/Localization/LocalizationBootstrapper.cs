@@ -1,3 +1,4 @@
+using System.Threading.Tasks;
 using UnityEngine;
 using Reiteki.Localization.Core;
 
@@ -27,6 +28,7 @@ namespace Reiteki.Localization
             }
 
             Instance = new LocalizationManager();
+            Instance.DefaultLocale = defaultLocale;
             DontDestroyOnLoad(gameObject);
 
             // Subscribe to the LocaleChanged event to update UI when hot-reloading finishes
@@ -35,6 +37,22 @@ namespace Reiteki.Localization
             // Start loading the locale. 
             // This is asynchronous, but won't block the main thread.
             await Instance.LoadLocale(defaultLocale);
+        }
+
+        /// <summary>
+        /// Call this method from UI controls or game settings to change the active language/locale.
+        /// </summary>
+        /// <param name="locale">Locale string code (e.g. "es-ES", "en-US", "ja-JP").</param>
+        public async Task SetLanguage(string locale)
+        {
+            if (Instance != null)
+            {
+                await Instance.LoadLocale(locale);
+            }
+            else
+            {
+                Debug.LogWarning("[LocalizationBootstrapper] Cannot set language because Instance is null.");
+            }
         }
 
         private void Start()

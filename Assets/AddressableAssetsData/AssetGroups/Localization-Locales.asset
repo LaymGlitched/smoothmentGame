@@ -15,6 +15,12 @@ MonoBehaviour:
   m_GroupName: Localization-Locales
   m_GUID: 8e69754279c395f4889125e54340d56a
   m_SerializeEntries:
+  - m_GUID: 080ded243b7f0bc4c9f733a230b3bba5
+    m_Address: Dutch (Netherlands) (nl-NL)
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 8035b2bdc0b27ac4a87ee565288c6440
     m_Address: Spanish (es)
     m_ReadOnly: 1

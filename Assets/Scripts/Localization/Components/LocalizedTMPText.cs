@@ -9,22 +9,29 @@ namespace Reiteki.Localization
         public TMP_Text uiText;
         private void Start()
         {
-            if(uiText == null)
+            if (uiText == null)
                 uiText = GetComponent<TMP_Text>();
 
-            LocalizationBootstrapper.Instance.LocaleChanged += RefreshText;
+            if (LocalizationBootstrapper.Instance != null)
+            {
+                LocalizationBootstrapper.Instance.LocaleChanged += RefreshText;
+            }
+
             RefreshText();
         }
+
         private void RefreshText()
         {
-            if (LocalizationBootstrapper.Instance.TryGet(translationKey, out string translatedText))
+            if (uiText == null)
+                return;
+
+            if (LocalizationBootstrapper.Instance != null && LocalizationBootstrapper.Instance.TryGet(translationKey, out string translatedText))
             {
                 uiText.text = translatedText;
             }
-            else
+            else if (!string.IsNullOrEmpty(translationKey))
             {
-                // Optionally set it to empty or a loading state until the event fires
-                uiText.text = "...";
+                uiText.text = LocalizationBootstrapper.Instance != null ? LocalizationBootstrapper.Instance.Get(translationKey) : translationKey;
             }
         }
 
