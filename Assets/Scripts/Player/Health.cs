@@ -1,5 +1,6 @@
 using GameCode.Shared;
 using Nanodogs.API.Nanoshake;
+using FPMovement;
 using UnityEngine;
 using UnityEngine.Events;
 
@@ -45,6 +46,13 @@ namespace GameCode.PlayerScripts
 
             // Trigger effects
             Nanoshake.Shake(false, null, 0.5f, 0.5f, 2f);
+
+            var procCam = GetComponent<ProceduralCameraController>();
+            if (procCam == null) procCam = GetComponentInChildren<ProceduralCameraController>();
+            if (procCam != null)
+            {
+                procCam.TriggerDamageReaction(actualDamage, Vector3.zero);
+            }
 
             if (showDebugLogs)
                 Debug.Log(

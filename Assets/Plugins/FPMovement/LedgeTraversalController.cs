@@ -36,6 +36,7 @@ namespace FPMovement
 
         public bool IsTraversing { get; private set; }
 
+        public event Action VaultStarted;
         public event Action ClimbSmallStarted;
         public event Action ClimbMediumStarted;
         public event Action ClimbLargeStarted;
@@ -261,6 +262,7 @@ namespace FPMovement
         private IEnumerator DoVault(ObstacleInfo obstacle)
         {
             IsTraversing = true;
+            VaultStarted?.Invoke();
             ClimbSmallStarted?.Invoke();
             
             if (fovController != null)

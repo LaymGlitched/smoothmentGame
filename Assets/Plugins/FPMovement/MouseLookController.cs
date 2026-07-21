@@ -38,6 +38,7 @@ namespace FPMovement
         private float targetYaw;
         private float targetPitch;
         private Vector3 defaultCameraLocalPosition;
+        private ProceduralCameraController procCam;
 
         private void Start()
         {
@@ -71,7 +72,10 @@ namespace FPMovement
                 ref pitchVelocity,
                 settings.lookSmoothTime
             );
-            float targetMovementRoll = -input.MoveInput.x * settings.movementTiltAngle;
+            if (procCam == null) procCam = GetComponent<ProceduralCameraController>();
+            if (procCam == null) procCam = GetComponentInChildren<ProceduralCameraController>();
+
+            float targetMovementRoll = (procCam != null && procCam.enabled) ? 0f : -input.MoveInput.x * settings.movementTiltAngle;
             currentMovementRoll = Mathf.Lerp(
                 currentMovementRoll,
                 targetMovementRoll,

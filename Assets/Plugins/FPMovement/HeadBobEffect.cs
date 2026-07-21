@@ -106,8 +106,18 @@ namespace FPMovement
             isLandingBobActive = true;
         }
 
+        private ProceduralCameraController procCam;
+
         private void Update()
         {
+            if (procCam == null) procCam = GetComponent<ProceduralCameraController>();
+            if (procCam == null) procCam = GetComponentInParent<ProceduralCameraController>();
+            if (procCam != null && procCam.enabled)
+            {
+                // ProceduralCameraController is active and taking care of head bob and camera motion.
+                return;
+            }
+
             if (!enableHeadBob)
             {
                 currentSmoothedPos = Vector3.Lerp(
@@ -218,6 +228,12 @@ namespace FPMovement
         /// </summary>
         public void TriggerLandingBob(float intensityMultiplier = 1f)
         {
+            if (procCam != null && procCam.enabled)
+            {
+                procCam.TriggerLandingBob(intensityMultiplier);
+                return;
+            }
+
             if (!enableLandingBob)
                 return;
 
