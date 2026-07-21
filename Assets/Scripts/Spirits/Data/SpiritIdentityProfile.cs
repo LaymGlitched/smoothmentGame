@@ -11,6 +11,8 @@ namespace GameCode.Spirits.Data
     [CreateAssetMenu(menuName = "Spirits/Spirit Identity Profile", fileName = "NewIdentityProfile")]
     public class SpiritIdentityProfile : ScriptableObject
     {
+        [SerializeField] private Color primaryColor;
+
         [Header("Temperament Axes (0.0 to 1.0)")]
         
         [Tooltip("0 = Detached/Unfeeling, 1 = Deeply Feeling/Compassionate")]
@@ -39,5 +41,10 @@ namespace GameCode.Spirits.Data
         /// How predisposed the Spirit is toward conflict and decisive force.
         /// </summary>
         public float Aggression => aggression;
+
+        /// <summary>
+        /// The spirit's main color.
+        /// </summary>
+        public Color PrimaryColor => primaryColor;
     }
 }

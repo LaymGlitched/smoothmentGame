@@ -11,6 +11,7 @@ namespace GameCode.Spirits.Communication
     public class DialogueResolverService : IDialogueResolver
     {
         private readonly Reiteki.Localization.Core.LocalizationManager _localizationManager;
+        private readonly Dictionary<string, string> _lastPlayedKeys = new Dictionary<string, string>();
 
         public DialogueResolverService(Reiteki.Localization.Core.LocalizationManager localizationManager)
         {
@@ -41,8 +42,22 @@ namespace GameCode.Spirits.Communication
                 return null; // No matching line authored for this scenario
             }
 
+            // Filter out the last played entry to prevent repetition if possible
+            string historyKey = $"{intent.SourceSpirit.Id}_{intent.Topic}";
+            if (validEntries.Count > 1 && _lastPlayedKeys.TryGetValue(historyKey, out string lastPlayedKey))
+            {
+                var filteredEntries = validEntries.FindAll(e => e.LocalizationKey.Value != lastPlayedKey);
+                if (filteredEntries.Count > 0)
+                {
+                    validEntries = filteredEntries;
+                }
+            }
+
             // Pick a random valid entry (Future: Use Weights and CooldownGroups)
             var selectedEntry = validEntries[UnityEngine.Random.Range(0, validEntries.Count)];
+            
+            // Record this entry as the last played for this spirit and topic
+            _lastPlayedKeys[historyKey] = selectedEntry.LocalizationKey.Value;
 
             // Resolve localization here
             string localizedText = _localizationManager != null 

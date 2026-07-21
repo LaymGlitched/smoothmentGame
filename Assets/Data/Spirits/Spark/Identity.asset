@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c8a8cea7aadf8d40a8fc670ec26c7ab, type: 3}
   m_Name: Identity
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Data.SpiritIdentityProfile
+  primaryColor: {r: 1, g: 1, b: 0, a: 1}
   empathy: 0.7
   caution: 0.8
   aggression: 0.2

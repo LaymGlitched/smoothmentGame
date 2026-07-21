@@ -66,8 +66,15 @@ namespace GameCode.Spirits.Communication
         {
             if (resolver == null)
             {
-                Debug.LogWarning("[SpiritDialogueCoordinator] Ignored intent because LocalizationManager is not yet initialized.");
-                return;
+                if (Reiteki.Localization.LocalizationBootstrapper.Instance != null)
+                {
+                    InitializeLocalization(Reiteki.Localization.LocalizationBootstrapper.Instance);
+                }
+                else
+                {
+                    Debug.LogWarning("[SpiritDialogueCoordinator] Ignored intent because LocalizationManager is not yet initialized. Did you forget to add the LocalizationBootstrapper to the scene?");
+                    return;
+                }
             }
 
             // The Resolver determines IF and HOW the intent becomes a concrete request.

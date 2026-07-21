@@ -12,8 +12,7 @@ namespace GameCode.Spirits.UI
     public class SpiritSubtitleUI : MonoBehaviour
     {
         [Header("UI References")]
-        [SerializeField] private TMP_Text subtitleText;
-        [SerializeField] private TMP_Text speakerNameText;
+        [SerializeField] private TMP_Text dialogueText;
         [SerializeField] private CanvasGroup canvasGroup;
         
         [Header("Settings")]
@@ -50,8 +49,10 @@ namespace GameCode.Spirits.UI
             }
 
             // The request now contains the pre-resolved localized text, completely decoupled from the localization system.
-            if (speakerNameText != null) speakerNameText.text = request.SourceSpirit.Definition.DisplayName;
-            if (subtitleText != null) subtitleText.text = request.LocalizedText; 
+            if (dialogueText != null)
+            {
+                dialogueText.text = $"<color=#{ColorUtility.ToHtmlStringRGB(request.SourceSpirit.Definition.IdentityProfile.PrimaryColor)}>{request.SourceSpirit.Definition.DisplayName}</color>: {request.LocalizedText}"; 
+            }
 
             activeDisplayRoutine = StartCoroutine(DisplaySubtitleRoutine(request.Duration));
         }
