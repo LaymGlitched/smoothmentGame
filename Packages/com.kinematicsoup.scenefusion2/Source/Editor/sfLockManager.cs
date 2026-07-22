@@ -25,6 +25,7 @@ namespace KS.SceneFusion2.Unity.Editor
 
         private HashSet<GameObject> m_gameObjectsWithStaleLockShader = new HashSet<GameObject>();
         private HashSet<GameObject> m_gameObjectsWithStaleLODLock = new HashSet<GameObject>();
+        private Dictionary<int, GameObject> m_lockObjectMap = new Dictionary<int, GameObject>();
 
         // Quad mesh used for the icon lock object
         private Mesh m_quadMesh = null;
@@ -181,10 +182,22 @@ namespace KS.SceneFusion2.Unity.Editor
             if ((sfConfig.Get().UI.ShowLockShaders || findWhenLocksDisabled) && gameObject != null &&
                 !PrefabUtility.IsPartOfPrefabAsset(gameObject))
             {
+                int id = gameObject.GetId();
+                GameObject lockObj;
+                if (m_lockObjectMap.TryGetValue(id, out lockObj))
+                {
+                    if (lockObj != null && IsLockObject(lockObj))
+                    {
+                        return lockObj;
+                    }
+                    m_lockObjectMap.Remove(id);
+                }
+
                 foreach (Transform childTransform in gameObject.transform)
                 {
                     if (IsLockObject(childTransform.gameObject))
                     {
+                        m_lockObjectMap[id] = childTransform.gameObject;
                         return childTransform.gameObject;
                     }
                 }
@@ -342,6 +355,7 @@ namespace KS.SceneFusion2.Unity.Editor
 
             if (lockObject != null)
             {
+                m_lockObjectMap[gameObject.GetId()] = lockObject;
                 lockObject.name = LOCK_OBJECT_NAME;
                 sfComponentUtils.SetParent(lockObject, gameObject);
                 // Set lock object as the first child so it won't be rendered on top of the other children.

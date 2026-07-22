@@ -383,31 +383,38 @@ namespace KS.SceneFusion2.Unity.Editor
         }
 
         /// <summary>
-        /// Applies serialized properties to a serialized object. Invokes post property and post uobject change events
-        /// on the uobject's translator for the modified properties.
+        /// Applies serialized properties to a serialized object and disposes native C++ memory wrappers.
+        /// Invokes post property and post uobject change events on the uobject's translator for modified properties.
         /// </summary>
         /// <param name="so"></param>
         private void ApplySerializedProperties(SerializedObject so)
         {
-            if (so.targetObject != null && sfPropertyUtils.ApplyProperties(so))
+            try
             {
-                sfObject obj = sfObjectMap.Get().GetSFObject(so.targetObject);
-                sfBaseUObjectTranslator translator = sfObjectEventDispatcher.Get()
-                    .GetTranslator<sfBaseUObjectTranslator>(obj);
-                if (translator != null)
+                if (so.targetObject != null && sfPropertyUtils.ApplyProperties(so))
                 {
-                    // Strings are the name of the removed dictionary field or null.
-                    List<Tuple<sfBaseProperty, string>> properties;
-                    if (m_changedPropertyMap.TryGetValue(so.targetObject, out properties))
+                    sfObject obj = sfObjectMap.Get().GetSFObject(so.targetObject);
+                    sfBaseUObjectTranslator translator = sfObjectEventDispatcher.Get()
+                        .GetTranslator<sfBaseUObjectTranslator>(obj);
+                    if (translator != null)
                     {
-                        for (int j = 0; j < properties.Count; j++)
+                        // Strings are the name of the removed dictionary field or null.
+                        List<Tuple<sfBaseProperty, string>> properties;
+                        if (m_changedPropertyMap.TryGetValue(so.targetObject, out properties))
                         {
-                            Tuple<sfBaseProperty, string> pair = properties[j];
-                            translator.CallPostPropertyChangeHandlers(so.targetObject, pair.Item1, pair.Item2);
+                            for (int j = 0; j < properties.Count; j++)
+                            {
+                                Tuple<sfBaseProperty, string> pair = properties[j];
+                                translator.CallPostPropertyChangeHandlers(so.targetObject, pair.Item1, pair.Item2);
+                            }
                         }
+                        translator.CallPostUObjectChangeHandlers(so.targetObject);
                     }
-                    translator.CallPostUObjectChangeHandlers(so.targetObject);
                 }
+            }
+            finally
+            {
+                so.Dispose();
             }
         }
 

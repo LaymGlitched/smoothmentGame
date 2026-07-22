@@ -18,6 +18,7 @@ namespace KS.SceneFusion2.Unity.Editor
         private static sfObjectMap m_instance = new sfObjectMap();
 
         private Dictionary<UObject, sfObject> m_uToSFObjectMap = new Dictionary<UObject, sfObject>();
+        private Dictionary<int, sfObject> m_instanceIdToSFObjectMap = new Dictionary<int, sfObject>();
         private Dictionary<sfObject, UObject> m_sfToUObjectMap = new Dictionary<sfObject, UObject>();
 
         /// <summary>Checks if a uobject is in the map.</summary>
@@ -25,7 +26,7 @@ namespace KS.SceneFusion2.Unity.Editor
         /// <returns>true if the uobject is in the map.</returns>
         public bool Contains(UObject uobj)
         {
-            return (object)uobj != null && m_uToSFObjectMap.ContainsKey(uobj);
+            return (object)uobj != null && m_instanceIdToSFObjectMap.ContainsKey(uobj.GetId());
         }
 
         /// <summary>Checks if an sfObject is in the map.</summary>
@@ -42,7 +43,7 @@ namespace KS.SceneFusion2.Unity.Editor
         public sfObject GetSFObject(UObject uobj)
         {
             sfObject obj;
-            if ((object)uobj == null || !m_uToSFObjectMap.TryGetValue(uobj, out obj))
+            if ((object)uobj == null || !m_instanceIdToSFObjectMap.TryGetValue(uobj.GetId(), out obj))
             {
                 return null;
             }
@@ -67,7 +68,7 @@ namespace KS.SceneFusion2.Unity.Editor
                 return null;
             }
             sfObject obj;
-            if (m_uToSFObjectMap.TryGetValue(uobj, out obj))
+            if (m_instanceIdToSFObjectMap.TryGetValue(uobj.GetId(), out obj))
             {
                 // When uobjects are destroyed and recreated via undo, the recreated script is actually a new object
                 // that pretends to be the old object (has the same hashcode and Equals(object) returns true with the
@@ -78,6 +79,7 @@ namespace KS.SceneFusion2.Unity.Editor
                 if (!object.ReferenceEquals(uobj, current))
                 {
                     m_sfToUObjectMap[obj] = uobj;
+                    m_uToSFObjectMap[uobj] = obj;
                 }
 
                 return obj;
@@ -117,8 +119,10 @@ namespace KS.SceneFusion2.Unity.Editor
             {
                 return;
             }
+            int id = uobj.GetId();
             m_sfToUObjectMap[obj] = uobj;
             m_uToSFObjectMap[uobj] = obj;
+            m_instanceIdToSFObjectMap[id] = obj;
         }
 
         /// <summary>Removes a uobject and its sfObject from the map.</summary>
@@ -130,9 +134,11 @@ namespace KS.SceneFusion2.Unity.Editor
             {
                 return null;
             }
+            int id = uobj.GetId();
             sfObject obj;
-            if (m_uToSFObjectMap.TryGetValue(uobj, out obj))
+            if (m_instanceIdToSFObjectMap.TryGetValue(id, out obj))
             {
+                m_instanceIdToSFObjectMap.Remove(id);
                 m_uToSFObjectMap.Remove(uobj);
                 // If the sfObject is mapped to a different uobject, do not remove it.
                 UObject currentUObj;
@@ -159,6 +165,10 @@ namespace KS.SceneFusion2.Unity.Editor
             {
                 m_sfToUObjectMap.Remove(obj);
                 m_uToSFObjectMap.Remove(uobj);
+                if ((object)uobj != null)
+                {
+                    m_instanceIdToSFObjectMap.Remove(uobj.GetId());
+                }
             }
             return uobj;
         }
@@ -167,6 +177,7 @@ namespace KS.SceneFusion2.Unity.Editor
         public void Clear()
         {
             m_uToSFObjectMap.Clear();
+            m_instanceIdToSFObjectMap.Clear();
             m_sfToUObjectMap.Clear();
         }
 
