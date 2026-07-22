@@ -40,14 +40,34 @@ namespace KS.SceneFusion2.Unity.Editor
         /// <summary>Constructor</summary>
         private sfLockManager()
         {
-            Mesh[] builtInMeshes = sfBuiltInAssetsLoader.Get().LoadBuiltInAssets<Mesh>();
-            foreach (Mesh mesh in builtInMeshes)
+            try
             {
-                if (mesh.name == "Quad")
+                sfBuiltInAssetsLoader loader = sfBuiltInAssetsLoader.Get();
+                Mesh[] builtInMeshes = loader != null ? loader.LoadBuiltInAssets<Mesh>() : null;
+                if (builtInMeshes != null)
                 {
-                    m_quadMesh = mesh;
-                    break;
+                    foreach (Mesh mesh in builtInMeshes)
+                    {
+                        if (mesh != null && mesh.name == "Quad")
+                        {
+                            m_quadMesh = mesh;
+                            break;
+                        }
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading built-in Quad mesh: " + e.Message);
+            }
+
+            if (m_quadMesh == null)
+            {
+                try
+                {
+                    m_quadMesh = Resources.GetBuiltinResource<Mesh>("Quad.fbx");
+                }
+                catch {}
             }
         }
 
