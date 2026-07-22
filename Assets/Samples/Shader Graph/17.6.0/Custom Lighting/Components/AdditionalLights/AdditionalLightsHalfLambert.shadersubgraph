@@ -20,6 +20,9 @@
         },
         {
             "m_Id": "530285f154954276b3f6245bbd29e947"
+        },
+        {
+            "m_Id": "e43a162872774bf3ab7e4553ca4f8bbe"
         }
     ],
     "m_Keywords": [],
@@ -71,6 +74,9 @@
         },
         {
             "m_Id": "a885bd5bea584c8ea41d0aefe73e74cc"
+        },
+        {
+            "m_Id": "73930b59b83a457983916e2aba77bbad"
         }
     ],
     "m_GroupDatas": [],
@@ -148,6 +154,20 @@
                     "m_Id": "d869e3d8654b48a491de945ad8af6301"
                 },
                 "m_SlotId": 1
+            }
+        },
+        {
+            "m_OutputSlot": {
+                "m_Node": {
+                    "m_Id": "73930b59b83a457983916e2aba77bbad"
+                },
+                "m_SlotId": 0
+            },
+            "m_InputSlot": {
+                "m_Node": {
+                    "m_Id": "af7e463337fa464994ef4fefeb1ef2b0"
+                },
+                "m_SlotId": 12
             }
         },
         {
@@ -344,6 +364,7 @@
     "m_DisplayName": "Specular",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Specular",
     "m_StageCapability": 3,
     "m_Value": {
@@ -361,12 +382,30 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "0289ef7c5b12424fa580a80d9bec50a2",
+    "m_Id": 0,
+    "m_DisplayName": "Steps",
+    "m_SlotType": 1,
+    "m_Hidden": false,
+    "m_HideConnector": false,
+    "m_ShaderOutputName": "Out",
+    "m_StageCapability": 3,
+    "m_Value": 0.0,
+    "m_DefaultValue": 0.0,
+    "m_Labels": [],
+    "m_LiteralMode": false
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
     "m_ObjectId": "034e7f2441f645919d0e6b0f1edf5fd0",
     "m_Id": 5,
     "m_DisplayName": "MainSpecular",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "MainSpecular",
     "m_StageCapability": 3,
     "m_Value": {
@@ -396,7 +435,7 @@
             "serializedVersion": "2",
             "x": -846.0,
             "y": 106.00000762939453,
-            "width": 206.00006103515626,
+            "width": 206.00006103515625,
             "height": 130.5
         }
     },
@@ -426,6 +465,7 @@
     "m_DisplayName": "MainColor",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "MainColor",
     "m_StageCapability": 3,
     "m_Value": {
@@ -485,6 +525,7 @@
     "m_DisplayName": "Reflectance",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Reflectance",
     "m_StageCapability": 3,
     "m_Value": {
@@ -515,7 +556,7 @@
             "x": -573.9999389648438,
             "y": 320.0000305175781,
             "width": 163.49996948242188,
-            "height": 33.999969482421878
+            "height": 33.999969482421875
         }
     },
     "m_Slots": [
@@ -544,11 +585,13 @@
     "m_DisplayName": "Diffuse",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Diffuse",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -559,6 +602,7 @@
     "m_DisplayName": "Specular",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Specular",
     "m_StageCapability": 3,
     "m_Value": {
@@ -582,6 +626,7 @@
     "m_DisplayName": "Out",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -604,6 +649,9 @@
     "m_Guid": {
         "m_GuidSerialized": "e2c68582-3932-4ce2-b115-d02070a25b36"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "Smoothness",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "Smoothness",
@@ -616,13 +664,27 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": 0.0,
     "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
     "m_RangeValues": {
         "x": 0.0,
         "y": 1.0
-    }
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
 }
 
 {
@@ -639,8 +701,8 @@
             "serializedVersion": "2",
             "x": -772.0,
             "y": 73.00001525878906,
-            "width": 132.00006103515626,
-            "height": 33.999961853027347
+            "width": 132.00006103515625,
+            "height": 33.999961853027344
         }
     },
     "m_Slots": [
@@ -669,6 +731,7 @@
     "m_DisplayName": "MainLightColor",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -691,6 +754,9 @@
     "m_Guid": {
         "m_GuidSerialized": "91bdd5c8-866f-4849-a89a-dfa6a21aa98f"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "Reflectance",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "Reflectance",
@@ -703,7 +769,10 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": {
         "x": 0.0,
         "y": 0.0,
@@ -720,6 +789,7 @@
     "m_DisplayName": "NotConnected",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "NotConnected",
     "m_StageCapability": 3,
     "m_Value": {
@@ -733,7 +803,8 @@
         "y": 0.0,
         "z": 0.0,
         "w": 0.0
-    }
+    },
+    "m_LiteralMode": false
 }
 
 {
@@ -744,11 +815,13 @@
     "m_DisplayName": "MainDiffuse",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "MainDiffuse",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -758,6 +831,9 @@
     "m_Guid": {
         "m_GuidSerialized": "5a8fd716-0518-4b75-9fac-97607ed249cf"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "NormalWS",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "NormalWS",
@@ -770,12 +846,51 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": {
         "x": 0.0,
         "y": 0.0,
         "z": 0.0,
         "w": 0.0
+    }
+}
+
+{
+    "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.PropertyNode",
+    "m_ObjectId": "73930b59b83a457983916e2aba77bbad",
+    "m_Group": {
+        "m_Id": ""
+    },
+    "m_Name": "Property",
+    "m_DrawState": {
+        "m_Expanded": true,
+        "m_Position": {
+            "serializedVersion": "2",
+            "x": -512.6038208007813,
+            "y": 591.396240234375,
+            "width": 101.43399047851563,
+            "height": 32.603759765625
+        }
+    },
+    "m_Slots": [
+        {
+            "m_Id": "0289ef7c5b12424fa580a80d9bec50a2"
+        }
+    ],
+    "synonyms": [],
+    "m_Precision": 0,
+    "m_PreviewExpanded": true,
+    "m_DismissedVersion": 0,
+    "m_PreviewMode": 0,
+    "m_CustomColors": {
+        "m_SerializableColors": []
+    },
+    "m_Property": {
+        "m_Id": "e43a162872774bf3ab7e4553ca4f8bbe"
     }
 }
 
@@ -786,6 +901,9 @@
     "m_Guid": {
         "m_GuidSerialized": "09ce332d-c752-414b-a652-75b1e796def3"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "MainLightDiffuse",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "MainLightDiffuse",
@@ -798,13 +916,27 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": 0.0,
     "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
     "m_RangeValues": {
         "x": 0.0,
         "y": 1.0
-    }
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
 }
 
 {
@@ -851,6 +983,9 @@
     "m_Guid": {
         "m_GuidSerialized": "7cb49a27-0767-4479-83ca-a8c03c548a6c"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "MainLightColor",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "MainLightColor",
@@ -863,7 +998,10 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": {
         "x": 0.0,
         "y": 0.0,
@@ -880,6 +1018,7 @@
     "m_DisplayName": "WorldPosition",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "WorldPosition",
     "m_StageCapability": 3,
     "m_Value": {
@@ -903,11 +1042,13 @@
     "m_DisplayName": "MainLightDiffuse",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -918,6 +1059,7 @@
     "m_DisplayName": "Connected",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Connected",
     "m_StageCapability": 3,
     "m_Value": {
@@ -931,7 +1073,8 @@
         "y": 0.0,
         "z": 0.0,
         "w": 0.0
-    }
+    },
+    "m_LiteralMode": false
 }
 
 {
@@ -942,11 +1085,13 @@
     "m_DisplayName": "Diffuse",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Diffuse",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -963,7 +1108,7 @@
             "serializedVersion": "2",
             "x": -556.6666259765625,
             "y": 460.0,
-            "width": 147.33331298828126,
+            "width": 147.33331298828125,
             "height": 131.3333740234375
         }
     },
@@ -1006,6 +1151,9 @@
         },
         {
             "m_Id": "530285f154954276b3f6245bbd29e947"
+        },
+        {
+            "m_Id": "e43a162872774bf3ab7e4553ca4f8bbe"
         }
     ]
 }
@@ -1018,6 +1166,7 @@
     "m_DisplayName": "Color",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Color",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1048,7 +1197,7 @@
             "x": -566.4999389648438,
             "y": 387.9999694824219,
             "width": 155.99996948242188,
-            "height": 34.000091552734378
+            "height": 34.000091552734375
         }
     },
     "m_Slots": [
@@ -1081,10 +1230,10 @@
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
-            "x": -294.6666259765625,
-            "y": 0.0,
-            "width": 270.0,
-            "height": 240.0
+            "x": -295.2453308105469,
+            "y": -0.000011384465324226767,
+            "width": 338.71697998046875,
+            "height": 307.9245300292969
         }
     },
     "m_Slots": [
@@ -1116,6 +1265,9 @@
             "m_Id": "d25a01793c9a40a09602a9124176e76d"
         },
         {
+            "m_Id": "db04fa3c294548d39fd81fb785b02caa"
+        },
+        {
             "m_Id": "a20bd994a61349b183b292f543a94b52"
         },
         {
@@ -1140,7 +1292,7 @@
     "m_FunctionName": "AddAdditionalLightsHalfLambert",
     "m_FunctionSource": "3beadf505dbc54f4cae878435013d751",
     "m_FunctionSourceUsePragmas": true,
-    "m_FunctionBody": "Diffuse = MainDiffuse;\r\nSpecular = MainSpecular;\r\nColor = MainColor * (MainDiffuse + MainSpecular);\r\n\r\n#ifndef SHADERGRAPH_PREVIEW\r\n    \r\n    uint pixelLightCount = GetAdditionalLightsCount();\r\n\r\n#if USE_CLUSTER_LIGHT_LOOP\r\n    // for Foward+ LIGHT_LOOP_BEGIN macro uses inputData.normalizedScreenSpaceUV and inputData.positionWS\r\n    InputData inputData = (InputData)0;\r\n\r\n    inputData.normalizedScreenSpaceUV = ScreenPosition;\r\n    inputData.positionWS = WorldPosition;\r\n#endif\r\n\r\n    LIGHT_LOOP_BEGIN(pixelLightCount)\r\n\t\t// Call the URP additional light algorithm. This will not calculate shadows, since we don't pass a shadow mask value\r\n\t\tLight light = GetAdditionalLight(lightIndex, WorldPosition);\r\n\t\t// Manually set the shadow attenuation by calculating realtime shadows\r\n\t\tlight.shadowAttenuation = AdditionalLightRealtimeShadow(lightIndex, WorldPosition, light.direction);\r\n        float NdotL = dot(WorldNormal, light.direction);\r\n        float halfLambert = NdotL * 0.5 + 0.5;\r\n        float atten = light.distanceAttenuation * light.shadowAttenuation;\r\n        float thisDiffuse = atten * halfLambert;\r\n        float3 halfAngle = normalize(light.direction + WorldView);\r\n        float spec = pow(saturate(dot(halfAngle, WorldNormal)), SpecPower);\r\n        float3 thisSpecular = spec * Reflectance * atten;\r\n        Diffuse += thisDiffuse;\r\n        Specular += thisSpecular;\r\n        #if defined(_LIGHT_COOKIES)\r\n            float3 cookieColor = SampleAdditionalLightCookie(lightIndex, WorldPosition);\r\n            light.color *= cookieColor;\r\n        #endif\r\n        Color += light.color * (thisDiffuse + thisSpecular);\r\n    LIGHT_LOOP_END\r\n    float total = Diffuse + dot(Specular, float3(0.333, 0.333, 0.333));\r\n    Color = total <= 0 ? MainColor : Color / total;\r\n#endif"
+    "m_FunctionBody": "// Initialize output values with Main Light data\nDiffuse = MainDiffuse;\nSpecular = MainSpecular;\nColor = MainColor * (MainDiffuse + MainSpecular);\n\n#ifndef SHADERGRAPH_PREVIEW\n\n    // 1. Ambient light calculation (prevents pitch-black void shadows)\n    float3 ambient = SampleSH(WorldNormal);\n    \n    float totalDiffuse = MainDiffuse;\n    float3 totalSpecular = MainSpecular;\n    float3 totalColor = Color;\n\n    // 2. Additional Lights Loop\n    uint pixelLightCount = GetAdditionalLightsCount();\n\n    // Required setup for Forward+ cluster lighting\n    InputData inputData = (InputData)0;\n    inputData.positionWS = WorldPosition;\n    inputData.normalizedScreenSpaceUV = ScreenPosition;\n\n    LIGHT_LOOP_BEGIN(pixelLightCount)\n        Light light = GetAdditionalLight(lightIndex, WorldPosition);\n        \n        // Calculate realtime shadow attenuation for additional lights\n        light.shadowAttenuation = AdditionalLightRealtimeShadow(lightIndex, WorldPosition, light.direction);\n        \n        // --- TOON SHADING MATH ---\n        float NdotL = dot(WorldNormal, light.direction);\n        float halfLambert = saturate(NdotL * 0.5 + 0.5);\n        \n        // Step the Half-Lambert value using your 'Steps' input pin\n        float toonLambert = floor(halfLambert * Steps) / Steps;\n        \n        float atten = light.distanceAttenuation * light.shadowAttenuation;\n        float thisDiffuse = atten * toonLambert;\n        \n        // Specular highlight calculation\n        float3 halfAngle = normalize(light.direction + WorldView);\n        float spec = pow(saturate(dot(halfAngle, WorldNormal)), SpecPower);\n        spec = step(0.5, spec); // Hard toon specular edge\n        float3 thisSpecular = spec * Reflectance * atten;\n        \n        // Accumulate diffuse & specular\n        totalDiffuse += thisDiffuse;\n        totalSpecular += thisSpecular;\n        \n        #if defined(_LIGHT_COOKIES)\n            float3 cookieColor = SampleAdditionalLightCookie(lightIndex, WorldPosition);\n            light.color *= cookieColor;\n        #endif\n        \n        // Accumulate colored light contribution\n        totalColor += light.color * (thisDiffuse + thisSpecular);\n    LIGHT_LOOP_END\n\n    // Assign final outputs back to the node output pins\n    Diffuse = totalDiffuse;\n    Specular = totalSpecular;\n    \n    // Combine total light color with ambient environment lighting\n    Color = totalColor + (ambient * MainColor);\n\n#endif"
 }
 
 {
@@ -1151,6 +1303,7 @@
     "m_DisplayName": "WorldView",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "WorldView",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1174,11 +1327,13 @@
     "m_DisplayName": "Smoothness",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "_Smoothness",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -1189,11 +1344,13 @@
     "m_DisplayName": "Smoothness",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -1204,6 +1361,7 @@
     "m_DisplayName": "Color",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Color",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1232,7 +1390,7 @@
         "m_Position": {
             "serializedVersion": "2",
             "x": -703.0000610351563,
-            "y": -149.00001525878907,
+            "y": -149.00001525878906,
             "width": 140.0,
             "height": 34.0
         }
@@ -1263,11 +1421,13 @@
     "m_DisplayName": "SpecPower",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "SpecPower",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -1278,6 +1438,7 @@
     "m_DisplayName": "MainLightSpecular",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1300,6 +1461,9 @@
     "m_Guid": {
         "m_GuidSerialized": "30389ff4-ef29-4a0e-ae70-2fb81f258f8f"
     },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
     "m_Name": "MainLightSpecular",
     "m_DefaultRefNameVersion": 1,
     "m_RefNameGeneratedByDisplayName": "MainLightSpecular",
@@ -1312,7 +1476,10 @@
     "m_Precision": 0,
     "overrideHLSLDeclaration": false,
     "hlslDeclarationOverride": 0,
+    "hideConnector": false,
     "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
     "m_Value": {
         "x": 0.0,
         "y": 0.0,
@@ -1329,6 +1496,7 @@
     "m_DisplayName": "ScreenPosition",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "ScreenPosition",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1357,7 +1525,7 @@
             "x": -616.4999389648438,
             "y": 36.00001907348633,
             "width": 205.99996948242188,
-            "height": 141.99998474121095
+            "height": 141.99998474121094
         }
     },
     "m_Slots": [
@@ -1386,6 +1554,23 @@
 
 {
     "m_SGVersion": 0,
+    "m_Type": "UnityEditor.ShaderGraph.Vector1MaterialSlot",
+    "m_ObjectId": "db04fa3c294548d39fd81fb785b02caa",
+    "m_Id": 12,
+    "m_DisplayName": "Steps",
+    "m_SlotType": 0,
+    "m_Hidden": false,
+    "m_HideConnector": false,
+    "m_ShaderOutputName": "Steps",
+    "m_StageCapability": 3,
+    "m_Value": 0.0,
+    "m_DefaultValue": 0.0,
+    "m_Labels": [],
+    "m_LiteralMode": false
+}
+
+{
+    "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.StickyNoteData",
     "m_ObjectId": "e0cb7ba40e0940709b8dd5a2869d4b94",
     "m_Title": "",
@@ -1394,10 +1579,10 @@
     "m_Theme": 0,
     "m_Position": {
         "serializedVersion": "2",
-        "x": -232.0,
-        "y": 286.0,
-        "width": 200.0,
-        "height": 108.0
+        "x": -227.32077026367188,
+        "y": 310.6415100097656,
+        "width": 200.1509552001953,
+        "height": 108.67926025390625
     },
     "m_Group": {
         "m_Id": ""
@@ -1412,6 +1597,7 @@
     "m_DisplayName": "WorldNormal",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "WorldNormal",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1428,6 +1614,51 @@
 }
 
 {
+    "m_SGVersion": 1,
+    "m_Type": "UnityEditor.ShaderGraph.Internal.Vector1ShaderProperty",
+    "m_ObjectId": "e43a162872774bf3ab7e4553ca4f8bbe",
+    "m_Guid": {
+        "m_GuidSerialized": "ecce6ee5-ef91-4720-bec6-85b651712940"
+    },
+    "promotedFromAssetID": "",
+    "promotedFromCategoryName": "",
+    "promotedOrdering": -1,
+    "m_Name": "Steps",
+    "m_DefaultRefNameVersion": 1,
+    "m_RefNameGeneratedByDisplayName": "Steps",
+    "m_DefaultReferenceName": "_Steps",
+    "m_OverrideReferenceName": "",
+    "m_GeneratePropertyBlock": true,
+    "m_UseCustomSlotLabel": false,
+    "m_CustomSlotLabel": "",
+    "m_DismissedVersion": 0,
+    "m_Precision": 0,
+    "overrideHLSLDeclaration": false,
+    "hlslDeclarationOverride": 0,
+    "hideConnector": false,
+    "m_Hidden": false,
+    "m_PerRendererData": false,
+    "m_customAttributes": [],
+    "m_Value": 4.0,
+    "m_FloatType": 0,
+    "m_LiteralFloatMode": false,
+    "m_RangeValues": {
+        "x": 0.0,
+        "y": 1.0
+    },
+    "m_SliderType": 0,
+    "m_SliderPower": 3.0,
+    "m_EnumType": 0,
+    "m_CSharpEnumString": "",
+    "m_EnumNames": [
+        "Default"
+    ],
+    "m_EnumValues": [
+        0
+    ]
+}
+
+{
     "m_SGVersion": 0,
     "m_Type": "UnityEditor.ShaderGraph.Vector3MaterialSlot",
     "m_ObjectId": "e44ae5bbf0ad43d89107afdbce38e4fc",
@@ -1435,6 +1666,7 @@
     "m_DisplayName": "Out",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1457,14 +1689,14 @@
     "m_Group": {
         "m_Id": ""
     },
-    "m_Name": "SmoothnessToSpecPower",
+    "m_Name": "Smoothness To Spec Power",
     "m_DrawState": {
         "m_Expanded": true,
         "m_Position": {
             "serializedVersion": "2",
             "x": -563.0000610351563,
-            "y": -189.50001525878907,
-            "width": 152.50006103515626,
+            "y": -189.50001525878906,
+            "width": 152.50006103515625,
             "height": 95.00001525878906
         }
     },
@@ -1509,8 +1741,8 @@
             "serializedVersion": "2",
             "x": -616.6666870117188,
             "y": 180.0,
-            "width": 207.33331298828126,
-            "height": 134.66668701171876
+            "width": 207.33331298828125,
+            "height": 134.66668701171875
         }
     },
     "m_Slots": [
@@ -1539,6 +1771,7 @@
     "m_DisplayName": "Out",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1562,6 +1795,7 @@
     "m_DisplayName": "Input",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Input",
     "m_StageCapability": 3
 }
@@ -1574,11 +1808,13 @@
     "m_DisplayName": "SpecPower",
     "m_SlotType": 0,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "SpecPower",
     "m_StageCapability": 3,
     "m_Value": 0.0,
     "m_DefaultValue": 0.0,
-    "m_Labels": []
+    "m_Labels": [],
+    "m_LiteralMode": false
 }
 
 {
@@ -1589,6 +1825,7 @@
     "m_DisplayName": "Out",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1620,7 +1857,7 @@
             "serializedVersion": "2",
             "x": -548.6666870117188,
             "y": 424.0,
-            "width": 140.00006103515626,
+            "width": 140.00006103515625,
             "height": 36.0
         }
     },
@@ -1650,6 +1887,7 @@
     "m_DisplayName": "NormalWS",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1713,6 +1951,7 @@
     "m_DisplayName": "Out",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
@@ -1726,7 +1965,8 @@
         "y": 0.0,
         "z": 0.0,
         "w": 0.0
-    }
+    },
+    "m_LiteralMode": false
 }
 
 {
@@ -1737,6 +1977,7 @@
     "m_DisplayName": "Reflectance",
     "m_SlotType": 1,
     "m_Hidden": false,
+    "m_HideConnector": false,
     "m_ShaderOutputName": "Out",
     "m_StageCapability": 3,
     "m_Value": {
