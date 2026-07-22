@@ -212,7 +212,7 @@ namespace KS.SceneFusion2.Unity.Editor
         private const float AVATAR_SEND_INTERVAL = 0.033f; // Max 30 network updates per second
 
         /// <summary>
-        /// Hides avatars that are too close to the camera and reposition the names to face the camera.
+        /// Hides avatars that are too close to the camera, repositions the names to face the camera, and interpolates avatar movement smoothly.
         /// </summary>
         public void UpdateAvatars()
         {
@@ -222,12 +222,25 @@ namespace KS.SceneFusion2.Unity.Editor
                 return;
             }
             Vector3 sceneCameraPosition = camera.transform.position;
-            foreach (GameObject avatar in m_sfObjectIdToGameObject.Values)
+            float lerpFactor = Mathf.Clamp01(Time.unscaledDeltaTime * 20f);
+
+            foreach (KeyValuePair<uint, GameObject> kvp in m_userIdToCamera)
             {
+                uint userId = kvp.Key;
+                GameObject avatar = kvp.Value;
                 if (avatar == null)
                 {
                     continue;
                 }
+
+                // Smoothly lerp user camera avatar position and rotation frame-by-frame
+                CameraInfo info;
+                if (m_userIdToCameraInfo.TryGetValue(userId, out info))
+                {
+                    avatar.transform.position = Vector3.Lerp(avatar.transform.position, info.Position, lerpFactor);
+                    avatar.transform.rotation = Quaternion.Slerp(avatar.transform.rotation, info.Rotation, lerpFactor);
+                }
+
                 bool shouldBeActive = sfConfig.Get().UI.ShowUserCameras && 
                     (avatar.transform.position - sceneCameraPosition).magnitude > DISAPEAR_DISTANCE;
                 if (avatar.activeSelf != shouldBeActive)
@@ -475,14 +488,14 @@ namespace KS.SceneFusion2.Unity.Editor
             }
         }
 
-        /// <summary>Called when an avatar's position changes. Moves the avatar game object.</summary>
+        /// <summary>Called when an avatar's position changes. Updates target position for smooth interpolation.</summary>
         /// <param name="id">id of the user whose avatar property changed</param>
         /// <param name="avatar">avatar to apply property change.</param>
         /// <param name="property"></param>
         private void OnPositionChange(uint userId, GameObject avatar, sfBaseProperty property)
         {
-            avatar.transform.position = property.Cast<Vector3>();
-            m_userIdToCameraInfo[userId].Position = avatar.transform.position;
+            Vector3 targetPos = property.Cast<Vector3>();
+            m_userIdToCameraInfo[userId].Position = targetPos;
             if (m_followedUserId == userId)
             {
                 StartFollowing();
@@ -490,14 +503,14 @@ namespace KS.SceneFusion2.Unity.Editor
             sfUI.Get().MarkSceneViewStale();
         }
 
-        /// <summary>Called when an avatar's rotation changes. Rotates the avatar game object.</summary>
+        /// <summary>Called when an avatar's rotation changes. Updates target rotation for smooth interpolation.</summary>
         /// <param name="id">id of the user whose avatar property changed</param>
         /// <param name="avatar">avatar to apply property change.</param>
         /// <param name="property"></param>
         private void OnRotationChange(uint userId, GameObject avatar, sfBaseProperty property)
         {
-            avatar.transform.rotation = property.Cast<Quaternion>();
-            m_userIdToCameraInfo[userId].Rotation = avatar.transform.rotation;
+            Quaternion targetRot = property.Cast<Quaternion>();
+            m_userIdToCameraInfo[userId].Rotation = targetRot;
             if (m_followedUserId == userId)
             {
                 StartFollowing();
@@ -741,44 +754,23 @@ namespace KS.SceneFusion2.Unity.Editor
                 }
             }
 
-            if (m_interpolatingFrame <= INTERPOLATION_FRAME_NUM)
-            {
-                m_interpolatingFrame++;
-                float t = m_interpolatingFrame / INTERPOLATION_FRAME_NUM;
-                m_renderPivot = Vector3.Slerp(
-                    m_oldPivot,
-                    info.Pivot,
-                    t);
-                m_renderRotation = Quaternion.Slerp(
-                    m_oldRotation,
-                    info.Rotation,
-                    t);
-                m_renderSize = Mathf.Lerp(
-                    m_oldSize,
-                    SceneView.lastActiveSceneView.size,
-                    t);
+            float lerpFactor = Mathf.Clamp01(Time.unscaledDeltaTime * 20f);
+            m_renderPivot = Vector3.Slerp(view.pivot, info.Pivot, lerpFactor);
+            m_renderRotation = Quaternion.Slerp(view.rotation, info.Rotation, lerpFactor);
+            m_renderSize = Mathf.Lerp(view.size, info.SceneViewSize, lerpFactor);
+            m_interpolatingFrame = 1f;
 
+            if ((view.pivot - info.Pivot).sqrMagnitude > 0.0001f ||
+                Quaternion.Angle(view.rotation, info.Rotation) > 0.01f ||
+                Mathf.Abs(view.size - info.SceneViewSize) > 0.01f)
+            {
                 m_cameraManager.SceneViewLookAt(
                     m_renderPivot,
                     m_renderRotation,
                     m_renderSize,
-                    SceneView.lastActiveSceneView.orthographic,
-                    true);
-                SceneView.RepaintAll();
-            }
-            else if (sceneViewCameraTransform.position != info.Position
-                    || sceneViewCameraTransform.rotation != info.Rotation
-                    || view.orthographic != info.Orthographic
-                    || view.in2DMode != info.In2DMode
-                    )
-            {
-                m_cameraManager.SceneViewLookAt(
-                    info.Pivot,
-                    info.Rotation,
-                    info.SceneViewSize,
                     info.Orthographic,
                     true);
-                SceneView.RepaintAll();
+                sfUI.Get().MarkSceneViewStale();
             }
         }
     }
