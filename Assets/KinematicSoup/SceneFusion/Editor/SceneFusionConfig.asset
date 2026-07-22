@@ -28,8 +28,8 @@ MonoBehaviour:
     ReceiveBufferSize: 65536
     OverrideServerPort: 0
   Performance:
-    PropertySyncRate: 60
-    TerrainSyncRate: 30
+    PropertySyncRate: 30
+    TerrainSyncRate: 15
   Logging:
     ObjectEventLogging: 0
     m_level: 2

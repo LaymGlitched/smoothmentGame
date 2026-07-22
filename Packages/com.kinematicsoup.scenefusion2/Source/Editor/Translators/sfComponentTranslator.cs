@@ -103,7 +103,7 @@ namespace KS.SceneFusion2.Unity.Editor
             // users, so we don't sync it.
             sfPropertyManager.Get().Blacklist.Add("TMPro.TMP_Text", "m_renderer");
 
-            // Directly set transform position/rotation/scale using smooth frame-by-frame interpolation to eliminate jitter.
+            // Directly set transform position/rotation/scale using smooth frame-by-frame interpolation ONLY for objects actually moving.
             m_propertyChangeHandlers.Add<Transform>(sfProp.Position, (UObject uobj, sfBaseProperty prop) =>
             {
                 Transform transform = uobj as Transform;
@@ -122,6 +122,12 @@ namespace KS.SceneFusion2.Unity.Editor
                 else
                 {
                     targetPos = prop.Cast<Vector3>();
+                }
+
+                // Only sync if the object is actually being moved (delta > threshold)
+                if ((transform.localPosition - targetPos).sqrMagnitude < 0.0001f)
+                {
+                    return true;
                 }
 
                 TransformTarget target;
@@ -154,6 +160,12 @@ namespace KS.SceneFusion2.Unity.Editor
                     targetRot = prop.Cast<Quaternion>();
                 }
 
+                // Only sync if the object is actually being rotated
+                if (Quaternion.Angle(transform.localRotation, targetRot) < 0.05f)
+                {
+                    return true;
+                }
+
                 TransformTarget target;
                 if (!m_interpolatingTransforms.TryGetValue(transform, out target))
                 {
@@ -182,6 +194,12 @@ namespace KS.SceneFusion2.Unity.Editor
                 else
                 {
                     targetScale = prop.Cast<Vector3>();
+                }
+
+                // Only sync if the object is actually being scaled
+                if ((transform.localScale - targetScale).sqrMagnitude < 0.0001f)
+                {
+                    return true;
                 }
 
                 TransformTarget target;
@@ -256,7 +274,9 @@ namespace KS.SceneFusion2.Unity.Editor
             if (m_interpolatingTransforms.Count > 0)
             {
                 m_interpolationToRemove.Clear();
-                float lerpFactor = Mathf.Clamp01(deltaTime * 30f);
+                float lerpFactor = Mathf.Clamp01(deltaTime * 25f);
+                bool movedAny = false;
+
                 foreach (KeyValuePair<Transform, TransformTarget> kvp in m_interpolatingTransforms)
                 {
                     Transform transform = kvp.Key;
@@ -282,14 +302,13 @@ namespace KS.SceneFusion2.Unity.Editor
                             transform.localPosition = next;
                             complete = false;
                         }
-                        RedrawSceneView(null);
-                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                        movedAny = true;
                     }
                     if (target.HasRotation)
                     {
                         Quaternion current = transform.localRotation;
                         Quaternion next = Quaternion.Slerp(current, target.TargetRotation, lerpFactor);
-                        if (Quaternion.Angle(next, target.TargetRotation) < 0.01f)
+                        if (Quaternion.Angle(next, target.TargetRotation) < 0.05f)
                         {
                             transform.localRotation = target.TargetRotation;
                             target.HasRotation = false;
@@ -299,8 +318,7 @@ namespace KS.SceneFusion2.Unity.Editor
                             transform.localRotation = next;
                             complete = false;
                         }
-                        RedrawSceneView(null);
-                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                        movedAny = true;
                     }
                     if (target.HasScale)
                     {
@@ -316,14 +334,19 @@ namespace KS.SceneFusion2.Unity.Editor
                             transform.localScale = next;
                             complete = false;
                         }
-                        RedrawSceneView(null);
-                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                        movedAny = true;
                     }
 
                     if (complete)
                     {
                         m_interpolationToRemove.Add(transform);
+                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
                     }
+                }
+
+                if (movedAny)
+                {
+                    sfUI.Get().MarkSceneViewStale();
                 }
 
                 for (int i = 0; i < m_interpolationToRemove.Count; i++)
