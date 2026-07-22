@@ -10,7 +10,7 @@ namespace FPMovement
     [Serializable]
     public struct PhysicMaterialMapping
     {
-        public PhysicMaterial physicMaterial;
+        public PhysicsMaterial physicMaterial;
         public SurfaceType surfaceType;
     }
 
@@ -56,7 +56,7 @@ namespace FPMovement
         public SurfaceType DefaultSurface => defaultSurface;
 
         // Cached runtime dictionaries for fast lookups
-        private Dictionary<PhysicMaterial, SurfaceType> physicMatLookup = new Dictionary<PhysicMaterial, SurfaceType>();
+        private Dictionary<PhysicsMaterial, SurfaceType> physicMatLookup = new Dictionary<PhysicsMaterial, SurfaceType>();
         private Dictionary<TerrainLayer, SurfaceType> terrainLayerLookup = new Dictionary<TerrainLayer, SurfaceType>();
 
         // Cache components attached to colliders to prevent GC from GetComponent during gameplay
@@ -140,7 +140,7 @@ namespace FPMovement
                 }
 
                 // 3. Check for PhysicMaterial / PhysicsMaterial
-                PhysicMaterial mat = hitCollider.sharedMaterial;
+                PhysicsMaterial mat = hitCollider.sharedMaterial;
                 if (mat != null && physicMatLookup.TryGetValue(mat, out SurfaceType matchedSurface))
                 {
                     return matchedSurface;
