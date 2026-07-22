@@ -230,10 +230,10 @@ namespace KS.SceneFusion2.Unity.Editor
 
             if (handlers != null)
             {
-                foreach (bool result in handlers.GetInvocationList().Select(
-                    (Delegate handler) => ((PropertyChangeHandler)handler)(uobj, property)))
+                Delegate[] invocationList = handlers.GetInvocationList();
+                for (int i = 0; i < invocationList.Length; i++)
                 {
-                    if (result)
+                    if (((PropertyChangeHandler)invocationList[i])(uobj, property))
                     {
                         return true;
                     }

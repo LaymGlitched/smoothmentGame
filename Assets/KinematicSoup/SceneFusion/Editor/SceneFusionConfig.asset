@@ -16,7 +16,7 @@ MonoBehaviour:
   LastVersion: 2.0.4
   ShowGettingStartedScreen: 1
   m_syncMaterials: 1
-  m_syncPrefabs: 1
+  m_syncPrefabs: 2
   UI:
     ShowUserCameras: 1
     m_showLockShaders: 1
@@ -25,11 +25,11 @@ MonoBehaviour:
     m_projectBrowserIconOffset: {x: 0, y: 0}
   Network:
     Timeout: 30
-    ReceiveBufferSize: 1024
+    ReceiveBufferSize: 65536
     OverrideServerPort: 0
   Performance:
-    PropertySyncRate: 10
-    TerrainSyncRate: 2
+    PropertySyncRate: 60
+    TerrainSyncRate: 30
   Logging:
     ObjectEventLogging: 0
     m_level: 2
