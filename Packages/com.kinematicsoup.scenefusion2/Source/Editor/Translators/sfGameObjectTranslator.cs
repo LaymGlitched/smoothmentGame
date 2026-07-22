@@ -3540,15 +3540,19 @@ namespace KS.SceneFusion2.Unity.Editor
         }
 
         /// <summary>
-        /// Called when a game object is created locally. Adds the game object's parent sfObject to the set of objects
-        /// with new children to upload.
+        /// Called when a game object is created locally. Immediately creates sfObjects for the new game object hierarchy and uploads it to the session.
         /// </summary>
         /// <param name="gameObject">gameObject that was created.</param>
         private void OnCreateGameObject(GameObject gameObject)
         {
+            if (gameObject == null)
+            {
+                return;
+            }
             sfObject obj = sfObjectMap.Get().GetSFObject(gameObject);
             if (obj == null || !obj.IsSyncing)
             {
+                CreateObject(gameObject);
                 AddParentToUploadSet(gameObject);
             }
         }
@@ -3563,6 +3567,14 @@ namespace KS.SceneFusion2.Unity.Editor
             if (prefabParent == null)
             {
                 return;
+            }
+            foreach (Transform child in prefabParent.transform)
+            {
+                sfObject childObj = sfObjectMap.Get().GetSFObject(child.gameObject);
+                if (childObj == null || !childObj.IsSyncing)
+                {
+                    CreateObject(child.gameObject);
+                }
             }
             sfObject obj = sfObjectMap.Get().GetSFObject(prefabParent.transform);
             if (obj != null && obj.IsSyncing)
