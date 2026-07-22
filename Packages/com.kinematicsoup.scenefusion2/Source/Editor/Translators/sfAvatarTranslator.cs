@@ -207,6 +207,10 @@ namespace KS.SceneFusion2.Unity.Editor
             sfUI.Get().MarkSceneViewStale();
         }
 
+        private Dictionary<GameObject, TextMesh> m_avatarTextMap = new Dictionary<GameObject, TextMesh>();
+        private float m_lastAvatarSendTime = 0f;
+        private const float AVATAR_SEND_INTERVAL = 0.033f; // Max 30 network updates per second
+
         /// <summary>
         /// Hides avatars that are too close to the camera and reposition the names to face the camera.
         /// </summary>
@@ -220,11 +224,24 @@ namespace KS.SceneFusion2.Unity.Editor
             Vector3 sceneCameraPosition = camera.transform.position;
             foreach (GameObject avatar in m_sfObjectIdToGameObject.Values)
             {
-                avatar.SetActive(sfConfig.Get().UI.ShowUserCameras && 
-                    (avatar.transform.position - sceneCameraPosition).magnitude > DISAPEAR_DISTANCE);
+                if (avatar == null)
+                {
+                    continue;
+                }
+                bool shouldBeActive = sfConfig.Get().UI.ShowUserCameras && 
+                    (avatar.transform.position - sceneCameraPosition).magnitude > DISAPEAR_DISTANCE;
+                if (avatar.activeSelf != shouldBeActive)
+                {
+                    avatar.SetActive(shouldBeActive);
+                }
                 if (avatar.activeSelf)
                 {
-                    TextMesh text = avatar.GetComponentInChildren<TextMesh>();
+                    TextMesh text;
+                    if (!m_avatarTextMap.TryGetValue(avatar, out text) || text == null)
+                    {
+                        text = avatar.GetComponentInChildren<TextMesh>();
+                        m_avatarTextMap[avatar] = text;
+                    }
                     if (text != null)
                     {
                         text.transform.forward = (text.transform.position - camera.transform.position).normalized;
@@ -241,6 +258,13 @@ namespace KS.SceneFusion2.Unity.Editor
             {
                 return;
             }
+
+            float currentTime = Time.realtimeSinceStartup;
+            if (currentTime - m_lastAvatarSendTime < AVATAR_SEND_INTERVAL)
+            {
+                return;
+            }
+            m_lastAvatarSendTime = currentTime;
 
             sfDictionaryProperty cameraProperties = m_cameraObject.Property as sfDictionaryProperty;
             

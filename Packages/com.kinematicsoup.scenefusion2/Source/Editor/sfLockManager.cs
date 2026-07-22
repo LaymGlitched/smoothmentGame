@@ -107,6 +107,9 @@ namespace KS.SceneFusion2.Unity.Editor
             m_userToIconMaterial.Clear();
         }
 
+        private float m_lastAnnotationUpdate = 0f;
+        private const float ANNOTATION_UPDATE_INTERVAL = 0.33f; // Max 3 times per second
+
         /// <summary>Called every frame.</summary>
         /// <param name="deltaTime">deltaTime since the last frame.</param>
         private void Update(float deltaTime)
@@ -119,23 +122,37 @@ namespace KS.SceneFusion2.Unity.Editor
             // Update lock LOD
             foreach (GameObject gameObject in m_gameObjectsWithStaleLODLock)
             {
-                UpdateLockLOD(gameObject, FindLockObject(gameObject));
+                if (gameObject != null)
+                {
+                    UpdateLockLOD(gameObject, FindLockObject(gameObject));
+                }
             }
             m_gameObjectsWithStaleLODLock.Clear();
 
             // Refresh stale lock objects
             foreach (GameObject gameObject in m_gameObjectsWithStaleLockShader)
             {
-                RefreshLock(gameObject);
+                if (gameObject != null)
+                {
+                    RefreshLock(gameObject);
+                }
             }
             m_gameObjectsWithStaleLockShader.Clear();
 
-            // If the icons in the scene have potential changes, refresh all lock objects.
-            if (sfAnnotationUtils.Get().UpdateAnnotationCache())
+            // If the icons in the scene have potential changes, refresh all lock objects (throttled).
+            float currentTime = Time.realtimeSinceStartup;
+            if (currentTime - m_lastAnnotationUpdate >= ANNOTATION_UPDATE_INTERVAL)
             {
-                foreach (GameObject gameObject in sfUnityUtils.IterateGameObjects())
+                m_lastAnnotationUpdate = currentTime;
+                if (sfAnnotationUtils.Get().UpdateAnnotationCache())
                 {
-                    RefreshLock(gameObject);
+                    foreach (GameObject gameObject in sfUnityUtils.IterateGameObjects())
+                    {
+                        if (gameObject != null)
+                        {
+                            RefreshLock(gameObject);
+                        }
+                    }
                 }
             }
         }
