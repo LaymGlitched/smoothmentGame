@@ -38,7 +38,8 @@ namespace KS.SceneFusion2.Unity.Editor
             foreach (ConstructorInfo c in ctors)
             {
                 ParameterInfo[] p = c.GetParameters();
-                if (p.Length == 1 && (p[0].ParameterType == typeof(int) || p[0].ParameterType == typeof(uint)))
+                if (p.Length == 1 && (p[0].ParameterType == typeof(int) || p[0].ParameterType == typeof(uint) || 
+                                     p[0].ParameterType == typeof(ulong) || p[0].ParameterType == typeof(long)))
                 {
                     m_entityIdCtor = c;
                     break;
@@ -51,13 +52,13 @@ namespace KS.SceneFusion2.Unity.Editor
             if (m_entityIdField != null)
             {
                 object val = m_entityIdField.GetValue(entityId);
-                if (val is int intVal)
+                if (val != null)
                 {
-                    return intVal;
-                }
-                if (val is uint uintVal)
-                {
-                    return (int)uintVal;
+                    try
+                    {
+                        return Convert.ToInt32(val);
+                    }
+                    catch {}
                 }
             }
             return entityId.GetHashCode();
@@ -67,25 +68,24 @@ namespace KS.SceneFusion2.Unity.Editor
         {
             if (m_entityIdCtor != null)
             {
-                ParameterInfo[] p = m_entityIdCtor.GetParameters();
-                if (p[0].ParameterType == typeof(uint))
+                try
                 {
-                    return (EntityId)m_entityIdCtor.Invoke(new object[] { (uint)instanceId });
+                    ParameterInfo[] p = m_entityIdCtor.GetParameters();
+                    object arg = Convert.ChangeType(instanceId, p[0].ParameterType);
+                    return (EntityId)m_entityIdCtor.Invoke(new object[] { arg });
                 }
-                return (EntityId)m_entityIdCtor.Invoke(new object[] { instanceId });
+                catch {}
             }
 
             object boxed = default(EntityId);
             if (m_entityIdField != null)
             {
-                if (m_entityIdField.FieldType == typeof(uint))
+                try
                 {
-                    m_entityIdField.SetValue(boxed, (uint)instanceId);
+                    object val = Convert.ChangeType(instanceId, m_entityIdField.FieldType);
+                    m_entityIdField.SetValue(boxed, val);
                 }
-                else
-                {
-                    m_entityIdField.SetValue(boxed, instanceId);
-                }
+                catch {}
             }
             return (EntityId)boxed;
         }
