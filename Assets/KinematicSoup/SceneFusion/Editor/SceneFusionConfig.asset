@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: SceneFusion-Editor.dll::KS.SceneFusion.sfConfig
   Debug: 1
   LastVersion: 2.0.4
-  ShowGettingStartedScreen: 1
+  ShowGettingStartedScreen: 0
   m_syncMaterials: 1
   m_syncPrefabs: 2
   UI:

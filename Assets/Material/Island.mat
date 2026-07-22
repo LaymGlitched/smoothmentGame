@@ -14,7 +14,7 @@ Material:
   m_ValidKeywords: []
   m_InvalidKeywords: []
   m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
+  m_EnableInstancingVariants: 1
   m_DoubleSidedGI: 0
   m_CustomRenderQueue: -1
   stringTagMap: {}
@@ -97,7 +97,7 @@ Material:
     - _AddPrecomputedVelocity: 0
     - _AlphaClip: 0
     - _AlphaToMask: 0
-    - _Ambient_Occlusion: 1
+    - _Ambient_Occlusion: 1.2
     - _Blend: 1
     - _BlendModePreserveSpecular: 1
     - _BumpScale: 1
@@ -108,7 +108,7 @@ Material:
     - _DetailAlbedoMapScale: 1
     - _DetailNormalMapScale: 1
     - _Dither_In: 1
-    - _Dither_Multipler: 2
+    - _Dither_Multipler: 1
     - _DstBlend: 0
     - _DstBlendAlpha: 0
     - _EnvironmentReflections: 1
@@ -116,7 +116,8 @@ Material:
     - _GlossMapScale: 0
     - _Glossiness: 0
     - _GlossyReflections: 0
-    - _Lighting_Steps: 8
+    - _Lighting_Steps: 6
+    - _Metalic: 0
     - _Metallic: 0
     - _Normal_Intensity: 1
     - _OcclusionStrength: 1
@@ -132,7 +133,7 @@ Material:
     - _SrcBlend: 1
     - _SrcBlendAlpha: 1
     - _Step_Edge: 0.5
-    - _Step_Fresnel: 1
+    - _Step_Fresnel: 0
     - _Surface: 0
     - _Tile: 0.5
     - _UseEmissionMap: 0
@@ -140,7 +141,7 @@ Material:
     - _Use_Albedo_Texture: 1
     - _Use_Dither: 1
     - _Use_Emission: 0
-    - _Use_Fresnel: 1
+    - _Use_Fresnel: 0
     - _Use_Normal_Map: 0
     - _Use_Subsurface_Scattering: 1
     - _WorkflowMode: 1
