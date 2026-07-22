@@ -83,8 +83,23 @@ namespace KS.SceneFusion2.Unity.Editor
         /// <summary>Singleton constructor</summary>
         private sfLoader()
         {
-            LoadGenerators();
-            LoadStandInTemplates();
+            try
+            {
+                LoadGenerators();
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading asset generators: " + e.Message);
+            }
+
+            try
+            {
+                LoadStandInTemplates();
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading stand-in templates: " + e.Message);
+            }
         }
 
         /// <summary>Constructor that sets the info cache for testing.</summary>
@@ -912,16 +927,49 @@ namespace KS.SceneFusion2.Unity.Editor
         /// </summary>
         private void LoadBuiltInAssets()
         {
-            CacheBuiltIns(ksIconUtility.Get().GetBuiltInIcons());
+            try
+            {
+                CacheBuiltIns(ksIconUtility.Get().GetBuiltInIcons());
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading built-in icons: " + e.Message);
+            }
 
-            sfBuiltInAssetsLoader loader = sfBuiltInAssetsLoader.Get();
-            CacheBuiltIns(loader.LoadBuiltInAssets<Material>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<Texture2D>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<Sprite>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<LightmapParameters>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<Mesh>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<Font>());
-            CacheBuiltIns(loader.LoadBuiltInAssets<Shader>());
+            try
+            {
+                sfBuiltInAssetsLoader loader = sfBuiltInAssetsLoader.Get();
+                if (loader != null)
+                {
+                    SafeLoadBuiltInAssets<Material>(loader);
+                    SafeLoadBuiltInAssets<Texture2D>(loader);
+                    SafeLoadBuiltInAssets<Sprite>(loader);
+                    SafeLoadBuiltInAssets<LightmapParameters>(loader);
+                    SafeLoadBuiltInAssets<Mesh>(loader);
+                    SafeLoadBuiltInAssets<Font>(loader);
+                    SafeLoadBuiltInAssets<Shader>(loader);
+                }
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading built-in assets: " + e.Message);
+            }
+        }
+
+        private void SafeLoadBuiltInAssets<T>(sfBuiltInAssetsLoader loader) where T : UObject
+        {
+            try
+            {
+                T[] assets = loader.LoadBuiltInAssets<T>();
+                if (assets != null)
+                {
+                    CacheBuiltIns(assets);
+                }
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception loading built-in assets of type " + typeof(T).Name + ": " + e.Message);
+            }
         }
 
         /// <summary>
@@ -1023,16 +1071,26 @@ namespace KS.SceneFusion2.Unity.Editor
         /// <param name="assetName"></param>
         private void CacheStandInFromBuiltIn<T>(string assetName) where T : UObject
         {
-            sfBuiltInAssetsLoader loader = sfBuiltInAssetsLoader.Get();
-            T[] assets = loader.LoadBuiltInAssets<T>();
-
-            foreach (T asset in assets)
+            try
             {
-                if (asset.name == assetName)
+                sfBuiltInAssetsLoader loader = sfBuiltInAssetsLoader.Get();
+                T[] assets = loader != null ? loader.LoadBuiltInAssets<T>() : null;
+
+                if (assets != null)
                 {
-                    m_standInTemplates[typeof(T)] = asset;
-                    return;
+                    foreach (T asset in assets)
+                    {
+                        if (asset != null && asset.name == assetName)
+                        {
+                            m_standInTemplates[typeof(T)] = asset;
+                            return;
+                        }
+                    }
                 }
+            }
+            catch (Exception e)
+            {
+                ksLog.Warning(this, "Exception caching built-in asset " + assetName + " of type " + typeof(T).Name + ": " + e.Message);
             }
 
             ksLog.Warning("Unable to cache built-in asset " + assetName + " of type " + typeof(T).ToString());
