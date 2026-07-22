@@ -383,38 +383,44 @@ namespace KS.SceneFusion2.Unity.Editor
         }
 
         /// <summary>
-        /// Applies serialized properties to a serialized object and disposes native C++ memory wrappers.
-        /// Invokes post property and post uobject change events on the uobject's translator for modified properties.
+        /// Applies serialized properties to a serialized object. Invokes post property and post uobject change events
+        /// on the uobject's translator for the modified properties.
         /// </summary>
         /// <param name="so"></param>
         private void ApplySerializedProperties(SerializedObject so)
         {
+            if (so == null)
+            {
+                return;
+            }
+            UObject target = null;
             try
             {
-                if (so.targetObject != null && sfPropertyUtils.ApplyProperties(so))
-                {
-                    sfObject obj = sfObjectMap.Get().GetSFObject(so.targetObject);
-                    sfBaseUObjectTranslator translator = sfObjectEventDispatcher.Get()
-                        .GetTranslator<sfBaseUObjectTranslator>(obj);
-                    if (translator != null)
-                    {
-                        // Strings are the name of the removed dictionary field or null.
-                        List<Tuple<sfBaseProperty, string>> properties;
-                        if (m_changedPropertyMap.TryGetValue(so.targetObject, out properties))
-                        {
-                            for (int j = 0; j < properties.Count; j++)
-                            {
-                                Tuple<sfBaseProperty, string> pair = properties[j];
-                                translator.CallPostPropertyChangeHandlers(so.targetObject, pair.Item1, pair.Item2);
-                            }
-                        }
-                        translator.CallPostUObjectChangeHandlers(so.targetObject);
-                    }
-                }
+                target = so.targetObject;
             }
-            finally
+            catch (Exception)
             {
-                so.Dispose();
+                return;
+            }
+            if (target != null && sfPropertyUtils.ApplyProperties(so))
+            {
+                sfObject obj = sfObjectMap.Get().GetSFObject(target);
+                sfBaseUObjectTranslator translator = sfObjectEventDispatcher.Get()
+                    .GetTranslator<sfBaseUObjectTranslator>(obj);
+                if (translator != null)
+                {
+                    // Strings are the name of the removed dictionary field or null.
+                    List<Tuple<sfBaseProperty, string>> properties;
+                    if (m_changedPropertyMap.TryGetValue(target, out properties))
+                    {
+                        for (int j = 0; j < properties.Count; j++)
+                        {
+                            Tuple<sfBaseProperty, string> pair = properties[j];
+                            translator.CallPostPropertyChangeHandlers(target, pair.Item1, pair.Item2);
+                        }
+                    }
+                    translator.CallPostUObjectChangeHandlers(target);
+                }
             }
         }
 
