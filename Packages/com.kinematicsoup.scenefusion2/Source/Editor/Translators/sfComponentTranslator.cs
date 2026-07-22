@@ -75,6 +75,20 @@ namespace KS.SceneFusion2.Unity.Editor
             new List<KeyValuePair<sfMissingComponent, Component>>();
         private int m_replacementCount = 0;
 
+        private class TransformTarget
+        {
+            public Vector3 TargetPosition;
+            public Quaternion TargetRotation;
+            public Vector3 TargetScale;
+            public bool HasPosition;
+            public bool HasRotation;
+            public bool HasScale;
+            public UObject UObj;
+        }
+
+        private Dictionary<Transform, TransformTarget> m_interpolatingTransforms = new Dictionary<Transform, TransformTarget>();
+        private List<Transform> m_interpolationToRemove = new List<Transform>();
+
         private ksReflectionObject m_roGetCoupledComponent;
 
         /// <summary>Initialization</summary>
@@ -89,59 +103,95 @@ namespace KS.SceneFusion2.Unity.Editor
             // users, so we don't sync it.
             sfPropertyManager.Get().Blacklist.Add("TMPro.TMP_Text", "m_renderer");
 
-            // Directly set transform position/rotation/scale to avoid SceneView rendering delays common when using serialized properties.
+            // Directly set transform position/rotation/scale using smooth frame-by-frame interpolation to eliminate jitter.
             m_propertyChangeHandlers.Add<Transform>(sfProp.Position, (UObject uobj, sfBaseProperty prop) =>
             {
-                RedrawSceneView(null);
+                Transform transform = uobj as Transform;
+                if (transform == null)
+                {
+                    return false;
+                }
+                Vector3 targetPos = Vector3.zero;
                 if (prop == null)
                 {
                     if (PrefabUtility.IsPartOfPrefabInstance(uobj))
                     {
                         return false;
                     }
-                    (uobj as Transform).localPosition = Vector3.zero;
                 }
                 else
                 {
-                    (uobj as Transform).localPosition = prop.Cast<Vector3>();
+                    targetPos = prop.Cast<Vector3>();
                 }
-                sfPrefabSaver.Get().MarkPrefabDirty(uobj);
+
+                TransformTarget target;
+                if (!m_interpolatingTransforms.TryGetValue(transform, out target))
+                {
+                    target = new TransformTarget { UObj = uobj };
+                    m_interpolatingTransforms[transform] = target;
+                }
+                target.TargetPosition = targetPos;
+                target.HasPosition = true;
                 return true;
             });
             m_propertyChangeHandlers.Add<Transform>(sfProp.Rotation, (UObject uobj, sfBaseProperty prop) =>
             {
-                RedrawSceneView(null);
+                Transform transform = uobj as Transform;
+                if (transform == null)
+                {
+                    return false;
+                }
+                Quaternion targetRot = Quaternion.identity;
                 if (prop == null)
                 {
                     if (PrefabUtility.IsPartOfPrefabInstance(uobj))
                     {
                         return false;
                     }
-                    (uobj as Transform).localRotation = Quaternion.identity;
                 }
                 else
                 {
-                    (uobj as Transform).localRotation = prop.Cast<Quaternion>();
+                    targetRot = prop.Cast<Quaternion>();
                 }
-                sfPrefabSaver.Get().MarkPrefabDirty(uobj);
+
+                TransformTarget target;
+                if (!m_interpolatingTransforms.TryGetValue(transform, out target))
+                {
+                    target = new TransformTarget { UObj = uobj };
+                    m_interpolatingTransforms[transform] = target;
+                }
+                target.TargetRotation = targetRot;
+                target.HasRotation = true;
                 return true;
             });
             m_propertyChangeHandlers.Add<Transform>(sfProp.Scale, (UObject uobj, sfBaseProperty prop) =>
             {
-                RedrawSceneView(null);
+                Transform transform = uobj as Transform;
+                if (transform == null)
+                {
+                    return false;
+                }
+                Vector3 targetScale = Vector3.one;
                 if (prop == null)
                 {
                     if (PrefabUtility.IsPartOfPrefabInstance(uobj))
                     {
                         return false;
                     }
-                    (uobj as Transform).localScale = Vector3.one;
                 }
                 else
                 {
-                    (uobj as Transform).localScale = prop.Cast<Vector3>();
+                    targetScale = prop.Cast<Vector3>();
                 }
-                sfPrefabSaver.Get().MarkPrefabDirty(uobj);
+
+                TransformTarget target;
+                if (!m_interpolatingTransforms.TryGetValue(transform, out target))
+                {
+                    target = new TransformTarget { UObj = uobj };
+                    m_interpolatingTransforms[transform] = target;
+                }
+                target.TargetScale = targetScale;
+                target.HasScale = true;
                 return true;
             });
 
@@ -167,6 +217,8 @@ namespace KS.SceneFusion2.Unity.Editor
         {
             sfUnityEventDispatcher.Get().OnUpdate -= Update;
             sfUnityEventDispatcher.Get().OnAddOrRemoveComponents -= OnAddOrRemoveComponents;
+            m_interpolatingTransforms.Clear();
+            m_interpolationToRemove.Clear();
         }
 
         /// <summary>Don't sync components of type T.</summary>
@@ -200,6 +252,86 @@ namespace KS.SceneFusion2.Unity.Editor
         /// <param name="deltaTime">deltaTime in seconds since the last update.</param>
         private void Update(float deltaTime)
         {
+            // Frame-by-frame smooth interpolation for position, rotation, and scale updates
+            if (m_interpolatingTransforms.Count > 0)
+            {
+                m_interpolationToRemove.Clear();
+                float lerpFactor = Mathf.Clamp01(deltaTime * 30f);
+                foreach (KeyValuePair<Transform, TransformTarget> kvp in m_interpolatingTransforms)
+                {
+                    Transform transform = kvp.Key;
+                    TransformTarget target = kvp.Value;
+                    if (transform == null)
+                    {
+                        m_interpolationToRemove.Add(transform);
+                        continue;
+                    }
+
+                    bool complete = true;
+                    if (target.HasPosition)
+                    {
+                        Vector3 current = transform.localPosition;
+                        Vector3 next = Vector3.Lerp(current, target.TargetPosition, lerpFactor);
+                        if ((next - target.TargetPosition).sqrMagnitude < 0.000001f || (current - target.TargetPosition).sqrMagnitude > 25f)
+                        {
+                            transform.localPosition = target.TargetPosition;
+                            target.HasPosition = false;
+                        }
+                        else
+                        {
+                            transform.localPosition = next;
+                            complete = false;
+                        }
+                        RedrawSceneView(null);
+                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                    }
+                    if (target.HasRotation)
+                    {
+                        Quaternion current = transform.localRotation;
+                        Quaternion next = Quaternion.Slerp(current, target.TargetRotation, lerpFactor);
+                        if (Quaternion.Angle(next, target.TargetRotation) < 0.01f)
+                        {
+                            transform.localRotation = target.TargetRotation;
+                            target.HasRotation = false;
+                        }
+                        else
+                        {
+                            transform.localRotation = next;
+                            complete = false;
+                        }
+                        RedrawSceneView(null);
+                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                    }
+                    if (target.HasScale)
+                    {
+                        Vector3 current = transform.localScale;
+                        Vector3 next = Vector3.Lerp(current, target.TargetScale, lerpFactor);
+                        if ((next - target.TargetScale).sqrMagnitude < 0.000001f)
+                        {
+                            transform.localScale = target.TargetScale;
+                            target.HasScale = false;
+                        }
+                        else
+                        {
+                            transform.localScale = next;
+                            complete = false;
+                        }
+                        RedrawSceneView(null);
+                        sfPrefabSaver.Get().MarkPrefabDirty(target.UObj);
+                    }
+
+                    if (complete)
+                    {
+                        m_interpolationToRemove.Add(transform);
+                    }
+                }
+
+                for (int i = 0; i < m_interpolationToRemove.Count; i++)
+                {
+                    m_interpolatingTransforms.Remove(m_interpolationToRemove[i]);
+                }
+            }
+
             // Destroy replaced missing components and update references to the replacement component. Apply properties
             // to the replacement component.
             foreach (KeyValuePair<sfMissingComponent, Component> replacement in m_replacedComponents)
