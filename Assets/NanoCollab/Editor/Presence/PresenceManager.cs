@@ -1,0 +1,137 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Net;
+using UnityEngine;
+
+namespace NanoCollab
+{
+    /// <summary>
+    /// Manages the connected user list, assigns unique colors, and fires
+    /// join/leave events for the UI and overlay layers.
+    /// </summary>
+    public sealed class PresenceManager
+    {
+        // 8 distinct, visually pleasant hues for collaborators
+        private static readonly Color[] Palette =
+        {
+            new Color(0.33f, 0.69f, 1.00f), // Sky blue
+            new Color(1.00f, 0.47f, 0.33f), // Coral
+            new Color(0.40f, 0.87f, 0.47f), // Mint green
+            new Color(0.93f, 0.60f, 1.00f), // Lavender
+            new Color(1.00f, 0.80f, 0.27f), // Gold
+            new Color(0.27f, 0.93f, 0.87f), // Teal
+            new Color(1.00f, 0.53f, 0.73f), // Pink
+            new Color(0.73f, 0.87f, 0.33f), // Lime
+        };
+
+        private readonly Dictionary<Guid, CollabUser> _users = new();
+        private int _colorIndex;
+
+        public IReadOnlyDictionary<Guid, CollabUser> Users => _users;
+
+        public event Action<CollabUser> OnUserJoined;
+        public event Action<CollabUser> OnUserLeft;
+
+        /// <summary>Add or update a user. Returns the assigned color.</summary>
+        public CollabUser AddUser(Guid id, string name)
+        {
+            if (_users.TryGetValue(id, out var existing))
+                return existing;
+
+            var user = new CollabUser(id, name, Palette[_colorIndex % Palette.Length]);
+            _colorIndex++;
+            _users[id] = user;
+            OnUserJoined?.Invoke(user);
+            return user;
+        }
+
+        /// <summary>Remove a user by ID.</summary>
+        public void RemoveUser(Guid id)
+        {
+            if (_users.TryGetValue(id, out var user))
+            {
+                _users.Remove(id);
+                OnUserLeft?.Invoke(user);
+            }
+        }
+
+        /// <summary>Update a user's mutable state (camera, selection, latency).</summary>
+        public void UpdateUser(Guid id, Action<CollabUser> mutate)
+        {
+            if (_users.TryGetValue(id, out var user))
+            {
+                mutate(user);
+                _users[id] = user; // re-assign because CollabUser is a struct
+            }
+        }
+
+        /// <summary>Get a user by ID, if present.</summary>
+        public bool TryGetUser(Guid id, out CollabUser user)
+        {
+            return _users.TryGetValue(id, out user);
+        }
+
+        public void Clear()
+        {
+            _users.Clear();
+            _colorIndex = 0;
+        }
+
+        // --- Serialization helpers for UserJoin / UserList messages ---
+
+        /// <summary>Write a UserJoin payload.</summary>
+        public static byte[] WriteUserJoin(Guid id, string name, Color color)
+        {
+            using var ms = new MemoryStream(64);
+            using var w  = new BinaryWriter(ms);
+            Serialization.WriteGuid(w, id);
+            Serialization.WriteString(w, name);
+            Serialization.WriteColor(w, color);
+            return ms.ToArray();
+        }
+
+        /// <summary>Read a UserJoin payload.</summary>
+        public static (Guid id, string name, Color color) ReadUserJoin(BinaryReader r)
+        {
+            var id    = Serialization.ReadGuid(r);
+            var name  = Serialization.ReadString(r);
+            var color = Serialization.ReadColor(r);
+            return (id, name, color);
+        }
+
+        /// <summary>Write a UserList payload (all current users).</summary>
+        public byte[] WriteUserList()
+        {
+            using var ms = new MemoryStream(256);
+            using var w  = new BinaryWriter(ms);
+            w.Write((byte)_users.Count);
+            foreach (var kv in _users)
+            {
+                Serialization.WriteGuid(w, kv.Value.Id);
+                Serialization.WriteString(w, kv.Value.Name);
+                Serialization.WriteColor(w, kv.Value.Color);
+            }
+            return ms.ToArray();
+        }
+
+        /// <summary>Read a UserList payload and populate the user dictionary.</summary>
+        public void ReadUserList(BinaryReader r)
+        {
+            int count = r.ReadByte();
+            for (int i = 0; i < count; i++)
+            {
+                var id    = Serialization.ReadGuid(r);
+                var name  = Serialization.ReadString(r);
+                var color = Serialization.ReadColor(r);
+                if (!_users.ContainsKey(id))
+                {
+                    var user = new CollabUser(id, name, color);
+                    _users[id] = user;
+                    _colorIndex++;
+                    OnUserJoined?.Invoke(user);
+                }
+            }
+        }
+    }
+}
