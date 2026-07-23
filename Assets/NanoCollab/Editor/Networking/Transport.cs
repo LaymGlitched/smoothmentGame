@@ -10,7 +10,7 @@ namespace NanoCollab
     /// <summary>
     /// TCP transport layer with integrated message routing and framing.
     /// Operates in Host mode (TcpListener + peer relay) or Client mode.
-    /// Streams use standard blocking sockets with DataAvailable polling to prevent WouldBlock socket errors over LAN/VPN.
+    /// Uses non-blocking tcp.Available checks to guarantee zero main-thread freezing in Unity Editor update loops.
     /// </summary>
     public sealed class Transport : IDisposable
     {
@@ -54,7 +54,7 @@ namespace NanoCollab
             {
                 _listener = new TcpListener(IPAddress.Any, port);
                 _listener.Start();
-                _listener.Server.Blocking = false; // Only listener socket is non-blocking for Poll accept
+                _listener.Server.Blocking = false;
                 Debug.Log($"[NanoCollab] Hosting TCP server on port {port}");
             }
             catch (Exception ex)
@@ -74,8 +74,8 @@ namespace NanoCollab
                 var tcp = new TcpClient();
                 tcp.Connect(address, port);
                 tcp.NoDelay = true;
-                tcp.SendTimeout = 5000;
-                tcp.ReceiveTimeout = 5000;
+                tcp.SendTimeout = 2000;
+                tcp.ReceiveTimeout = 2000;
 
                 _hostConn = new PeerConnection(tcp);
                 _peers.Add(_hostConn);
@@ -89,8 +89,8 @@ namespace NanoCollab
         }
 
         /// <summary>
-        /// Polls TCP socket streams and dispatches messages to registered handlers.
-        /// Host automatically relays messages to all other peers.
+        /// Polls TCP socket streams non-blockingly using tcp.Available.
+        /// Immediately dispatches complete messages to registered handlers.
         /// </summary>
         public void PollAndDispatch()
         {
@@ -105,8 +105,8 @@ namespace NanoCollab
                     {
                         var tcp = _listener.AcceptTcpClient();
                         tcp.NoDelay = true;
-                        tcp.SendTimeout = 5000;
-                        tcp.ReceiveTimeout = 5000;
+                        tcp.SendTimeout = 2000;
+                        tcp.ReceiveTimeout = 2000;
 
                         var peer = new PeerConnection(tcp);
                         _peers.Add(peer);
@@ -208,41 +208,54 @@ namespace NanoCollab
             _mode = Mode.None;
         }
 
-        // --- Internal ---
+        // --- Non-Blocking Framing Accumulator ---
 
         private bool TryReadMessage(PeerConnection peer, out MsgType msgType, out byte[] payload)
         {
             msgType = 0;
             payload = null;
 
+            var tcp = peer.TcpClient;
+            if (tcp == null) return false;
+
             var stream = peer.Stream;
-            if (stream == null || !stream.DataAvailable)
-                return false;
+            if (stream == null) return false;
 
-            int read = ReadExact(stream, _headerBuf, 0, 3);
-            if (read < 3) return false;
-
-            ushort len = (ushort)(_headerBuf[0] | (_headerBuf[1] << 8));
-            if (len < 1) return false;
-
-            msgType = (MsgType)_headerBuf[2];
-
-            int payloadLen = len - 1;
-            if (payloadLen > 0)
+            // Step 1: Read 3-byte header if not already buffered
+            if (!peer.HasHeader)
             {
-                payload = new byte[payloadLen];
-                int readPayload = ReadExact(stream, payload, 0, payloadLen);
-                if (readPayload < payloadLen)
-                {
-                    Debug.LogWarning($"[NanoCollab] Incomplete payload read from {peer.RemoteEndPoint} (expected {payloadLen}, got {readPayload})");
-                    return false;
-                }
+                if (tcp.Available < 3)
+                    return false; // Not enough bytes in OS socket buffer yet — return non-blockingly
+
+                int read = stream.Read(_headerBuf, 0, 3);
+                if (read < 3) return false;
+
+                ushort len = (ushort)(_headerBuf[0] | (_headerBuf[1] << 8));
+                if (len < 1) return false;
+
+                peer.PendingMsgType = (MsgType)_headerBuf[2];
+                peer.PendingPayloadLen = len - 1;
+                peer.HasHeader = true;
+            }
+
+            // Step 2: Read payload once all bytes arrive in OS buffer
+            int needed = peer.PendingPayloadLen;
+            if (needed > 0)
+            {
+                if (tcp.Available < needed)
+                    return false; // Payload incomplete in OS buffer — wait for next tick without blocking
+
+                payload = new byte[needed];
+                int readPayload = ReadExact(stream, payload, 0, needed);
+                if (readPayload < needed) return false;
             }
             else
             {
                 payload = Array.Empty<byte>();
             }
 
+            msgType = peer.PendingMsgType;
+            peer.HasHeader = false; // Reset for next frame
             return true;
         }
 
@@ -265,8 +278,14 @@ namespace NanoCollab
         private NetworkStream _stream;
 
         public Guid UserId { get; set; }
+        public TcpClient TcpClient => _tcp;
         public NetworkStream Stream => _stream;
         public string RemoteEndPoint { get; private set; }
+
+        // Non-blocking frame accumulator state
+        public bool HasHeader { get; set; }
+        public MsgType PendingMsgType { get; set; }
+        public int PendingPayloadLen { get; set; }
 
         public bool IsConnected
         {
@@ -275,7 +294,6 @@ namespace NanoCollab
                 try
                 {
                     if (_tcp == null || !_tcp.Connected) return false;
-                    // Test if remote end has closed connection cleanly (FIN)
                     if (_tcp.Client.Poll(0, SelectMode.SelectRead) && _tcp.Available == 0)
                         return false;
                     return true;
