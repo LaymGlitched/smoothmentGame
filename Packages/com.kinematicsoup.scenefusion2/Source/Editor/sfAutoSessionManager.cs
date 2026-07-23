@@ -16,7 +16,7 @@ namespace KS.SceneFusion2.Unity.Editor
     /// <summary>
     /// Manages automatic central session hosting and joining per scene.
     /// When any user opens a scene, SceneFusion automatically joins the central session
-    /// for that scene, or creates it if it doesn't exist yet. No manual lobby/joining required.
+    /// for that scene, or creates it if it doesn't exist yet.
     /// </summary>
     [InitializeOnLoad]
     public class sfAutoSessionManager : ksSingleton<sfAutoSessionManager>
@@ -74,10 +74,15 @@ namespace KS.SceneFusion2.Unity.Editor
 
             string centralSessionName = scene.name;
 
-            // If already connected to a session for this scene, return
+            // If switching scenes, leave existing session first if connected
             if (service.IsConnected && service.Session != null)
             {
-                if (m_currentSyncedScene == scene.name)
+                if (m_currentSyncedScene != scene.name)
+                {
+                    ksLog.Info(this, "Switching scene to '" + scene.name + "'. Leaving previous session...");
+                    service.LeaveSession();
+                }
+                else
                 {
                     return;
                 }
@@ -101,126 +106,83 @@ namespace KS.SceneFusion2.Unity.Editor
             try
             {
                 object webService = sfWebService.Get();
-                if (webService == null)
-                {
-                    m_isConnecting = false;
-                    return;
-                }
-
-                Type webType = webService.GetType();
                 int projectId = sfConfig.Get().ProjectId;
 
-                // Find session fetching methods on WebService or sfService
-                MethodInfo getSessionsMethod = null;
-                foreach (MethodInfo m in webType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+                // Log available methods for diagnostic inspection
+                ksLog.Info(this, "Inspecting sfService and sfWebService methods for session creation/joining...");
+
+                // Method search on sfService and sfWebService
+                bool attempted = TryInvokeSessionConnect(service, webService, projectId, sessionName);
+                if (!attempted)
                 {
-                    if (m.Name.Equals("GetSessions", StringComparison.OrdinalIgnoreCase) || 
-                        m.Name.Equals("FetchSessions", StringComparison.OrdinalIgnoreCase))
-                    {
-                        getSessionsMethod = m;
-                        break;
-                    }
+                    ksLog.Warning(this, "Could not find standard Create/Join session method. Retrying...");
+                    m_isConnecting = false;
                 }
-
-                if (getSessionsMethod != null)
-                {
-                    ParameterInfo[] pars = getSessionsMethod.GetParameters();
-                    if (pars.Length >= 2)
-                    {
-                        Type delegateType = pars[1].ParameterType;
-                        if (typeof(MulticastDelegate).IsAssignableFrom(delegateType))
-                        {
-                            MethodInfo handlerMethod = typeof(sfAutoSessionManager).GetMethod(nameof(OnSessionsRetrieved), BindingFlags.NonPublic | BindingFlags.Instance);
-                            Delegate callback = Delegate.CreateDelegate(delegateType, this, handlerMethod, false);
-
-                            if (callback != null)
-                            {
-                                getSessionsMethod.Invoke(webService, new object[] { projectId, callback });
-                                return;
-                            }
-                        }
-                    }
-                }
-
-                // If no delegate method matched, fallback to direct session join/create attempt
-                TryDirectSessionCreateOrJoin(service, sessionName, webService);
             }
             catch (Exception ex)
             {
                 m_isConnecting = false;
-                ksLog.Info(this, "ExecuteCentralSessionConnect note: " + ex.Message);
+                ksLog.Warning(this, "ExecuteCentralSessionConnect error: " + ex.Message);
             }
         }
 
-        /// <summary>Fallback direct session creation/joining.</summary>
-        private void TryDirectSessionCreateOrJoin(sfService service, string targetName, object webService)
+        private bool TryInvokeSessionConnect(sfService service, object webService, int projectId, string sessionName)
         {
-            m_isConnecting = false;
-            try
+            Type serviceType = service.GetType();
+            Type webType = webService != null ? webService.GetType() : null;
+
+            // Search service methods for Join or Create
+            MethodInfo[] serviceMethods = serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+            foreach (MethodInfo m in serviceMethods)
             {
-                ksLog.Info(this, "Auto-creating central session for '" + targetName + "'...");
-                MethodInfo createMethod = webService?.GetType().GetMethod("CreateSession") ?? service.GetType().GetMethod("CreateSession");
-                if (createMethod != null)
+                ParameterInfo[] p = m.GetParameters();
+                if (m.Name.Equals("CreateSession", StringComparison.OrdinalIgnoreCase) || m.Name.Equals("JoinSession", StringComparison.OrdinalIgnoreCase))
                 {
-                    ParameterInfo[] pInfo = createMethod.GetParameters();
-                    object[] args = new object[pInfo.Length];
-                    if (args.Length > 0) args[0] = sfConfig.Get().ProjectId;
-                    if (args.Length > 1) args[1] = targetName;
-                    createMethod.Invoke(createMethod.IsStatic ? null : (createMethod.DeclaringType.IsAssignableFrom(service.GetType()) ? (object)service : webService), args);
-                }
-            }
-            catch (Exception ex)
-            {
-                ksLog.Warning(this, "TryDirectSessionCreateOrJoin exception: " + ex.Message);
-            }
-        }
-
-        /// <summary>Callback executed when session list is returned from SceneFusion web service.</summary>
-        private void OnSessionsRetrieved(object sessionsListObj, string error)
-        {
-            m_isConnecting = false;
-            sfService service = SceneFusion.Get().Service;
-            if (service == null) return;
-
-            string targetName = m_currentSyncedScene;
-            if (string.IsNullOrEmpty(targetName)) return;
-
-            object foundSession = null;
-            if (sessionsListObj is IEnumerable list)
-            {
-                foreach (object sInfo in list)
-                {
-                    if (sInfo == null) continue;
-                    PropertyInfo nameProp = sInfo.GetType().GetProperty("Name") ?? sInfo.GetType().GetProperty("SessionName") ?? sInfo.GetType().GetProperty("RoomName");
-                    FieldInfo nameField = sInfo.GetType().GetField("Name") ?? sInfo.GetType().GetField("SessionName");
-                    
-                    string sName = null;
-                    if (nameProp != null) sName = nameProp.GetValue(sInfo) as string;
-                    else if (nameField != null) sName = nameField.GetValue(sInfo) as string;
-
-                    if (sName != null && string.Equals(sName, targetName, StringComparison.OrdinalIgnoreCase))
+                    if (p.Length == 1 && p[0].ParameterType == typeof(string))
                     {
-                        foundSession = sInfo;
-                        break;
+                        ksLog.Info(this, "Invoking " + serviceType.Name + "." + m.Name + "(\"" + sessionName + "\")");
+                        m.Invoke(service, new object[] { sessionName });
+                        m_isConnecting = false;
+                        return true;
+                    }
+                    else if (p.Length == 2 && p[0].ParameterType == typeof(int) && p[1].ParameterType == typeof(string))
+                    {
+                        ksLog.Info(this, "Invoking " + serviceType.Name + "." + m.Name + "(" + projectId + ", \"" + sessionName + "\")");
+                        m.Invoke(service, new object[] { projectId, sessionName });
+                        m_isConnecting = false;
+                        return true;
                     }
                 }
             }
 
-            if (foundSession != null)
+            if (webType != null)
             {
-                ksLog.Info(this, "Central session for '" + targetName + "' found. Joining automatically...");
-                MethodInfo joinMethod = service.GetType().GetMethod("JoinSession", new Type[] { foundSession.GetType() });
-                if (joinMethod != null)
+                MethodInfo[] webMethods = webType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
+                foreach (MethodInfo m in webMethods)
                 {
-                    joinMethod.Invoke(service, new object[] { foundSession });
+                    ParameterInfo[] p = m.GetParameters();
+                    if (m.Name.Equals("CreateSession", StringComparison.OrdinalIgnoreCase) || m.Name.Equals("JoinSession", StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (p.Length == 1 && p[0].ParameterType == typeof(string))
+                        {
+                            ksLog.Info(this, "Invoking " + webType.Name + "." + m.Name + "(\"" + sessionName + "\")");
+                            m.Invoke(webService, new object[] { sessionName });
+                            m_isConnecting = false;
+                            return true;
+                        }
+                        else if (p.Length == 2 && p[0].ParameterType == typeof(int) && p[1].ParameterType == typeof(string))
+                        {
+                            ksLog.Info(this, "Invoking " + webType.Name + "." + m.Name + "(" + projectId + ", \"" + sessionName + "\")");
+                            m.Invoke(webService, new object[] { projectId, sessionName });
+                            m_isConnecting = false;
+                            return true;
+                        }
+                    }
                 }
             }
-            else
-            {
-                ksLog.Info(this, "No central session found for '" + targetName + "'. Creating central session automatically...");
-                object webService = sfWebService.Get();
-                TryDirectSessionCreateOrJoin(service, targetName, webService);
-            }
+
+            m_isConnecting = false;
+            return false;
         }
     }
 }
