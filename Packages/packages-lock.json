@@ -10,12 +10,6 @@
       },
       "hash": "6d0ddff64173193f024638c2de2dbeb8a2525965"
     },
-    "com.kinematicsoup.scenefusion2": {
-      "version": "file:com.kinematicsoup.scenefusion2",
-      "depth": 0,
-      "source": "embedded",
-      "dependencies": {}
-    },
     "com.nanodogs.toolkit": {
       "version": "https://github.com/NanoDogs-Studios/Nanodogs-Toolkit.git",
       "depth": 0,

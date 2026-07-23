@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: ConversationBank
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Conversation.Data.ConversationBank
   conversations:
-  - {fileID: 0}
+  - {fileID: 11400000, guid: de9a4460ebf130e4dac806a0f1219021, type: 2}
