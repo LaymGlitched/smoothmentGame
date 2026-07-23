@@ -6,9 +6,6 @@ using UnityEngine;
 
 namespace NanoCollab
 {
-    /// <summary>
-    /// NanoCollab message type headers. Single byte on the wire.
-    /// </summary>
     public enum MsgType : byte
     {
         // Presence (0x01–0x0F)
@@ -28,9 +25,6 @@ namespace NanoCollab
         Pong            = 0xFF,
     }
 
-    /// <summary>
-    /// Hierarchy change sub-types.
-    /// </summary>
     public enum HierarchyChangeType : byte
     {
         Reparent = 0x01,
@@ -39,10 +33,6 @@ namespace NanoCollab
         Delete   = 0x04,
     }
 
-    /// <summary>
-    /// Binary serialization extension methods for Unity & NanoCollab types.
-    /// Operates directly on BinaryWriter / BinaryReader.
-    /// </summary>
     public static class SerializationExtensions
     {
         // --- Vector3 ---
@@ -105,7 +95,7 @@ namespace NanoCollab
             return Encoding.UTF8.GetString(r.ReadBytes(len));
         }
 
-        // --- GlobalObjectId ---
+        // --- GlobalObjectId & Hybrid Object Resolution ---
 
         public static void WriteGlobalObjectId(this BinaryWriter w, GlobalObjectId id)
         {
@@ -120,15 +110,41 @@ namespace NanoCollab
             return id;
         }
 
-        public static GameObject ToGameObject(this GlobalObjectId id)
+        public static GameObject ToGameObject(this GlobalObjectId id, string pathFallback = null)
         {
-            if (id.Equals(default(GlobalObjectId))) return null;
-            return GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) as GameObject;
+            if (id.IsValid())
+            {
+                var obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(id) as GameObject;
+                if (obj != null) return obj;
+            }
+
+            if (!string.IsNullOrEmpty(pathFallback))
+            {
+                var go = GameObject.Find(pathFallback);
+                if (go != null) return go;
+                if (pathFallback.StartsWith("/"))
+                    return GameObject.Find(pathFallback.Substring(1));
+            }
+
+            return null;
         }
 
         public static bool IsValid(this GlobalObjectId id)
         {
             return !id.Equals(default(GlobalObjectId));
+        }
+
+        public static string GetHierarchyPath(GameObject go)
+        {
+            if (go == null) return "";
+            var path = "/" + go.name;
+            var parent = go.transform.parent;
+            while (parent != null)
+            {
+                path = "/" + parent.name + path;
+                parent = parent.parent;
+            }
+            return path;
         }
 
         // --- Color ---

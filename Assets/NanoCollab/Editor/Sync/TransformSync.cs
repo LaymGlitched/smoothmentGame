@@ -7,7 +7,7 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Detects local transform changes at 30Hz using GlobalObjectId.
+    /// Detects local transform changes at 30Hz using GlobalObjectId + Hierarchy Path fallback.
     /// Manages object manipulation presence (drag start/stop) and prevents
     /// local Undo stack flooding during continuous remote drag streams.
     /// </summary>
@@ -91,7 +91,6 @@ namespace NanoCollab
                 if (t == null) continue;
 
                 var gid = GlobalObjectId.GetGlobalObjectIdSlow(t.gameObject);
-                if (!gid.IsValid()) continue;
                 if (_suppressObjects.Contains(gid)) continue;
 
                 var current = new Snapshot
@@ -129,7 +128,9 @@ namespace NanoCollab
                 }
                 _lastDragChangeTime = now;
 
+                string path = SerializationExtensions.GetHierarchyPath(t.gameObject);
                 w.WriteGlobalObjectId(gid);
+                w.WriteString(path);
                 w.Write((byte)flags);
                 if ((flags & DirtyFlags.Position) != 0) w.WriteVector3(current.Position);
                 if ((flags & DirtyFlags.Rotation) != 0) w.WriteQuaternion(current.Rotation);
@@ -179,6 +180,7 @@ namespace NanoCollab
             for (int i = 0; i < count; i++)
             {
                 var gid   = r.ReadGlobalObjectId();
+                string path = r.ReadString();
                 var flags = (DirtyFlags)r.ReadByte();
 
                 Vector3    pos   = default;
@@ -189,15 +191,15 @@ namespace NanoCollab
                 if ((flags & DirtyFlags.Rotation) != 0) rot   = r.ReadQuaternion();
                 if ((flags & DirtyFlags.Scale)    != 0) scale = r.ReadVector3();
 
-                var targetObj = gid.ToGameObject();
+                var targetObj = gid.ToGameObject(path);
                 if (targetObj == null) continue;
 
                 var t = targetObj.transform;
 
-                _suppressObjects.Add(gid);
+                if (gid.IsValid()) _suppressObjects.Add(gid);
                 _suppressExpiry[gid] = now + 0.2f;
 
-                if (!_remoteRecordedUndos.Contains(gid))
+                if (gid.IsValid() && !_remoteRecordedUndos.Contains(gid))
                 {
                     Undo.RecordObject(t, "NanoCollab Remote Drag");
                     _remoteRecordedUndos.Add(gid);
