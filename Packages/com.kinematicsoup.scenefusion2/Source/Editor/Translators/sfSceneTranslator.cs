@@ -520,8 +520,21 @@ namespace KS.SceneFusion2.Unity.Editor
                 }
                 case OpenSceneMode.Single:
                 {
-                    ksLog.Info(this, "User opened a new scene. Disconnecting from server.");
-                    SceneFusion.Get().Service.LeaveSession();
+                    ksLog.Info(this, "User opened a new scene: " + scene.name);
+                    sfObject obj = GetSceneObject(scene);
+                    if (obj != null)
+                    {
+                        Subscribe(obj);
+                    }
+                    else if (SceneFusion.Get().Service != null && SceneFusion.Get().Service.IsConnected)
+                    {
+                        RequestLock();
+                        m_uploadList.Add(scene);
+                    }
+                    else
+                    {
+                        sfAutoSessionManager.Get().AutoConnectForScene(scene);
+                    }
                     break;
                 }
             }

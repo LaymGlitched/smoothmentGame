@@ -38,6 +38,7 @@ namespace KS.SceneFusion2.Unity.Editor
             ksEditorUtils.SetDefineSymbol("SCENE_FUSION_2");
             EditorApplication.update += TrackUserId;
             SceneFusionService.Set(SceneFusion.Get().Service);
+            sfAutoSessionManager.Get().StartAutoSync();
             sfGettingStartedWindow.OpenSessionWindow = OpenSessionWindow;
 
             if (sfConfig.Get().Version.ToString() != sfConfig.Get().LastVersion)
