@@ -244,6 +244,7 @@ namespace NanoCollab
 
         public Guid UserId { get; set; }
         public NetworkStream Stream => _stream;
+        public string RemoteEndPoint { get; private set; }
 
         public bool IsConnected
         {
@@ -258,6 +259,8 @@ namespace NanoCollab
         {
             _tcp = tcp;
             _stream = tcp.GetStream();
+            try { RemoteEndPoint = tcp.Client.RemoteEndPoint?.ToString() ?? "unknown"; }
+            catch { RemoteEndPoint = "unknown"; }
         }
 
         public void Send(byte[] frame)

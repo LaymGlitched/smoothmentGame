@@ -10,14 +10,14 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi).
+    /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi, ZeroTier).
     /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 2s).
-    /// Computes stable session hash from Scene GUID.
+    /// Session hash is based on scene NAME (not GUID) so non-git-synced project copies still match.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
         private const uint   Magic           = 0x4E434F4C;
-        private const byte   ProtocolVersion = 2;
+        private const byte   ProtocolVersion = 3; // Bumped: scene-name-based hashing
         private const byte   MsgAnnounce     = 0x01;
         private const byte   MsgGoodbye      = 0x02;
         private const float  HeartbeatInterval = 2.0f;
@@ -120,7 +120,8 @@ namespace NanoCollab
             // 1. Send to global broadcast 255.255.255.255
             SendToEndpoint(bytes, new IPEndPoint(IPAddress.Broadcast, _port));
 
-            // 2. Send to directed broadcast IP of every active IPv4 network interface (Wi-Fi, LAN)
+            // 2. Send to directed broadcast IP of every active IPv4 network interface
+            //    (Wi-Fi, Ethernet, ZeroTier, Hamachi, etc.)
             var broadcastAddresses = GetSubnetBroadcastAddresses();
             for (int i = 0; i < broadcastAddresses.Count; i++)
             {
@@ -193,7 +194,11 @@ namespace NanoCollab
             string userName          = r.ReadString();
 
             if (userId == _localId) return;
-            if (sessHash != _sessionHash) return;
+            if (sessHash != _sessionHash)
+            {
+                Debug.Log($"[NanoCollab] Ignoring peer {userName} (session hash mismatch: theirs={sessHash:X16} ours={_sessionHash:X16})");
+                return;
+            }
 
             if (msgType == MsgGoodbye)
             {
@@ -214,13 +219,21 @@ namespace NanoCollab
             }
         }
 
+        /// <summary>
+        /// Computes session hash from the scene FILE NAME (not GUID).
+        /// This ensures two developers with independently-created project copies
+        /// (e.g., over ZeroTier without shared git) still match sessions
+        /// as long as they have the same scene name open.
+        /// </summary>
         public static ulong ComputeSessionHash(string scenePath)
         {
-            string sceneGuid = AssetDatabase.AssetPathToGUID(scenePath);
-            if (string.IsNullOrEmpty(sceneGuid)) sceneGuid = scenePath;
+            // Use scene file name (e.g., "SampleScene") rather than asset GUID.
+            // Asset GUIDs differ between project copies that aren't git-synced.
+            string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
+            if (string.IsNullOrEmpty(sceneName)) sceneName = scenePath;
 
             ulong hash = 14695981039346656037;
-            foreach (char c in sceneGuid)
+            foreach (char c in sceneName)
             {
                 hash ^= (byte)c;
                 hash *= 1099511628211;
