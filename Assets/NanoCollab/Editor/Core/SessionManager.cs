@@ -51,6 +51,9 @@ namespace NanoCollab
         private float _discoverStartTime;
         private const float HostPromotionDelay = 2.5f;
 
+        private float _lastConnectAttemptTime;
+        private const float ConnectRetryCooldown = 4.0f;
+
         private readonly Dictionary<Guid, DiscoveryPacket> _discoveredPeers = new();
 
         private float _lastPingTime;
@@ -110,7 +113,7 @@ namespace NanoCollab
         }
 
         /// <summary>
-        /// Manually connects to a host IP address on LAN/ZeroTier (bypasses UDP broadcast).
+        /// Manually initiates non-blocking connection to a host IP address on LAN/ZeroTier.
         /// </summary>
         public void ConnectDirect(string hostIp)
         {
@@ -118,16 +121,8 @@ namespace NanoCollab
             {
                 int port = NanoCollabSettings.instance.Port;
                 _transport.ConnectToHost(ip, port + 1);
-
-                if (_transport.CurrentMode == Transport.Mode.Client)
-                {
-                    _state = SessionState.Connected;
-                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
-                    _pendingUserJoinBroadcast = true;
-
-                    _hierarchySync.RebuildSnapshot();
-                    Debug.Log($"[NanoCollab] Direct connected to LAN host at {ip}:{port + 1}");
-                }
+                _state = SessionState.Discovering;
+                Debug.Log($"[NanoCollab] Direct connection initiated to LAN host at {ip}:{port + 1}");
             }
             else
             {
@@ -143,29 +138,42 @@ namespace NanoCollab
 
             if (_state == SessionState.Discovering)
             {
-                float now = (float)EditorApplication.timeSinceStartup;
-                if (now - _discoverStartTime > HostPromotionDelay)
-                    CheckHostElection();
+                if (_transport.IsConnectedClient)
+                {
+                    _state = SessionState.Connected;
+                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+                    _pendingUserJoinBroadcast = true;
+                    Debug.Log("[NanoCollab] Successfully connected to host.");
+                }
+                else
+                {
+                    float now = (float)EditorApplication.timeSinceStartup;
+                    if (now - _discoverStartTime > HostPromotionDelay)
+                        CheckHostElection();
+                }
             }
 
-            if (_state == SessionState.Hosting || _state == SessionState.Connected)
+            if (_state == SessionState.Hosting || _state == SessionState.Connected || _transport.IsConnecting)
             {
                 _transport.PollAndDispatch();
 
-                if (_pendingUserJoinBroadcast)
+                if (_state == SessionState.Connected && _pendingUserJoinBroadcast)
                 {
                     _pendingUserJoinBroadcast = false;
                     BroadcastLocalUserJoin();
                 }
 
-                _transformSync.Tick();
-                _hierarchySync.Tick();
-
-                float now = (float)EditorApplication.timeSinceStartup;
-                if (now - _lastPingTime > PingInterval)
+                if (_state == SessionState.Hosting || _state == SessionState.Connected)
                 {
-                    _lastPingTime = now;
-                    SendPing();
+                    _transformSync.Tick();
+                    _hierarchySync.Tick();
+
+                    float now = (float)EditorApplication.timeSinceStartup;
+                    if (now - _lastPingTime > PingInterval)
+                    {
+                        _lastPingTime = now;
+                        SendPing();
+                    }
                 }
             }
         }
@@ -216,6 +224,10 @@ namespace NanoCollab
         private void CheckHostElection()
         {
             if (_state != SessionState.Discovering) return;
+            if (_transport.IsConnecting) return;
+
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (now - _lastConnectAttemptTime < ConnectRetryCooldown) return;
 
             long oldestStartTime = _sessionStartTimeTicks;
             DiscoveryPacket? hostCandidate = null;
@@ -232,17 +244,9 @@ namespace NanoCollab
             if (hostCandidate.HasValue)
             {
                 var target = hostCandidate.Value;
+                _lastConnectAttemptTime = now;
                 _transport.ConnectToHost(target.Address, target.HostPort);
-
-                if (_transport.CurrentMode == Transport.Mode.Client)
-                {
-                    _state = SessionState.Connected;
-                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
-                    _pendingUserJoinBroadcast = true;
-
-                    _hierarchySync.RebuildSnapshot();
-                    Debug.Log($"[NanoCollab] Connected to LAN host {target.UserName} at {target.Address}:{target.HostPort}");
-                }
+                _hierarchySync.RebuildSnapshot();
             }
             else
             {

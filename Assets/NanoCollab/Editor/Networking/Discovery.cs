@@ -12,12 +12,12 @@ namespace NanoCollab
     /// <summary>
     /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi, ZeroTier).
     /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 2s).
-    /// Session hash is based on scene NAME (not GUID) so non-git-synced project copies still match.
+    /// Caches network interface scans to prevent main-thread delay.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
         private const uint   Magic           = 0x4E434F4C;
-        private const byte   ProtocolVersion = 3; // Bumped: scene-name-based hashing
+        private const byte   ProtocolVersion = 3;
         private const byte   MsgAnnounce     = 0x01;
         private const byte   MsgGoodbye      = 0x02;
         private const float  HeartbeatInterval = 2.0f;
@@ -33,6 +33,10 @@ namespace NanoCollab
         private float _lastBroadcast;
         private bool  _disposed;
 
+        private static List<IPAddress> _cachedBroadcastAddresses;
+        private static float           _lastAddressScanTime;
+        private const float            AddressScanInterval = 30.0f; // Cache adapter list for 30s
+
         public event Action<DiscoveryPacket> OnPeerFound;
         public event Action<Guid> OnPeerGone;
 
@@ -45,13 +49,20 @@ namespace NanoCollab
             _hostPort               = hostPort;
             _sessionStartTimeTicks = sessionStartTimeTicks;
 
-            _udp = new UdpClient();
-            _udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            _udp.Client.Bind(new IPEndPoint(IPAddress.Any, _port));
-            _udp.EnableBroadcast = true;
-            _udp.Client.Blocking = false;
+            try
+            {
+                _udp = new UdpClient();
+                _udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                _udp.Client.Bind(new IPEndPoint(IPAddress.Any, _port));
+                _udp.EnableBroadcast = true;
+                _udp.Client.Blocking = false;
 
-            SendImmediateAnnounce();
+                SendImmediateAnnounce();
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[NanoCollab] UDP discovery bind warning: {ex.Message}");
+            }
         }
 
         public void SendImmediateAnnounce()
@@ -63,7 +74,7 @@ namespace NanoCollab
 
         public void Tick()
         {
-            if (_disposed) return;
+            if (_disposed || _udp == null) return;
 
             float now = (float)EditorApplication.timeSinceStartup;
             if (now - _lastBroadcast >= HeartbeatInterval)
@@ -72,7 +83,7 @@ namespace NanoCollab
                 Broadcast(MsgAnnounce);
             }
 
-            while (_udp.Available > 0)
+            while (_udp != null && _udp.Available > 0)
             {
                 try
                 {
@@ -103,6 +114,8 @@ namespace NanoCollab
 
         private void Broadcast(byte msgType)
         {
+            if (_udp == null) return;
+
             using var ms = new MemoryStream(96);
             using var w  = new BinaryWriter(ms);
 
@@ -117,11 +130,10 @@ namespace NanoCollab
 
             var bytes = ms.ToArray();
 
-            // 1. Send to global broadcast 255.255.255.255
+            // 1. Global broadcast
             SendToEndpoint(bytes, new IPEndPoint(IPAddress.Broadcast, _port));
 
-            // 2. Send to directed broadcast IP of every active IPv4 network interface
-            //    (Wi-Fi, Ethernet, ZeroTier, Hamachi, etc.)
+            // 2. Subnet directed broadcasts (cached)
             var broadcastAddresses = GetSubnetBroadcastAddresses();
             for (int i = 0; i < broadcastAddresses.Count; i++)
             {
@@ -133,16 +145,18 @@ namespace NanoCollab
         {
             try
             {
-                _udp.Send(bytes, bytes.Length, ep);
+                _udp?.Send(bytes, bytes.Length, ep);
             }
-            catch (SocketException)
-            {
-                // Ignored: interface may not support broadcast
-            }
+            catch (SocketException) { }
         }
 
         private static List<IPAddress> GetSubnetBroadcastAddresses()
         {
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (_cachedBroadcastAddresses != null && now - _lastAddressScanTime < AddressScanInterval)
+                return _cachedBroadcastAddresses;
+
+            _lastAddressScanTime = now;
             var list = new List<IPAddress>();
             try
             {
@@ -170,6 +184,7 @@ namespace NanoCollab
                 }
             }
             catch { }
+            _cachedBroadcastAddresses = list;
             return list;
         }
 
@@ -194,11 +209,7 @@ namespace NanoCollab
             string userName          = r.ReadString();
 
             if (userId == _localId) return;
-            if (sessHash != _sessionHash)
-            {
-                Debug.Log($"[NanoCollab] Ignoring peer {userName} (session hash mismatch: theirs={sessHash:X16} ours={_sessionHash:X16})");
-                return;
-            }
+            if (sessHash != _sessionHash) return;
 
             if (msgType == MsgGoodbye)
             {
@@ -219,16 +230,8 @@ namespace NanoCollab
             }
         }
 
-        /// <summary>
-        /// Computes session hash from the scene FILE NAME (not GUID).
-        /// This ensures two developers with independently-created project copies
-        /// (e.g., over ZeroTier without shared git) still match sessions
-        /// as long as they have the same scene name open.
-        /// </summary>
         public static ulong ComputeSessionHash(string scenePath)
         {
-            // Use scene file name (e.g., "SampleScene") rather than asset GUID.
-            // Asset GUIDs differ between project copies that aren't git-synced.
             string sceneName = System.IO.Path.GetFileNameWithoutExtension(scenePath);
             if (string.IsNullOrEmpty(sceneName)) sceneName = scenePath;
 

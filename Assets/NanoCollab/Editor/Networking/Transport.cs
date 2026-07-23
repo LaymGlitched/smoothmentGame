@@ -10,7 +10,7 @@ namespace NanoCollab
     /// <summary>
     /// TCP transport layer with integrated message routing and framing.
     /// Operates in Host mode (TcpListener + peer relay) or Client mode.
-    /// Uses non-blocking tcp.Available checks to guarantee zero main-thread freezing in Unity Editor update loops.
+    /// Uses non-blocking BeginConnect and tcp.Available checks to guarantee zero main-thread freezing in Unity Editor update loops.
     /// </summary>
     public sealed class Transport : IDisposable
     {
@@ -22,11 +22,21 @@ namespace NanoCollab
         private PeerConnection _hostConn;
         private bool _disposed;
 
+        // Async non-blocking connect state
+        private TcpClient _pendingTcp;
+        private IAsyncResult _pendingConnectResult;
+
         private readonly Dictionary<MsgType, Action<BinaryReader>> _handlers = new();
         private readonly byte[] _headerBuf = new byte[3];
 
         public Mode CurrentMode => _mode;
         public int PeerCount => _peers.Count;
+
+        /// <summary>True while non-blocking TCP connect is in progress in background thread.</summary>
+        public bool IsConnecting => _pendingConnectResult != null;
+
+        /// <summary>True if successfully connected to host as Client.</summary>
+        public bool IsConnectedClient => _mode == Mode.Client && _hostConn != null && _hostConn.IsConnected;
 
         public event Action<PeerConnection> OnPeerConnected;
         public event Action<PeerConnection> OnPeerDisconnected;
@@ -64,6 +74,10 @@ namespace NanoCollab
             }
         }
 
+        /// <summary>
+        /// Initiates non-blocking TCP connection to host on background thread.
+        /// Guaranteed 0ms delay on main thread.
+        /// </summary>
         public void ConnectToHost(IPAddress address, int port)
         {
             if (_mode != Mode.None) return;
@@ -71,30 +85,57 @@ namespace NanoCollab
 
             try
             {
-                var tcp = new TcpClient();
-                tcp.Connect(address, port);
-                tcp.NoDelay = true;
-                tcp.SendTimeout = 2000;
-                tcp.ReceiveTimeout = 2000;
+                _pendingTcp = new TcpClient();
+                _pendingTcp.NoDelay = true;
+                _pendingTcp.SendTimeout = 2000;
+                _pendingTcp.ReceiveTimeout = 2000;
 
-                _hostConn = new PeerConnection(tcp);
-                _peers.Add(_hostConn);
-                Debug.Log($"[NanoCollab] Connected TCP to host {address}:{port}");
+                _pendingConnectResult = _pendingTcp.BeginConnect(address, port, null, null);
+                Debug.Log($"[NanoCollab] Connecting to host at {address}:{port} (non-blocking)...");
             }
-            catch (SocketException ex)
+            catch (Exception ex)
             {
-                Debug.LogWarning($"[NanoCollab] Failed to connect to host {address}:{port}: {ex.Message}");
+                Debug.LogWarning($"[NanoCollab] Connection attempt failed: {ex.Message}");
+                CleanupPendingConnect();
                 _mode = Mode.None;
             }
         }
 
         /// <summary>
-        /// Polls TCP socket streams non-blockingly using tcp.Available.
-        /// Immediately dispatches complete messages to registered handlers.
+        /// Polls TCP sockets non-blockingly using tcp.Available.
+        /// Dispatches complete frames to handlers.
         /// </summary>
         public void PollAndDispatch()
         {
             if (_disposed) return;
+
+            // Check async connection status (Client mode)
+            if (_pendingConnectResult != null)
+            {
+                if (!_pendingConnectResult.IsCompleted)
+                {
+                    // Still connecting on background thread — return immediately (0ms)
+                    return;
+                }
+
+                try
+                {
+                    _pendingTcp.EndConnect(_pendingConnectResult);
+                    _hostConn = new PeerConnection(_pendingTcp);
+                    _peers.Add(_hostConn);
+                    Debug.Log($"[NanoCollab] Non-blocking TCP connection established to {_hostConn.RemoteEndPoint}");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[NanoCollab] TCP connection failed: {ex.Message}");
+                    try { _pendingTcp?.Close(); } catch { }
+                    _mode = Mode.None;
+                }
+                finally
+                {
+                    CleanupPendingConnect();
+                }
+            }
 
             // Accept new peers (host mode)
             if (_mode == Mode.Host && _listener != null)
@@ -199,6 +240,7 @@ namespace NanoCollab
         {
             if (_disposed) return;
             _disposed = true;
+            CleanupPendingConnect();
             foreach (var peer in _peers)
                 peer.Dispose();
             _peers.Clear();
@@ -206,6 +248,12 @@ namespace NanoCollab
             try { _listener?.Stop(); } catch { }
             _listener = null;
             _mode = Mode.None;
+        }
+
+        private void CleanupPendingConnect()
+        {
+            _pendingConnectResult = null;
+            _pendingTcp = null;
         }
 
         // --- Non-Blocking Framing Accumulator ---
@@ -225,7 +273,7 @@ namespace NanoCollab
             if (!peer.HasHeader)
             {
                 if (tcp.Available < 3)
-                    return false; // Not enough bytes in OS socket buffer yet — return non-blockingly
+                    return false;
 
                 int read = stream.Read(_headerBuf, 0, 3);
                 if (read < 3) return false;
@@ -243,7 +291,7 @@ namespace NanoCollab
             if (needed > 0)
             {
                 if (tcp.Available < needed)
-                    return false; // Payload incomplete in OS buffer — wait for next tick without blocking
+                    return false;
 
                 payload = new byte[needed];
                 int readPayload = ReadExact(stream, payload, 0, needed);
@@ -255,7 +303,7 @@ namespace NanoCollab
             }
 
             msgType = peer.PendingMsgType;
-            peer.HasHeader = false; // Reset for next frame
+            peer.HasHeader = false;
             return true;
         }
 
@@ -282,7 +330,6 @@ namespace NanoCollab
         public NetworkStream Stream => _stream;
         public string RemoteEndPoint { get; private set; }
 
-        // Non-blocking frame accumulator state
         public bool HasHeader { get; set; }
         public MsgType PendingMsgType { get; set; }
         public int PendingPayloadLen { get; set; }
