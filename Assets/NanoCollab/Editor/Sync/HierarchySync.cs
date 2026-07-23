@@ -16,8 +16,8 @@ namespace NanoCollab
     {
         private readonly Transport _transport;
 
-        // Snapshot: path → instanceID
-        private Dictionary<string, int> _snapshot = new();
+        // Snapshot: path → EntityId
+        private Dictionary<string, UnityEditor.EntityId> _snapshot = new();
         private bool _hierarchyDirty;
 
         // Suppress applying our own changes back
@@ -59,16 +59,16 @@ namespace NanoCollab
             _snapshot = BuildSnapshot();
         }
 
-        private Dictionary<string, int> BuildSnapshot()
+        private Dictionary<string, UnityEditor.EntityId> BuildSnapshot()
         {
-            var result = new Dictionary<string, int>();
+            var result = new Dictionary<string, UnityEditor.EntityId>();
             var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (var root in roots)
                 AddToSnapshot(root.transform, "", result);
             return result;
         }
 
-        private void AddToSnapshot(Transform t, string parentPath, Dictionary<string, int> snapshot)
+        private void AddToSnapshot(Transform t, string parentPath, Dictionary<string, UnityEditor.EntityId> snapshot)
         {
             string path = parentPath + "/" + t.name;
             snapshot[path] = t.gameObject.GetEntityId();
@@ -76,7 +76,7 @@ namespace NanoCollab
                 AddToSnapshot(t.GetChild(i), path, snapshot);
         }
 
-        private void DiffAndBroadcast(Dictionary<string, int> oldSnap, Dictionary<string, int> newSnap)
+        private void DiffAndBroadcast(Dictionary<string, UnityEditor.EntityId> oldSnap, Dictionary<string, UnityEditor.EntityId> newSnap)
         {
             // Detect deletes: in old but not in new
             foreach (var kv in oldSnap)
