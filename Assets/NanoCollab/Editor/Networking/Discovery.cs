@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Net;
+using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using UnityEditor;
 using UnityEngine;
@@ -8,8 +10,9 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// UDP broadcast discovery. Announces presence on LAN immediately on scene load/join
-    /// and periodically (heartbeat every 2s). Computes stable session hash from Scene GUID.
+    /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi).
+    /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 2s).
+    /// Computes stable session hash from Scene GUID.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
@@ -48,11 +51,9 @@ namespace NanoCollab
             _udp.EnableBroadcast = true;
             _udp.Client.Blocking = false;
 
-            // Broadcast immediately on creation
             SendImmediateAnnounce();
         }
 
-        /// <summary>Broadcasts an announce packet immediately.</summary>
         public void SendImmediateAnnounce()
         {
             if (_disposed) return;
@@ -64,7 +65,6 @@ namespace NanoCollab
         {
             if (_disposed) return;
 
-            // Periodic heartbeat broadcast
             float now = (float)EditorApplication.timeSinceStartup;
             if (now - _lastBroadcast >= HeartbeatInterval)
             {
@@ -72,7 +72,6 @@ namespace NanoCollab
                 Broadcast(MsgAnnounce);
             }
 
-            // Non-blocking receive
             while (_udp.Available > 0)
             {
                 try
@@ -117,14 +116,60 @@ namespace NanoCollab
             w.WriteString(_userName);
 
             var bytes = ms.ToArray();
+
+            // 1. Send to global broadcast 255.255.255.255
+            SendToEndpoint(bytes, new IPEndPoint(IPAddress.Broadcast, _port));
+
+            // 2. Send to directed broadcast IP of every active IPv4 network interface (Wi-Fi, LAN)
+            var broadcastAddresses = GetSubnetBroadcastAddresses();
+            for (int i = 0; i < broadcastAddresses.Count; i++)
+            {
+                SendToEndpoint(bytes, new IPEndPoint(broadcastAddresses[i], _port));
+            }
+        }
+
+        private void SendToEndpoint(byte[] bytes, IPEndPoint ep)
+        {
             try
             {
-                _udp.Send(bytes, bytes.Length, new IPEndPoint(IPAddress.Broadcast, _port));
+                _udp.Send(bytes, bytes.Length, ep);
             }
-            catch (SocketException ex)
+            catch (SocketException)
             {
-                Debug.LogWarning($"[NanoCollab] Discovery broadcast failed: {ex.Message}");
+                // Ignored: interface may not support broadcast
             }
+        }
+
+        private static List<IPAddress> GetSubnetBroadcastAddresses()
+        {
+            var list = new List<IPAddress>();
+            try
+            {
+                foreach (var ni in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (ni.OperationalStatus != OperationalStatus.Up) continue;
+                    if (ni.NetworkInterfaceType == NetworkInterfaceType.Loopback) continue;
+
+                    var props = ni.GetIPProperties();
+                    foreach (var unicast in props.UnicastAddresses)
+                    {
+                        if (unicast.Address.AddressFamily == AddressFamily.InterNetwork)
+                        {
+                            var ip   = unicast.Address.GetAddressBytes();
+                            var mask = unicast.IPv4Mask?.GetAddressBytes();
+                            if (mask != null && mask.Length == 4)
+                            {
+                                var bc = new byte[4];
+                                for (int i = 0; i < 4; i++)
+                                    bc[i] = (byte)(ip[i] | ~mask[i]);
+                                list.Add(new IPAddress(bc));
+                            }
+                        }
+                    }
+                }
+            }
+            catch { }
+            return list;
         }
 
         private void ProcessPacket(byte[] data, IPEndPoint sender)
@@ -169,15 +214,11 @@ namespace NanoCollab
             }
         }
 
-        /// <summary>
-        /// Compute a stable session hash based on Scene GUID (survives moving project folder).
-        /// </summary>
         public static ulong ComputeSessionHash(string scenePath)
         {
             string sceneGuid = AssetDatabase.AssetPathToGUID(scenePath);
             if (string.IsNullOrEmpty(sceneGuid)) sceneGuid = scenePath;
 
-            // FNV-1a 64-bit
             ulong hash = 14695981039346656037;
             foreach (char c in sceneGuid)
             {

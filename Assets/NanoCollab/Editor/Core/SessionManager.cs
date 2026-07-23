@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using UnityEditor;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -11,7 +12,7 @@ namespace NanoCollab
     /// <summary>
     /// Central coordinator for NanoCollab.
     /// Manages state machine, deterministic host election by oldest session start time,
-    /// subsystem lifecycles, and update ticks.
+    /// manual direct LAN IP joining, subsystem lifecycles, and update ticks.
     /// </summary>
     public sealed class SessionManager : IDisposable
     {
@@ -101,6 +102,29 @@ namespace NanoCollab
             StartDiscovery(scene.path);
         }
 
+        /// <summary>
+        /// Manually connects to a host IP address on LAN (useful if router blocks UDP broadcast).
+        /// </summary>
+        public void ConnectDirect(string hostIp)
+        {
+            if (IPAddress.TryParse(hostIp.Trim(), out var ip))
+            {
+                int port = NanoCollabSettings.instance.Port;
+                _transport.ConnectToHost(ip, port + 1);
+                _state = SessionState.Connected;
+
+                var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
+                _transport.Broadcast(MsgType.UserJoin, payload);
+
+                _hierarchySync.RebuildSnapshot();
+                Debug.Log($"[NanoCollab] Direct connected to LAN host at {ip}:{port + 1}");
+            }
+            else
+            {
+                Debug.LogWarning($"[NanoCollab] Invalid LAN IP address: '{hostIp}'");
+            }
+        }
+
         public void Tick()
         {
             if (!NanoCollabSettings.instance.Enabled) return;
@@ -154,7 +178,7 @@ namespace NanoCollab
             _discoverStartTime = (float)EditorApplication.timeSinceStartup;
             _discoveredPeers.Clear();
 
-            Debug.Log($"[NanoCollab] Discovering peers for session {_sessionHash:X16}...");
+            Debug.Log($"[NanoCollab] Discovering peers on LAN for session {_sessionHash:X16}...");
         }
 
         private void OnPeerDiscovered(DiscoveryPacket packet)
@@ -163,7 +187,6 @@ namespace NanoCollab
 
             if (_state == SessionState.Discovering)
             {
-                // Immediate host election evaluation
                 CheckHostElection();
             }
         }
@@ -174,14 +197,10 @@ namespace NanoCollab
             _presence.RemoveUser(userId);
         }
 
-        /// <summary>
-        /// Deterministic host election: the peer with the earliest SessionStartTimeTicks becomes host.
-        /// </summary>
         private void CheckHostElection()
         {
             if (_state != SessionState.Discovering) return;
 
-            // Find the peer with the earliest start time among known peers and ourselves
             long oldestStartTime = _sessionStartTimeTicks;
             DiscoveryPacket? hostCandidate = null;
 
@@ -196,7 +215,6 @@ namespace NanoCollab
 
             if (hostCandidate.HasValue)
             {
-                // Another peer is older — connect to them as client
                 var target = hostCandidate.Value;
                 _transport.ConnectToHost(target.Address, target.HostPort);
                 _state = SessionState.Connected;
@@ -205,11 +223,10 @@ namespace NanoCollab
                 _transport.Broadcast(MsgType.UserJoin, payload);
 
                 _hierarchySync.RebuildSnapshot();
-                Debug.Log($"[NanoCollab] Connected as client to host {target.UserName} (oldest peer).");
+                Debug.Log($"[NanoCollab] Connected to LAN host {target.UserName} at {target.Address}:{target.HostPort}");
             }
             else
             {
-                // We are the oldest peer — promote to host!
                 PromoteToHost();
             }
         }
@@ -223,7 +240,7 @@ namespace NanoCollab
             _state = SessionState.Hosting;
 
             _hierarchySync.RebuildSnapshot();
-            Debug.Log("[NanoCollab] Promoted to host (oldest active peer in session).");
+            Debug.Log("[NanoCollab] Promoted to host (oldest active peer in LAN session).");
         }
 
         private void OnPeerTcpConnected(PeerConnection peer)
@@ -247,7 +264,7 @@ namespace NanoCollab
 
             if (_state == SessionState.Connected && _transport.PeerCount == 0)
             {
-                Debug.Log("[NanoCollab] Lost connection to host. Re-discovering & electing new host...");
+                Debug.Log("[NanoCollab] Connection to host lost. Re-discovering LAN peers...");
                 _transport.Shutdown();
                 _transport = new Transport();
                 RegisterHandlers();

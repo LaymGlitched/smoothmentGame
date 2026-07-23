@@ -6,19 +6,21 @@ namespace NanoCollab
 {
     /// <summary>
     /// Lightweight EditorWindow showing connection status, connected users,
-    /// latency, and Right-Click 'Follow Camera' option.
+    /// latency, Right-Click 'Follow Camera' option, and Direct LAN Connect.
     /// Accessible via Window > NanoCollab.
     /// </summary>
     public sealed class CollabWindow : EditorWindow
     {
         private static SessionManager _session;
         private Vector2 _scrollPos;
+        private string _directIpInput = "";
+        private bool _showDirectConnect = false;
 
         [MenuItem("Window/NanoCollab")]
         private static void ShowWindow()
         {
             var win = GetWindow<CollabWindow>("NanoCollab");
-            win.minSize = new Vector2(240, 200);
+            win.minSize = new Vector2(240, 220);
         }
 
         public static void Bind(SessionManager session)
@@ -60,6 +62,7 @@ namespace NanoCollab
             DrawHeader();
             EditorGUILayout.Space(4);
             DrawUserList();
+            DrawDirectConnectSection();
             GUILayout.FlexibleSpace();
             DrawFooter();
         }
@@ -126,12 +129,10 @@ namespace NanoCollab
                 var user = kv.Value;
                 var rowRect = EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
-                // Color dot
                 var dotRect = GUILayoutUtility.GetRect(14, 14, GUILayout.Width(14));
                 dotRect.y += 2;
                 EditorGUI.DrawRect(dotRect, user.Color);
 
-                // Name & Follow indicator
                 string displayName = user.Name;
                 if (currentFollowId.HasValue && currentFollowId.Value == user.Id)
                     displayName += " [Following]";
@@ -146,7 +147,6 @@ namespace NanoCollab
 
                 EditorGUILayout.EndHorizontal();
 
-                // Context Menu on Right Click
                 if (Event.current.type == EventType.ContextClick && rowRect.Contains(Event.current.mousePosition))
                 {
                     var menu = new GenericMenu();
@@ -173,6 +173,25 @@ namespace NanoCollab
             }
 
             EditorGUILayout.EndScrollView();
+        }
+
+        private void DrawDirectConnectSection()
+        {
+            EditorGUILayout.Space(4);
+            _showDirectConnect = EditorGUILayout.Foldout(_showDirectConnect, "Direct LAN IP Join", true);
+            if (_showDirectConnect)
+            {
+                EditorGUILayout.BeginHorizontal();
+                _directIpInput = EditorGUILayout.TextField(_directIpInput, GUILayout.MinWidth(120));
+                if (GUILayout.Button("Connect IP", GUILayout.Width(80)))
+                {
+                    if (!string.IsNullOrWhiteSpace(_directIpInput))
+                    {
+                        _session.ConnectDirect(_directIpInput);
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+            }
         }
 
         private void DrawFooter()
