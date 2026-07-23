@@ -16,8 +16,8 @@ namespace NanoCollab
     {
         private readonly Transport _transport;
 
-        // Snapshot: path → EntityId
-        private Dictionary<string, UnityEditor.EntityId> _snapshot = new();
+        // Snapshot: path → GlobalObjectId
+        private Dictionary<string, GlobalObjectId> _snapshot = new();
         private bool _hierarchyDirty;
 
         // Suppress applying our own changes back
@@ -59,24 +59,24 @@ namespace NanoCollab
             _snapshot = BuildSnapshot();
         }
 
-        private Dictionary<string, UnityEditor.EntityId> BuildSnapshot()
+        private Dictionary<string, GlobalObjectId> BuildSnapshot()
         {
-            var result = new Dictionary<string, UnityEditor.EntityId>();
+            var result = new Dictionary<string, GlobalObjectId>();
             var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (var root in roots)
                 AddToSnapshot(root.transform, "", result);
             return result;
         }
 
-        private void AddToSnapshot(Transform t, string parentPath, Dictionary<string, UnityEditor.EntityId> snapshot)
+        private void AddToSnapshot(Transform t, string parentPath, Dictionary<string, GlobalObjectId> snapshot)
         {
             string path = parentPath + "/" + t.name;
-            snapshot[path] = t.gameObject.GetEntityId();
+            snapshot[path] = GlobalObjectId.GetGlobalObjectIdSlow(t.gameObject);
             for (int i = 0; i < t.childCount; i++)
                 AddToSnapshot(t.GetChild(i), path, snapshot);
         }
 
-        private void DiffAndBroadcast(Dictionary<string, UnityEditor.EntityId> oldSnap, Dictionary<string, UnityEditor.EntityId> newSnap)
+        private void DiffAndBroadcast(Dictionary<string, GlobalObjectId> oldSnap, Dictionary<string, GlobalObjectId> newSnap)
         {
             // Detect deletes: in old but not in new
             foreach (var kv in oldSnap)
@@ -84,11 +84,11 @@ namespace NanoCollab
                 if (!newSnap.ContainsKey(kv.Key) && !_suppressPaths.Contains(kv.Key))
                 {
                     // Could be delete or rename/reparent
-                    // Check if instanceID exists in new snapshot under different path
+                    // Check if GlobalObjectId exists in new snapshot under different path
                     string newPath = null;
                     foreach (var nkv in newSnap)
                     {
-                        if (nkv.Value == kv.Value)
+                        if (nkv.Value.Equals(kv.Value))
                         {
                             newPath = nkv.Key;
                             break;
@@ -128,7 +128,7 @@ namespace NanoCollab
                     bool wasMoved = false;
                     foreach (var okv in oldSnap)
                     {
-                        if (okv.Value == kv.Value) { wasMoved = true; break; }
+                        if (okv.Value.Equals(kv.Value)) { wasMoved = true; break; }
                     }
                     if (!wasMoved)
                     {
