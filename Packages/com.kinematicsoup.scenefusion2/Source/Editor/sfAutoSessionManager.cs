@@ -110,11 +110,12 @@ namespace KS.SceneFusion2.Unity.Editor
                 Type webType = webService.GetType();
                 int projectId = sfConfig.Get().ProjectId;
 
-                // Find session fetching methods on WebService
+                // Find session fetching methods on WebService or sfService
                 MethodInfo getSessionsMethod = null;
                 foreach (MethodInfo m in webType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
                 {
-                    if (m.Name.Contains("GetSessions") || m.Name.Contains("FetchSessions") || m.Name.Contains("ListSessions"))
+                    if (m.Name.Equals("GetSessions", StringComparison.OrdinalIgnoreCase) || 
+                        m.Name.Equals("FetchSessions", StringComparison.OrdinalIgnoreCase))
                     {
                         getSessionsMethod = m;
                         break;
@@ -126,26 +127,51 @@ namespace KS.SceneFusion2.Unity.Editor
                     ParameterInfo[] pars = getSessionsMethod.GetParameters();
                     if (pars.Length >= 2)
                     {
-                        // Create handler for session list callback
                         Type delegateType = pars[1].ParameterType;
-                        MethodInfo handlerMethod = typeof(sfAutoSessionManager).GetMethod(nameof(OnSessionsRetrieved), BindingFlags.NonPublic | BindingFlags.Instance);
-                        Delegate callback = Delegate.CreateDelegate(delegateType, this, handlerMethod, false);
-
-                        if (callback != null)
+                        if (typeof(MulticastDelegate).IsAssignableFrom(delegateType))
                         {
-                            getSessionsMethod.Invoke(webService, new object[] { projectId, callback });
-                            return;
+                            MethodInfo handlerMethod = typeof(sfAutoSessionManager).GetMethod(nameof(OnSessionsRetrieved), BindingFlags.NonPublic | BindingFlags.Instance);
+                            Delegate callback = Delegate.CreateDelegate(delegateType, this, handlerMethod, false);
+
+                            if (callback != null)
+                            {
+                                getSessionsMethod.Invoke(webService, new object[] { projectId, callback });
+                                return;
+                            }
                         }
                     }
                 }
 
-                // Fallback direct reconnect check
-                m_isConnecting = false;
+                // If no delegate method matched, fallback to direct session join/create attempt
+                TryDirectSessionCreateOrJoin(service, sessionName, webService);
             }
             catch (Exception ex)
             {
                 m_isConnecting = false;
-                ksLog.Warning(this, "ExecuteCentralSessionConnect note: " + ex.Message);
+                ksLog.Info(this, "ExecuteCentralSessionConnect note: " + ex.Message);
+            }
+        }
+
+        /// <summary>Fallback direct session creation/joining.</summary>
+        private void TryDirectSessionCreateOrJoin(sfService service, string targetName, object webService)
+        {
+            m_isConnecting = false;
+            try
+            {
+                ksLog.Info(this, "Auto-creating central session for '" + targetName + "'...");
+                MethodInfo createMethod = webService?.GetType().GetMethod("CreateSession") ?? service.GetType().GetMethod("CreateSession");
+                if (createMethod != null)
+                {
+                    ParameterInfo[] pInfo = createMethod.GetParameters();
+                    object[] args = new object[pInfo.Length];
+                    if (args.Length > 0) args[0] = sfConfig.Get().ProjectId;
+                    if (args.Length > 1) args[1] = targetName;
+                    createMethod.Invoke(createMethod.IsStatic ? null : (createMethod.DeclaringType.IsAssignableFrom(service.GetType()) ? (object)service : webService), args);
+                }
+            }
+            catch (Exception ex)
+            {
+                ksLog.Warning(this, "TryDirectSessionCreateOrJoin exception: " + ex.Message);
             }
         }
 
@@ -193,18 +219,7 @@ namespace KS.SceneFusion2.Unity.Editor
             {
                 ksLog.Info(this, "No central session found for '" + targetName + "'. Creating central session automatically...");
                 object webService = sfWebService.Get();
-                if (webService != null)
-                {
-                    MethodInfo createMethod = webService.GetType().GetMethod("CreateSession") ?? service.GetType().GetMethod("CreateSession");
-                    if (createMethod != null)
-                    {
-                        ParameterInfo[] pInfo = createMethod.GetParameters();
-                        object[] args = new object[pInfo.Length];
-                        if (args.Length > 0) args[0] = sfConfig.Get().ProjectId;
-                        if (args.Length > 1) args[1] = targetName;
-                        createMethod.Invoke(createMethod.IsStatic ? null : (createMethod.DeclaringType.IsAssignableFrom(service.GetType()) ? (object)service : webService), args);
-                    }
-                }
+                TryDirectSessionCreateOrJoin(service, targetName, webService);
             }
         }
     }
