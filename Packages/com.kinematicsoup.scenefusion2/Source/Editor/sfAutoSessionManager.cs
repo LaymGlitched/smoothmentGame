@@ -14,9 +14,8 @@ using KS.SF.Reactor;
 namespace KS.SceneFusion2.Unity.Editor
 {
     /// <summary>
-    /// Manages automatic central session hosting and joining per scene.
-    /// When any user opens a scene, SceneFusion automatically joins the central session
-    /// for that scene, or creates it if it doesn't exist yet.
+    /// Manages automatic central session hosting and joining per scene using native SceneFusion 2 APIs.
+    /// Hooks directly into Unity's scene change events to trigger immediate auto-connection on scene load.
     /// </summary>
     [InitializeOnLoad]
     public class sfAutoSessionManager : ksSingleton<sfAutoSessionManager>
@@ -33,7 +32,7 @@ namespace KS.SceneFusion2.Unity.Editor
             };
         }
 
-        /// <summary>Starts monitoring scene loading for central auto session connection.</summary>
+        /// <summary>Starts monitoring scene loading for central cloud session connection.</summary>
         public void StartAutoSync()
         {
             if (m_initialized)
@@ -42,9 +41,12 @@ namespace KS.SceneFusion2.Unity.Editor
             }
             m_initialized = true;
 
+            // Hook into all scene change events in Unity
+            EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged;
+            EditorSceneManager.sceneOpened += OnUnitySceneOpened;
             sfUnityEventDispatcher.Get().OnOpenScene += OnOpenScene;
             
-            // Check active scene on startup
+            // Check current active scene immediately
             Scene activeScene = SceneManager.GetActiveScene();
             if (activeScene.IsValid() && !string.IsNullOrEmpty(activeScene.path))
             {
@@ -52,7 +54,26 @@ namespace KS.SceneFusion2.Unity.Editor
             }
         }
 
-        /// <summary>Triggered when a scene is opened in Unity Editor.</summary>
+        private void OnActiveSceneChanged(Scene current, Scene next)
+        {
+            if (!next.IsValid() || string.IsNullOrEmpty(next.path))
+            {
+                return;
+            }
+            ksLog.Info(this, "Active scene changed in Edit mode: " + next.name);
+            AutoConnectForScene(next);
+        }
+
+        private void OnUnitySceneOpened(Scene scene, OpenSceneMode mode)
+        {
+            if (!scene.IsValid() || string.IsNullOrEmpty(scene.path))
+            {
+                return;
+            }
+            ksLog.Info(this, "Unity scene opened: " + scene.name);
+            AutoConnectForScene(scene);
+        }
+
         private void OnOpenScene(Scene scene, OpenSceneMode mode)
         {
             if (!scene.IsValid() || string.IsNullOrEmpty(scene.path))
@@ -63,7 +84,7 @@ namespace KS.SceneFusion2.Unity.Editor
             AutoConnectForScene(scene);
         }
 
-        /// <summary>Auto-connects to or creates the central session for the given scene.</summary>
+        /// <summary>Auto-connects to or creates the KinematicSoup Cloud session for the given scene.</summary>
         public void AutoConnectForScene(Scene scene)
         {
             sfService service = SceneFusion.Get().Service;
@@ -72,20 +93,21 @@ namespace KS.SceneFusion2.Unity.Editor
                 return;
             }
 
-            string centralSessionName = scene.name;
+            string targetScene = scene.name;
 
-            // If switching scenes, leave existing session first if connected
-            if (service.IsConnected && service.Session != null)
+            // Reset connection lock if opening a new scene
+            if (m_currentSyncedScene != targetScene)
             {
-                if (m_currentSyncedScene != scene.name)
+                m_isConnecting = false;
+                if (service.IsConnected && service.Session != null)
                 {
-                    ksLog.Info(this, "Switching scene to '" + scene.name + "'. Leaving previous session...");
+                    ksLog.Info(this, "Switching from '" + m_currentSyncedScene + "' to '" + targetScene + "'. Leaving previous cloud session...");
                     service.LeaveSession();
                 }
-                else
-                {
-                    return;
-                }
+            }
+            else if (service.IsConnected && service.Session != null)
+            {
+                return;
             }
 
             if (m_isConnecting)
@@ -93,96 +115,167 @@ namespace KS.SceneFusion2.Unity.Editor
                 return;
             }
 
-            m_currentSyncedScene = scene.name;
-            ksLog.Info(this, "Auto-connecting to central session for scene: " + centralSessionName);
+            m_isConnecting = true;
+            m_currentSyncedScene = targetScene;
 
-            ExecuteCentralSessionConnect(service, centralSessionName);
+            // Validate KinematicSoup Web Token
+            object webService = sfWebService.Get();
+            string token = null;
+            if (webService != null)
+            {
+                PropertyInfo tokenProp = webService.GetType().GetProperty("SFToken");
+                if (tokenProp != null)
+                {
+                    token = tokenProp.GetValue(webService) as string;
+                }
+            }
+
+            if (string.IsNullOrEmpty(token))
+            {
+                m_isConnecting = false;
+                ksLog.Warning(this, "KinematicSoup Cloud token missing. Please log into your SceneFusion account in Unity.");
+                PromptKinematicSoupLogin();
+                return;
+            }
+
+            ksLog.Info(this, "Auto-connecting SceneFusion Cloud for scene: " + targetScene);
+            ExecuteCloudSessionAutoConnect(service, targetScene);
         }
 
-        /// <summary>Finds existing central session on server to join, or hosts it if not found.</summary>
-        private void ExecuteCentralSessionConnect(sfService service, string sessionName)
+        /// <summary>Prompts user to log into KinematicSoup account if token is invalid or missing.</summary>
+        private void PromptKinematicSoupLogin()
         {
-            m_isConnecting = true;
+            bool open = EditorUtility.DisplayDialog(
+                "KinematicSoup Authentication Required",
+                "KinematicSoup Cloud requires an active login token.\n\nPlease log into your KinematicSoup account in the Session window once so SceneFusion can automatically host and join cloud sessions for your scenes.",
+                "Open Login Window",
+                "Cancel"
+            );
+
+            if (open)
+            {
+                ksWindow.Open(ksWindow.SCENE_FUSION_MAIN, delegate (ksWindow window)
+                {
+                    window.titleContent = new GUIContent(" Session Login", KS.SceneFusion.sfTextures.Logo);
+                    window.minSize = new Vector2(380f, 100f);
+                    window.Menu = ScriptableObject.CreateInstance<sfSessionsMenu>();
+                });
+            }
+        }
+
+        private void ExecuteCloudSessionAutoConnect(sfService service, string sceneName)
+        {
             try
             {
-                object webService = sfWebService.Get();
                 int projectId = sfConfig.Get().ProjectId;
+                string version = sfConfig.Get().Version.ToString();
 
-                // Log available methods for diagnostic inspection
-                ksLog.Info(this, "Inspecting sfService and sfWebService methods for session creation/joining...");
-
-                // Method search on sfService and sfWebService
-                bool attempted = TryInvokeSessionConnect(service, webService, projectId, sessionName);
-                if (!attempted)
+                MethodInfo getSessionsMethod = service.GetType().GetMethod("GetSessions");
+                if (getSessionsMethod != null)
                 {
-                    ksLog.Warning(this, "Could not find standard Create/Join session method. Retrying...");
-                    m_isConnecting = false;
+                    ParameterInfo[] pars = getSessionsMethod.GetParameters();
+                    if (pars.Length == 3)
+                    {
+                        Type delegateType = pars[2].ParameterType;
+                        MethodInfo handlerMethod = typeof(sfAutoSessionManager).GetMethod(nameof(OnGetSessionsCallback), BindingFlags.NonPublic | BindingFlags.Instance);
+                        Delegate callback = Delegate.CreateDelegate(delegateType, this, handlerMethod, false);
+
+                        if (callback != null)
+                        {
+                            getSessionsMethod.Invoke(service, new object[] { version, "Unity", callback });
+                            return;
+                        }
+                    }
                 }
+
+                StartCloudCentralSession(service, projectId, version, sceneName);
             }
             catch (Exception ex)
             {
                 m_isConnecting = false;
-                ksLog.Warning(this, "ExecuteCentralSessionConnect error: " + ex.Message);
+                ksLog.Warning(this, "ExecuteCloudSessionAutoConnect exception: " + ex.Message);
             }
         }
 
-        private bool TryInvokeSessionConnect(sfService service, object webService, int projectId, string sessionName)
+        private void OnGetSessionsCallback(sfSessionInfo[] sessions, string error)
         {
-            Type serviceType = service.GetType();
-            Type webType = webService != null ? webService.GetType() : null;
-
-            // Search service methods for Join or Create
-            MethodInfo[] serviceMethods = serviceType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-            foreach (MethodInfo m in serviceMethods)
-            {
-                ParameterInfo[] p = m.GetParameters();
-                if (m.Name.Equals("CreateSession", StringComparison.OrdinalIgnoreCase) || m.Name.Equals("JoinSession", StringComparison.OrdinalIgnoreCase))
-                {
-                    if (p.Length == 1 && p[0].ParameterType == typeof(string))
-                    {
-                        ksLog.Info(this, "Invoking " + serviceType.Name + "." + m.Name + "(\"" + sessionName + "\")");
-                        m.Invoke(service, new object[] { sessionName });
-                        m_isConnecting = false;
-                        return true;
-                    }
-                    else if (p.Length == 2 && p[0].ParameterType == typeof(int) && p[1].ParameterType == typeof(string))
-                    {
-                        ksLog.Info(this, "Invoking " + serviceType.Name + "." + m.Name + "(" + projectId + ", \"" + sessionName + "\")");
-                        m.Invoke(service, new object[] { projectId, sessionName });
-                        m_isConnecting = false;
-                        return true;
-                    }
-                }
-            }
-
-            if (webType != null)
-            {
-                MethodInfo[] webMethods = webType.GetMethods(BindingFlags.Public | BindingFlags.Instance);
-                foreach (MethodInfo m in webMethods)
-                {
-                    ParameterInfo[] p = m.GetParameters();
-                    if (m.Name.Equals("CreateSession", StringComparison.OrdinalIgnoreCase) || m.Name.Equals("JoinSession", StringComparison.OrdinalIgnoreCase))
-                    {
-                        if (p.Length == 1 && p[0].ParameterType == typeof(string))
-                        {
-                            ksLog.Info(this, "Invoking " + webType.Name + "." + m.Name + "(\"" + sessionName + "\")");
-                            m.Invoke(webService, new object[] { sessionName });
-                            m_isConnecting = false;
-                            return true;
-                        }
-                        else if (p.Length == 2 && p[0].ParameterType == typeof(int) && p[1].ParameterType == typeof(string))
-                        {
-                            ksLog.Info(this, "Invoking " + webType.Name + "." + m.Name + "(" + projectId + ", \"" + sessionName + "\")");
-                            m.Invoke(webService, new object[] { projectId, sessionName });
-                            m_isConnecting = false;
-                            return true;
-                        }
-                    }
-                }
-            }
-
             m_isConnecting = false;
-            return false;
+            sfService service = SceneFusion.Get().Service;
+            if (service == null) return;
+
+            string targetScene = m_currentSyncedScene;
+            if (string.IsNullOrEmpty(targetScene)) return;
+
+            int projectId = sfConfig.Get().ProjectId;
+            string version = sfConfig.Get().Version.ToString();
+
+            if (!string.IsNullOrEmpty(error) && error.Contains("Invalid token"))
+            {
+                ksLog.Warning(this, "KinematicSoup Cloud token invalid or expired. Prompting re-login...");
+                PromptKinematicSoupLogin();
+                return;
+            }
+
+            sfSessionInfo matchedSession = null;
+            if (sessions != null)
+            {
+                foreach (sfSessionInfo sInfo in sessions)
+                {
+                    if (sInfo == null) continue;
+                    
+                    string sName = GetSessionSceneName(sInfo);
+                    if (string.Equals(sName, targetScene, StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchedSession = sInfo;
+                        break;
+                    }
+                }
+            }
+
+            if (matchedSession != null)
+            {
+                ksLog.Info(this, "Found existing KinematicSoup Cloud session for scene '" + targetScene + "'. Joining automatically...");
+                service.JoinSession(matchedSession);
+            }
+            else
+            {
+                ksLog.Info(this, "No cloud session found for scene '" + targetScene + "'. Hosting KinematicSoup Cloud session automatically...");
+                StartCloudCentralSession(service, projectId, version, targetScene);
+            }
+        }
+
+        private string GetSessionSceneName(sfSessionInfo sInfo)
+        {
+            if (sInfo == null) return null;
+            try
+            {
+                PropertyInfo prop = sInfo.GetType().GetProperty("SceneName") ?? sInfo.GetType().GetProperty("Name") ?? sInfo.GetType().GetProperty("SessionName");
+                if (prop != null) return prop.GetValue(sInfo) as string;
+
+                FieldInfo field = sInfo.GetType().GetField("SceneName") ?? sInfo.GetType().GetField("Name");
+                if (field != null) return field.GetValue(sInfo) as string;
+
+                if (sInfo.RoomInfo != null) return sInfo.RoomInfo.Name;
+            }
+            catch { }
+            return null;
+        }
+
+        private void StartCloudCentralSession(sfService service, int projectId, string version, string sceneName)
+        {
+            m_isConnecting = false;
+            try
+            {
+                MethodInfo startSessionMethod = service.GetType().GetMethod("StartSession");
+                if (startSessionMethod != null)
+                {
+                    startSessionMethod.Invoke(service, new object[] { projectId, version, version, "Unity", sceneName });
+                }
+            }
+            catch (Exception ex)
+            {
+                ksLog.Warning(this, "StartCloudCentralSession exception: " + ex.Message);
+            }
         }
     }
 }
