@@ -33,8 +33,17 @@ namespace NanoCollab
 
         public CollabUser AddUser(Guid id, string name, long sessionStartTimeTicks = 0)
         {
+            if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
+
             if (_users.TryGetValue(id, out var existing))
+            {
+                if (existing.Name != name)
+                {
+                    existing.Name = name;
+                    _users[id] = existing;
+                }
                 return existing;
+            }
 
             var user = new CollabUser(id, name, Palette[_colorIndex % Palette.Length], sessionStartTimeTicks);
             _colorIndex++;
@@ -61,6 +70,18 @@ namespace NanoCollab
             }
         }
 
+        public void UpdateAllUserLatencies(float latencyMs)
+        {
+            var keys = new List<Guid>(_users.Keys);
+            for (int i = 0; i < keys.Count; i++)
+            {
+                var id = keys[i];
+                var user = _users[id];
+                user.LatencyMs = latencyMs;
+                _users[id] = user;
+            }
+        }
+
         public bool TryGetUser(Guid id, out CollabUser user)
         {
             return _users.TryGetValue(id, out user);
@@ -79,7 +100,7 @@ namespace NanoCollab
             using var ms = new MemoryStream(80);
             using var w  = new BinaryWriter(ms);
             w.WriteGuid(id);
-            w.WriteString(name);
+            w.WriteString(name ?? "");
             w.WriteColor(color);
             w.Write(sessionStartTimeTicks);
             return ms.ToArray();
@@ -91,6 +112,7 @@ namespace NanoCollab
             var name      = r.ReadString();
             var color     = r.ReadColor();
             var startTime = r.ReadInt64();
+            if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
             return (id, name, color, startTime);
         }
 
@@ -102,7 +124,7 @@ namespace NanoCollab
             foreach (var kv in _users)
             {
                 w.WriteGuid(kv.Value.Id);
-                w.WriteString(kv.Value.Name);
+                w.WriteString(kv.Value.Name ?? "");
                 w.WriteColor(kv.Value.Color);
                 w.Write(kv.Value.SessionStartTimeTicks);
             }
@@ -118,6 +140,8 @@ namespace NanoCollab
                 var name      = r.ReadString();
                 var color     = r.ReadColor();
                 var startTime = r.ReadInt64();
+                if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
+
                 if (!_users.ContainsKey(id))
                 {
                     var user = new CollabUser(id, name, color, startTime);

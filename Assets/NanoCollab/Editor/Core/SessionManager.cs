@@ -64,6 +64,10 @@ namespace NanoCollab
         public SessionManager()
         {
             _userName = NanoCollabSettings.instance.DisplayName;
+            if (string.IsNullOrWhiteSpace(_userName))
+                _userName = System.Environment.UserName;
+            if (string.IsNullOrWhiteSpace(_userName))
+                _userName = "User_" + UnityEngine.Random.Range(100, 999);
 
             _transport    = new Transport();
             _presence     = new PresenceManager();
@@ -393,8 +397,7 @@ namespace NanoCollab
             long now = Stopwatch.GetTimestamp();
             float latencyMs = (float)(now - sentTimestamp) / Stopwatch.Frequency * 1000f;
 
-            foreach (var kv in _presence.Users)
-                _presence.UpdateUser(kv.Key, user => user.LatencyMs = latencyMs);
+            _presence.UpdateAllUserLatencies(latencyMs);
         }
 
         private void SendPing()
