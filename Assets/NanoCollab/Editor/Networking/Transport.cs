@@ -156,6 +156,7 @@ namespace NanoCollab
                     try
                     {
                         var tcp = _listener.AcceptTcpClient();
+                        tcp.Client.Blocking = true; // Ensure socket is blocking for NetworkStream constructor
                         tcp.NoDelay = true;
                         tcp.SendTimeout = 3000;
                         tcp.ReceiveTimeout = 3000;
@@ -361,6 +362,7 @@ namespace NanoCollab
         public PeerConnection(TcpClient tcp)
         {
             _tcp = tcp;
+            try { _tcp.Client.Blocking = true; } catch { }
             _stream = tcp.GetStream();
             try { RemoteEndPoint = tcp.Client.RemoteEndPoint?.ToString() ?? "unknown"; }
             catch { RemoteEndPoint = "unknown"; }
