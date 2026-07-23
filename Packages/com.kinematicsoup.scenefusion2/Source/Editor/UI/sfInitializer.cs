@@ -58,24 +58,19 @@ namespace KS.SceneFusion2.Unity.Editor
             }
 
 
-            ksWindow window = ksWindow.Find(ksWindow.SCENE_FUSION_MAIN);
-            if (window != null)
-            {
-                window.Close();
-            }
-
             sfPackageUpdater.Get().CheckForUpdates();
         }
 
-        /// <summary>Opens the sessions status notice.</summary>
-        [MenuItem(WINDOWS + "Session Status", priority = WINDOWS_PRIORITY)]
+        /// <summary>Opens the sessions window for login and manual session management.</summary>
+        [MenuItem(WINDOWS + "Session", priority = WINDOWS_PRIORITY)]
         private static void OpenSessionWindow()
         {
-            EditorUtility.DisplayDialog(
-                "SceneFusion Auto-Sync Active",
-                "Manual session creation buttons have been removed.\n\nSceneFusion now automatically syncs whatever scene you are in (e.g. Hub) with anyone else opening that same scene.",
-                "OK"
-            );
+            ksWindow.Open(ksWindow.SCENE_FUSION_MAIN, delegate (ksWindow window)
+            {
+                window.titleContent = new GUIContent(" " + Product.NAME, sfTextures.Logo);
+                window.minSize = new UnityEngine.Vector2(380f, 100f);
+                window.Menu = ScriptableObject.CreateInstance<sfSessionsMenu>();
+            });
         }
 
         /// <summary>Opens the notifications window.</summary>
