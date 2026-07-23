@@ -6,18 +6,15 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Draws remote collaborator cameras (frustum gizmo + name label) and
-    /// selection highlights (wireframe box in user color) in the SceneView.
-    /// Smoothly interpolates remote camera positions.
+    /// Draws remote collaborator cameras (frustum + name), selection outlines,
+    /// and active object manipulation indicators (colored halo + movement label).
     /// </summary>
     public sealed class SceneOverlay
     {
         private const float CameraGizmoSize = 0.6f;
-        private const float LerpSpeed       = 12f;
+        private const float LerpSpeed       = 14f;
 
         private readonly PresenceManager _presence;
-
-        // Interpolated positions for smooth camera movement
         private readonly Dictionary<Guid, Vector3>    _interpPos = new();
         private readonly Dictionary<Guid, Quaternion>  _interpRot = new();
 
@@ -26,31 +23,25 @@ namespace NanoCollab
             _presence = presence;
         }
 
-        /// <summary>
-        /// Call from SceneView.duringSceneGui to render all overlays.
-        /// </summary>
         public void OnSceneGUI(SceneView sceneView)
         {
             if (_presence.Users.Count == 0) return;
 
-            float dt = Mathf.Min(0.05f, Time.realtimeSinceStartup * 0); // Handles deltaTime
-            // Use a fixed smooth factor since EditorApplication doesn't provide delta
-            float t = 1f - Mathf.Exp(-LerpSpeed * 0.016f); // assume ~60fps
+            float t = 1f - Mathf.Exp(-LerpSpeed * 0.016f);
 
             foreach (var kv in _presence.Users)
             {
                 var user = kv.Value;
                 DrawRemoteCamera(user, t);
                 DrawSelectionHighlights(user);
+                DrawManipulationIndicator(user);
             }
 
-            // Keep repainting for smooth interpolation
             sceneView.Repaint();
         }
 
         private void DrawRemoteCamera(CollabUser user, float t)
         {
-            // Interpolate
             if (!_interpPos.TryGetValue(user.Id, out var currentPos))
                 currentPos = user.CameraPosition;
             if (!_interpRot.TryGetValue(user.Id, out var currentRot))
@@ -62,26 +53,20 @@ namespace NanoCollab
             _interpPos[user.Id] = currentPos;
             _interpRot[user.Id] = currentRot;
 
-            // Skip if at origin (no data yet)
             if (currentPos == Vector3.zero && currentRot == Quaternion.identity)
                 return;
 
             var color = user.Color;
-
-            // Draw camera frustum
             var matrix = Matrix4x4.TRS(currentPos, currentRot, Vector3.one);
             Handles.matrix = matrix;
 
             Handles.color = color;
             DrawFrustumGizmo(CameraGizmoSize);
 
-            // Draw camera icon (small sphere)
             Handles.matrix = Matrix4x4.identity;
             Handles.color = color;
-            Handles.SphereHandleCap(0, currentPos, Quaternion.identity,
-                CameraGizmoSize * 0.35f, EventType.Repaint);
+            Handles.SphereHandleCap(0, currentPos, Quaternion.identity, CameraGizmoSize * 0.35f, EventType.Repaint);
 
-            // Draw name label above camera
             var labelPos = currentPos + Vector3.up * CameraGizmoSize * 1.2f;
             var style = new GUIStyle(EditorStyles.boldLabel)
             {
@@ -99,74 +84,70 @@ namespace NanoCollab
             float halfW = size * 0.4f;
             float halfH = size * 0.3f;
 
-            // Near plane corners
             var n0 = new Vector3(-halfW * 0.3f, -halfH * 0.3f, near);
             var n1 = new Vector3( halfW * 0.3f, -halfH * 0.3f, near);
             var n2 = new Vector3( halfW * 0.3f,  halfH * 0.3f, near);
             var n3 = new Vector3(-halfW * 0.3f,  halfH * 0.3f, near);
 
-            // Far plane corners
             var f0 = new Vector3(-halfW, -halfH, far);
             var f1 = new Vector3( halfW, -halfH, far);
             var f2 = new Vector3( halfW,  halfH, far);
             var f3 = new Vector3(-halfW,  halfH, far);
 
-            // Near plane
-            Handles.DrawLine(n0, n1);
-            Handles.DrawLine(n1, n2);
-            Handles.DrawLine(n2, n3);
-            Handles.DrawLine(n3, n0);
-
-            // Far plane
-            Handles.DrawLine(f0, f1);
-            Handles.DrawLine(f1, f2);
-            Handles.DrawLine(f2, f3);
-            Handles.DrawLine(f3, f0);
-
-            // Connecting lines
-            Handles.DrawLine(n0, f0);
-            Handles.DrawLine(n1, f1);
-            Handles.DrawLine(n2, f2);
-            Handles.DrawLine(n3, f3);
+            Handles.DrawLine(n0, n1); Handles.DrawLine(n1, n2); Handles.DrawLine(n2, n3); Handles.DrawLine(n3, n0);
+            Handles.DrawLine(f0, f1); Handles.DrawLine(f1, f2); Handles.DrawLine(f2, f3); Handles.DrawLine(f3, f0);
+            Handles.DrawLine(n0, f0); Handles.DrawLine(n1, f1); Handles.DrawLine(n2, f2); Handles.DrawLine(n3, f3);
         }
 
         private void DrawSelectionHighlights(CollabUser user)
         {
-            if (user.SelectedPaths == null || user.SelectedPaths.Length == 0) return;
+            if (user.SelectedObjects == null || user.SelectedObjects.Length == 0) return;
 
             Handles.matrix = Matrix4x4.identity;
             var color = user.Color;
             color.a = 0.7f;
             Handles.color = color;
 
-            foreach (var path in user.SelectedPaths)
+            foreach (var gid in user.SelectedObjects)
             {
-                var go = GameObject.Find(path);
+                var go = gid.ToGameObject();
                 if (go == null) continue;
 
-                // Get bounds
-                var renderer = go.GetComponent<Renderer>();
-                Bounds bounds;
-                if (renderer != null)
-                {
-                    bounds = renderer.bounds;
-                }
-                else
-                {
-                    // Fallback: small box at position
-                    bounds = new Bounds(go.transform.position, Vector3.one * 0.5f);
-                }
-
-                // Draw wireframe box
+                var bounds = GetBounds(go);
                 Handles.DrawWireCube(bounds.center, bounds.size * 1.05f);
-
-                // Draw a thicker outline
-                var thickColor = color;
-                thickColor.a = 0.4f;
-                Handles.color = thickColor;
-                Handles.DrawWireCube(bounds.center, bounds.size * 1.08f);
-                Handles.color = color;
             }
+        }
+
+        private void DrawManipulationIndicator(CollabUser user)
+        {
+            if (!user.DraggingObject.IsValid()) return;
+
+            var go = user.DraggingObject.ToGameObject();
+            if (go == null) return;
+
+            Handles.matrix = Matrix4x4.identity;
+            var color = user.Color;
+
+            var bounds = GetBounds(go);
+
+            Handles.color = color;
+            Handles.DrawWireCube(bounds.center, bounds.size * 1.12f);
+
+            var labelStyle = new GUIStyle(EditorStyles.boldLabel)
+            {
+                normal = { textColor = color },
+                alignment = TextAnchor.MiddleCenter,
+                fontSize = 12,
+            };
+            Vector3 topPos = bounds.center + Vector3.up * (bounds.extents.y + 0.4f);
+            Handles.Label(topPos, $"✎ {user.Name} moving...", labelStyle);
+        }
+
+        private static Bounds GetBounds(GameObject go)
+        {
+            var renderer = go.GetComponent<Renderer>();
+            if (renderer != null) return renderer.bounds;
+            return new Bounds(go.transform.position, Vector3.one * 0.5f);
         }
     }
 }

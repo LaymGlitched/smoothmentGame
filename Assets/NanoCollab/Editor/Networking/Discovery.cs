@@ -2,23 +2,22 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Sockets;
-using System.Text;
+using UnityEditor;
 using UnityEngine;
 
 namespace NanoCollab
 {
     /// <summary>
-    /// UDP broadcast discovery. Announces our presence on the LAN and listens
-    /// for other NanoCollab editors on the same project + scene.
+    /// UDP broadcast discovery. Announces presence on LAN immediately on scene load/join
+    /// and periodically (heartbeat every 2s). Computes stable session hash from Scene GUID.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
-        // "NCOL" magic bytes
-        private const uint   Magic          = 0x4E434F4C;
-        private const byte   ProtocolVersion = 1;
-        private const byte   MsgAnnounce    = 0x01;
-        private const byte   MsgGoodbye     = 0x02;
-        private const float  BroadcastInterval = 2.0f;
+        private const uint   Magic           = 0x4E434F4C;
+        private const byte   ProtocolVersion = 2;
+        private const byte   MsgAnnounce     = 0x01;
+        private const byte   MsgGoodbye      = 0x02;
+        private const float  HeartbeatInterval = 2.0f;
 
         private UdpClient _udp;
         private readonly int    _port;
@@ -26,23 +25,22 @@ namespace NanoCollab
         private readonly ulong  _sessionHash;
         private readonly string _userName;
         private readonly ushort _hostPort;
+        private readonly long   _sessionStartTimeTicks;
 
         private float _lastBroadcast;
         private bool  _disposed;
 
-        /// <summary>Fired when a peer with a matching session is discovered.</summary>
         public event Action<DiscoveryPacket> OnPeerFound;
-
-        /// <summary>Fired when a peer sends a goodbye.</summary>
         public event Action<Guid> OnPeerGone;
 
-        public Discovery(Guid localId, ulong sessionHash, string userName, int port, ushort hostPort)
+        public Discovery(Guid localId, ulong sessionHash, string userName, int port, ushort hostPort, long sessionStartTimeTicks)
         {
-            _localId     = localId;
-            _sessionHash = sessionHash;
-            _userName    = userName;
-            _port        = port;
-            _hostPort    = hostPort;
+            _localId                = localId;
+            _sessionHash            = sessionHash;
+            _userName               = userName;
+            _port                   = port;
+            _hostPort               = hostPort;
+            _sessionStartTimeTicks = sessionStartTimeTicks;
 
             _udp = new UdpClient();
             _udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
@@ -50,26 +48,31 @@ namespace NanoCollab
             _udp.EnableBroadcast = true;
             _udp.Client.Blocking = false;
 
-            _lastBroadcast = -BroadcastInterval; // broadcast immediately on first tick
+            // Broadcast immediately on creation
+            SendImmediateAnnounce();
         }
 
-        /// <summary>
-        /// Call from EditorApplication.update. Sends periodic announces and
-        /// processes any incoming discovery packets. Non-blocking.
-        /// </summary>
+        /// <summary>Broadcasts an announce packet immediately.</summary>
+        public void SendImmediateAnnounce()
+        {
+            if (_disposed) return;
+            _lastBroadcast = (float)EditorApplication.timeSinceStartup;
+            Broadcast(MsgAnnounce);
+        }
+
         public void Tick()
         {
             if (_disposed) return;
 
-            // Periodic broadcast
-            float now = (float)UnityEditor.EditorApplication.timeSinceStartup;
-            if (now - _lastBroadcast >= BroadcastInterval)
+            // Periodic heartbeat broadcast
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (now - _lastBroadcast >= HeartbeatInterval)
             {
                 _lastBroadcast = now;
                 Broadcast(MsgAnnounce);
             }
 
-            // Receive
+            // Non-blocking receive
             while (_udp.Available > 0)
             {
                 try
@@ -78,19 +81,14 @@ namespace NanoCollab
                     var data = _udp.Receive(ref ep);
                     ProcessPacket(data, ep);
                 }
-                catch (SocketException)
-                {
-                    // Non-blocking receive may throw EWOULDBLOCK — safe to ignore
-                }
+                catch (SocketException) { }
             }
         }
 
-        /// <summary>Broadcast a goodbye and dispose.</summary>
         public void Shutdown()
         {
             if (_disposed) return;
-            try { Broadcast(MsgGoodbye); }
-            catch { /* best-effort */ }
+            try { Broadcast(MsgGoodbye); } catch { }
             Dispose();
         }
 
@@ -106,16 +104,17 @@ namespace NanoCollab
 
         private void Broadcast(byte msgType)
         {
-            using var ms = new MemoryStream(64);
+            using var ms = new MemoryStream(96);
             using var w  = new BinaryWriter(ms);
 
             w.Write(Magic);
             w.Write(ProtocolVersion);
             w.Write(msgType);
             w.Write(_sessionHash);
-            Serialization.WriteGuid(w, _localId);
+            w.WriteGuid(_localId);
             w.Write(_hostPort);
-            Serialization.WriteString(w, _userName);
+            w.Write(_sessionStartTimeTicks);
+            w.WriteString(_userName);
 
             var bytes = ms.ToArray();
             try
@@ -130,7 +129,7 @@ namespace NanoCollab
 
         private void ProcessPacket(byte[] data, IPEndPoint sender)
         {
-            if (data.Length < 30) return; // minimum packet size
+            if (data.Length < 38) return;
 
             using var ms = new MemoryStream(data);
             using var r  = new BinaryReader(ms);
@@ -141,16 +140,14 @@ namespace NanoCollab
             byte version = r.ReadByte();
             if (version != ProtocolVersion) return;
 
-            byte msgType     = r.ReadByte();
-            ulong sessHash   = r.ReadUInt64();
-            Guid  userId     = Serialization.ReadGuid(r);
-            ushort hostPort  = r.ReadUInt16();
-            string userName  = Serialization.ReadString(r);
+            byte msgType             = r.ReadByte();
+            ulong sessHash           = r.ReadUInt64();
+            Guid  userId             = r.ReadGuid();
+            ushort hostPort          = r.ReadUInt16();
+            long  startTimeTicks     = r.ReadInt64();
+            string userName          = r.ReadString();
 
-            // Ignore our own packets
             if (userId == _localId) return;
-
-            // Only care about matching sessions
             if (sessHash != _sessionHash) return;
 
             if (msgType == MsgGoodbye)
@@ -163,25 +160,26 @@ namespace NanoCollab
             {
                 OnPeerFound?.Invoke(new DiscoveryPacket
                 {
-                    UserId   = userId,
-                    UserName = userName,
-                    Address  = sender.Address,
-                    HostPort = hostPort,
+                    UserId                = userId,
+                    UserName              = userName,
+                    Address               = sender.Address,
+                    HostPort              = hostPort,
+                    SessionStartTimeTicks = startTimeTicks
                 });
             }
         }
 
-        // --- Helpers ---
-
         /// <summary>
-        /// Compute a stable session hash from project path and scene path.
+        /// Compute a stable session hash based on Scene GUID (survives moving project folder).
         /// </summary>
-        public static ulong ComputeSessionHash(string projectPath, string scenePath)
+        public static ulong ComputeSessionHash(string scenePath)
         {
-            string combined = projectPath + "|" + scenePath;
+            string sceneGuid = AssetDatabase.AssetPathToGUID(scenePath);
+            if (string.IsNullOrEmpty(sceneGuid)) sceneGuid = scenePath;
+
             // FNV-1a 64-bit
             ulong hash = 14695981039346656037;
-            foreach (char c in combined)
+            foreach (char c in sceneGuid)
             {
                 hash ^= (byte)c;
                 hash *= 1099511628211;
@@ -190,12 +188,12 @@ namespace NanoCollab
         }
     }
 
-    /// <summary>Data received from a discovered peer.</summary>
     public struct DiscoveryPacket
     {
         public Guid      UserId;
         public string    UserName;
         public IPAddress Address;
         public ushort    HostPort;
+        public long      SessionStartTimeTicks;
     }
 }

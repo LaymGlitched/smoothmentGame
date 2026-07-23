@@ -7,9 +7,8 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Broadcasts local object selection changes to peers and receives
-    /// remote selection updates. Stores remote selections in PresenceManager
-    /// for the SceneOverlay to render highlights.
+    /// Event-driven selection sync using GlobalObjectId.
+    /// Broadcasts selection changes on Selection.selectionChanged.
     /// </summary>
     public sealed class SelectionSync
     {
@@ -17,16 +16,15 @@ namespace NanoCollab
         private readonly PresenceManager _presence;
         private readonly Guid            _localId;
 
-        private string[] _lastSentPaths = Array.Empty<string>();
+        private GlobalObjectId[] _lastSentObjects = Array.Empty<GlobalObjectId>();
 
-        public SelectionSync(Transport transport, PresenceManager presence,
-                             MessageRouter router, Guid localId)
+        public SelectionSync(Transport transport, PresenceManager presence, Guid localId)
         {
             _transport = transport;
             _presence  = presence;
             _localId   = localId;
 
-            router.Register(MsgType.SelectionChange, OnSelectionReceived);
+            _transport.RegisterHandler(MsgType.SelectionChange, OnSelectionReceived);
             Selection.selectionChanged += OnLocalSelectionChanged;
         }
 
@@ -40,36 +38,41 @@ namespace NanoCollab
             if (_transport.CurrentMode == Transport.Mode.None) return;
 
             var gos = Selection.gameObjects;
-            var paths = new string[gos.Length];
+            var gids = new GlobalObjectId[gos.Length];
+            int count = 0;
             for (int i = 0; i < gos.Length; i++)
-                paths[i] = TransformSync.GetHierarchyPath(gos[i]);
+            {
+                var gid = GlobalObjectId.GetGlobalObjectIdSlow(gos[i]);
+                if (!gid.Equals(default))
+                    gids[count++] = gid;
+            }
 
-            // Skip if unchanged
-            if (paths.SequenceEqual(_lastSentPaths)) return;
-            _lastSentPaths = paths;
+            Array.Resize(ref gids, count);
 
-            // Serialize
+            if (gids.SequenceEqual(_lastSentObjects)) return;
+            _lastSentObjects = gids;
+
             using var ms = new MemoryStream(128);
             using var w  = new BinaryWriter(ms);
-            Serialization.WriteGuid(w, _localId);
-            w.Write((byte)paths.Length);
-            for (int i = 0; i < paths.Length; i++)
-                Serialization.WriteString(w, paths[i]);
+            w.WriteGuid(_localId);
+            w.Write((byte)gids.Length);
+            for (int i = 0; i < gids.Length; i++)
+                w.WriteGlobalObjectId(gids[i]);
 
             _transport.Broadcast(MsgType.SelectionChange, ms.ToArray());
         }
 
         private void OnSelectionReceived(BinaryReader r)
         {
-            var userId = Serialization.ReadGuid(r);
+            var userId = r.ReadGuid();
             int count  = r.ReadByte();
-            var paths  = new string[count];
+            var gids   = new GlobalObjectId[count];
             for (int i = 0; i < count; i++)
-                paths[i] = Serialization.ReadString(r);
+                gids[i] = r.ReadGlobalObjectId();
 
             _presence.UpdateUser(userId, user =>
             {
-                user.SelectedPaths = paths;
+                user.SelectedObjects = gids;
             });
 
             SceneView.RepaintAll();

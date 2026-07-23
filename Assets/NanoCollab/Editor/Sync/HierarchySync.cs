@@ -8,42 +8,42 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Detects hierarchy changes (reparent, rename, create, delete) by comparing
-    /// a snapshot of the scene hierarchy each tick. Broadcasts changes to peers
-    /// and applies remote changes locally.
+    /// Event-driven hierarchy change detection (reparent, rename, create, delete)
+    /// using persistent GlobalObjectId.
     /// </summary>
     public sealed class HierarchySync
     {
         private readonly Transport _transport;
 
-        // Snapshot: path → GlobalObjectId
-        private Dictionary<string, GlobalObjectId> _snapshot = new();
+        private struct ObjectInfo
+        {
+            public GlobalObjectId ParentGid;
+            public string Name;
+            public int SiblingIndex;
+        }
+
+        private Dictionary<GlobalObjectId, ObjectInfo> _snapshot = new();
         private bool _hierarchyDirty;
 
-        // Suppress applying our own changes back
-        private readonly HashSet<string> _suppressPaths = new();
+        private readonly HashSet<GlobalObjectId> _suppressObjects = new();
         private float _suppressClearTime;
 
-        public HierarchySync(Transport transport, MessageRouter router)
+        public HierarchySync(Transport transport)
         {
             _transport = transport;
-            router.Register(MsgType.HierarchyChange, OnHierarchyReceived);
+            _transport.RegisterHandler(MsgType.HierarchyChange, OnHierarchyReceived);
 
             EditorApplication.hierarchyChanged += () => _hierarchyDirty = true;
             RebuildSnapshot();
         }
 
-        /// <summary>
-        /// Called from EditorApplication.update. Diffs the hierarchy if it changed.
-        /// </summary>
         public void Tick()
         {
             if (_transport.CurrentMode == Transport.Mode.None) return;
 
-            // Clean suppressions
             float now = (float)EditorApplication.timeSinceStartup;
-            if (now > _suppressClearTime && _suppressPaths.Count > 0)
-                _suppressPaths.Clear();
+            if (now > _suppressClearTime && _suppressObjects.Count > 0)
+                _suppressObjects.Clear();
 
             if (!_hierarchyDirty) return;
             _hierarchyDirty = false;
@@ -53,100 +53,78 @@ namespace NanoCollab
             _snapshot = newSnapshot;
         }
 
-        /// <summary>Rebuild the snapshot from scratch (e.g. on scene load).</summary>
         public void RebuildSnapshot()
         {
             _snapshot = BuildSnapshot();
         }
 
-        private Dictionary<string, GlobalObjectId> BuildSnapshot()
+        private Dictionary<GlobalObjectId, ObjectInfo> BuildSnapshot()
         {
-            var result = new Dictionary<string, GlobalObjectId>();
+            var result = new Dictionary<GlobalObjectId, ObjectInfo>();
             var roots = UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects();
             foreach (var root in roots)
-                AddToSnapshot(root.transform, "", result);
+                AddToSnapshot(root.transform, default, result);
             return result;
         }
 
-        private void AddToSnapshot(Transform t, string parentPath, Dictionary<string, GlobalObjectId> snapshot)
+        private void AddToSnapshot(Transform t, GlobalObjectId parentGid, Dictionary<GlobalObjectId, ObjectInfo> snapshot)
         {
-            string path = parentPath + "/" + t.name;
-            snapshot[path] = GlobalObjectId.GetGlobalObjectIdSlow(t.gameObject);
+            var gid = GlobalObjectId.GetGlobalObjectIdSlow(t.gameObject);
+            if (gid.IsValid())
+            {
+                snapshot[gid] = new ObjectInfo
+                {
+                    ParentGid    = parentGid,
+                    Name         = t.name,
+                    SiblingIndex = t.GetSiblingIndex()
+                };
+            }
             for (int i = 0; i < t.childCount; i++)
-                AddToSnapshot(t.GetChild(i), path, snapshot);
+                AddToSnapshot(t.GetChild(i), gid, snapshot);
         }
 
-        private void DiffAndBroadcast(Dictionary<string, GlobalObjectId> oldSnap, Dictionary<string, GlobalObjectId> newSnap)
+        private void DiffAndBroadcast(Dictionary<GlobalObjectId, ObjectInfo> oldSnap,
+                                     Dictionary<GlobalObjectId, ObjectInfo> newSnap)
         {
-            // Detect deletes: in old but not in new
             foreach (var kv in oldSnap)
             {
-                if (!newSnap.ContainsKey(kv.Key) && !_suppressPaths.Contains(kv.Key))
+                if (!newSnap.ContainsKey(kv.Key) && !_suppressObjects.Contains(kv.Key))
                 {
-                    // Could be delete or rename/reparent
-                    // Check if GlobalObjectId exists in new snapshot under different path
-                    string newPath = null;
-                    foreach (var nkv in newSnap)
-                    {
-                        if (nkv.Value.Equals(kv.Value))
-                        {
-                            newPath = nkv.Key;
-                            break;
-                        }
-                    }
-
-                    if (newPath != null)
-                    {
-                        // Reparent or rename
-                        string oldName = System.IO.Path.GetFileName(kv.Key);
-                        string newName = System.IO.Path.GetFileName(newPath);
-
-                        if (oldName != newName)
-                            BroadcastChange(HierarchyChangeType.Rename, kv.Key, "", newName, 0);
-                        else
-                        {
-                            // Find sibling index
-                            var go = FindByPath(newPath);
-                            int sibIndex = go != null ? go.transform.GetSiblingIndex() : 0;
-                            string newParent = newPath.Substring(0, newPath.LastIndexOf('/'));
-                            BroadcastChange(HierarchyChangeType.Reparent, kv.Key, newParent, "", sibIndex);
-                        }
-                    }
-                    else
-                    {
-                        BroadcastChange(HierarchyChangeType.Delete, kv.Key, "", "", 0);
-                    }
+                    BroadcastChange(HierarchyChangeType.Delete, kv.Key, default, "", 0);
                 }
             }
 
-            // Detect creates: in new but not in old (and not a moved object)
             foreach (var kv in newSnap)
             {
-                if (!oldSnap.ContainsKey(kv.Key) && !_suppressPaths.Contains(kv.Key))
+                if (_suppressObjects.Contains(kv.Key)) continue;
+
+                if (!oldSnap.TryGetValue(kv.Key, out var oldInfo))
                 {
-                    // Check if this instanceID existed in old (moved)
-                    bool wasMoved = false;
-                    foreach (var okv in oldSnap)
+                    BroadcastChange(HierarchyChangeType.Create, kv.Key, kv.Value.ParentGid, kv.Value.Name, kv.Value.SiblingIndex);
+                }
+                else
+                {
+                    if (oldInfo.Name != kv.Value.Name)
                     {
-                        if (okv.Value.Equals(kv.Value)) { wasMoved = true; break; }
+                        BroadcastChange(HierarchyChangeType.Rename, kv.Key, default, kv.Value.Name, 0);
                     }
-                    if (!wasMoved)
+                    if (!oldInfo.ParentGid.Equals(kv.Value.ParentGid))
                     {
-                        BroadcastChange(HierarchyChangeType.Create, kv.Key, "", "", 0);
+                        BroadcastChange(HierarchyChangeType.Reparent, kv.Key, kv.Value.ParentGid, "", kv.Value.SiblingIndex);
                     }
                 }
             }
         }
 
-        private void BroadcastChange(HierarchyChangeType changeType, string objectPath,
-                                     string newParentPath, string newName, int siblingIndex)
+        private void BroadcastChange(HierarchyChangeType changeType, GlobalObjectId targetGid,
+                                     GlobalObjectId newParentGid, string newName, int siblingIndex)
         {
             using var ms = new MemoryStream(128);
             using var w  = new BinaryWriter(ms);
             w.Write((byte)changeType);
-            Serialization.WriteString(w, objectPath);
-            Serialization.WriteString(w, newParentPath);
-            Serialization.WriteString(w, newName);
+            w.WriteGlobalObjectId(targetGid);
+            w.WriteGlobalObjectId(newParentGid);
+            w.WriteString(newName);
             w.Write(siblingIndex);
 
             _transport.Broadcast(MsgType.HierarchyChange, ms.ToArray());
@@ -154,64 +132,57 @@ namespace NanoCollab
 
         private void OnHierarchyReceived(BinaryReader r)
         {
-            var changeType    = (HierarchyChangeType)r.ReadByte();
-            string objectPath = Serialization.ReadString(r);
-            string newParent  = Serialization.ReadString(r);
-            string newName    = Serialization.ReadString(r);
-            int siblingIndex  = r.ReadInt32();
+            var changeType   = (HierarchyChangeType)r.ReadByte();
+            var targetGid    = r.ReadGlobalObjectId();
+            var newParentGid = r.ReadGlobalObjectId();
+            string newName   = r.ReadString();
+            int siblingIndex = r.ReadInt32();
 
-            // Suppress so we don't echo
-            _suppressPaths.Add(objectPath);
+            _suppressObjects.Add(targetGid);
             _suppressClearTime = (float)EditorApplication.timeSinceStartup + 0.5f;
 
             switch (changeType)
             {
                 case HierarchyChangeType.Create:
-                    CreateObject(objectPath);
+                    CreateObject(targetGid, newParentGid, newName);
                     break;
                 case HierarchyChangeType.Delete:
-                    DeleteObject(objectPath);
+                    DeleteObject(targetGid);
                     break;
                 case HierarchyChangeType.Rename:
-                    RenameObject(objectPath, newName);
+                    RenameObject(targetGid, newName);
                     break;
                 case HierarchyChangeType.Reparent:
-                    ReparentObject(objectPath, newParent, siblingIndex);
+                    ReparentObject(targetGid, newParentGid, siblingIndex);
                     break;
             }
 
-            // Rebuild our snapshot after applying remote changes
             _snapshot = BuildSnapshot();
         }
 
-        private static void CreateObject(string path)
+        private static void CreateObject(GlobalObjectId targetGid, GlobalObjectId parentGid, string name)
         {
-            // Extract name and parent path
-            int lastSlash = path.LastIndexOf('/');
-            string name = path.Substring(lastSlash + 1);
-            string parentPath = lastSlash > 0 ? path.Substring(0, lastSlash) : "";
-
-            var go = new GameObject(name);
+            var go = new GameObject(string.IsNullOrEmpty(name) ? "New GameObject" : name);
             Undo.RegisterCreatedObjectUndo(go, "NanoCollab Create");
 
-            if (!string.IsNullOrEmpty(parentPath))
+            if (parentGid.IsValid())
             {
-                var parent = FindByPath(parentPath);
-                if (parent != null)
-                    go.transform.SetParent(parent.transform, false);
+                var parentGo = parentGid.ToGameObject();
+                if (parentGo != null)
+                    go.transform.SetParent(parentGo.transform, false);
             }
         }
 
-        private static void DeleteObject(string path)
+        private static void DeleteObject(GlobalObjectId targetGid)
         {
-            var go = FindByPath(path);
+            var go = targetGid.ToGameObject();
             if (go != null)
                 Undo.DestroyObjectImmediate(go);
         }
 
-        private static void RenameObject(string path, string newName)
+        private static void RenameObject(GlobalObjectId targetGid, string newName)
         {
-            var go = FindByPath(path);
+            var go = targetGid.ToGameObject();
             if (go != null)
             {
                 Undo.RecordObject(go, "NanoCollab Rename");
@@ -219,37 +190,20 @@ namespace NanoCollab
             }
         }
 
-        private static void ReparentObject(string path, string newParentPath, int siblingIndex)
+        private static void ReparentObject(GlobalObjectId targetGid, GlobalObjectId newParentGid, int siblingIndex)
         {
-            var go = FindByPath(path);
+            var go = targetGid.ToGameObject();
             if (go == null) return;
 
             Transform newParent = null;
-            if (!string.IsNullOrEmpty(newParentPath))
+            if (newParentGid.IsValid())
             {
-                var parentGo = FindByPath(newParentPath);
+                var parentGo = newParentGid.ToGameObject();
                 if (parentGo != null) newParent = parentGo.transform;
             }
 
             Undo.SetTransformParent(go.transform, newParent, "NanoCollab Reparent");
             go.transform.SetSiblingIndex(siblingIndex);
-        }
-
-        private static GameObject FindByPath(string path)
-        {
-            // Path format: "/Root/Child/Grandchild"
-            // GameObject.Find expects paths without leading slash for root objects
-            if (string.IsNullOrEmpty(path)) return null;
-
-            // Try direct find first
-            var go = GameObject.Find(path);
-            if (go != null) return go;
-
-            // Fallback: strip leading slash
-            if (path.StartsWith("/"))
-                go = GameObject.Find(path.Substring(1));
-
-            return go;
         }
     }
 }

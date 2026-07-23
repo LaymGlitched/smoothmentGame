@@ -3,16 +3,15 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using UnityEditor;
-using UnityEditor.SceneManagement;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace NanoCollab
 {
     /// <summary>
-    /// Central coordinator. Manages the connection lifecycle state machine,
-    /// owns all subsystems (discovery, transport, sync modules, presence),
-    /// and drives them from EditorApplication.update.
+    /// Central coordinator for NanoCollab.
+    /// Manages state machine, deterministic host election by oldest session start time,
+    /// subsystem lifecycles, and update ticks.
     /// </summary>
     public sealed class SessionManager : IDisposable
     {
@@ -21,20 +20,20 @@ namespace NanoCollab
             Idle,
             Discovering,
             Hosting,
-            Connected, // as client
+            Connected,
         }
 
         private SessionState _state = SessionState.Idle;
         public SessionState State => _state;
 
         // Identity
-        private readonly Guid   _localId = Guid.NewGuid();
+        private readonly Guid   _localId                = Guid.NewGuid();
+        private readonly long   _sessionStartTimeTicks  = DateTime.UtcNow.Ticks;
         private readonly string _userName;
 
         // Subsystems
         private Discovery        _discovery;
         private Transport        _transport;
-        private MessageRouter    _router;
         private PresenceManager  _presence;
         private Notification     _notification;
         private CameraSync       _cameraSync;
@@ -43,19 +42,16 @@ namespace NanoCollab
         private HierarchySync    _hierarchySync;
         private SceneOverlay     _sceneOverlay;
 
-        // Properties for UI
-        public PresenceManager Presence  => _presence;
-        public Transport       Transport => _transport;
+        public PresenceManager Presence   => _presence;
+        public Transport       Transport  => _transport;
+        public CameraSync      CameraSync => _cameraSync;
 
-        // Discovery state
-        private ulong  _sessionHash;
-        private float  _discoverStartTime;
-        private const float HostPromotionDelay = 3.0f; // seconds to wait before becoming host
+        private ulong _sessionHash;
+        private float _discoverStartTime;
+        private const float HostPromotionDelay = 2.5f;
 
-        // Known peers (to avoid duplicate connections)
-        private readonly HashSet<Guid> _knownPeers = new();
+        private readonly Dictionary<Guid, DiscoveryPacket> _discoveredPeers = new();
 
-        // Ping/pong
         private float _lastPingTime;
         private const float PingInterval = 5.0f;
 
@@ -63,41 +59,36 @@ namespace NanoCollab
         {
             _userName = NanoCollabSettings.instance.DisplayName;
 
-            // Create subsystems that exist for the lifetime of the session
             _transport    = new Transport();
-            _router       = new MessageRouter();
             _presence     = new PresenceManager();
             _notification = new Notification(_presence);
             _sceneOverlay = new SceneOverlay(_presence);
 
-            // Register presence message handlers
-            _router.Register(MsgType.UserJoin, OnUserJoinReceived);
-            _router.Register(MsgType.UserLeave, OnUserLeaveReceived);
-            _router.Register(MsgType.UserList, OnUserListReceived);
-            _router.Register(MsgType.Ping, OnPingReceived);
-            _router.Register(MsgType.Pong, OnPongReceived);
+            RegisterHandlers();
 
-            // Create sync modules
-            _cameraSync    = new CameraSync(_transport, _presence, _router, _localId);
-            _transformSync = new TransformSync(_transport, _router);
-            _selectionSync = new SelectionSync(_transport, _presence, _router, _localId);
-            _hierarchySync = new HierarchySync(_transport, _router);
+            _cameraSync    = new CameraSync(_transport, _presence, _localId);
+            _transformSync = new TransformSync(_transport, _presence, _localId);
+            _selectionSync = new SelectionSync(_transport, _presence, _localId);
+            _hierarchySync = new HierarchySync(_transport);
 
-            // Hook undo for transform detection
             Undo.postprocessModifications += _transformSync.OnPostprocessModifications;
-
-            // Transport events
             _transport.OnPeerConnected    += OnPeerTcpConnected;
             _transport.OnPeerDisconnected += OnPeerTcpDisconnected;
 
-            // SceneView hooks
             SceneView.duringSceneGui += OnSceneGUI;
 
-            // Bind window
             CollabWindow.Bind(this);
         }
 
-        /// <summary>Called when the active scene changes.</summary>
+        private void RegisterHandlers()
+        {
+            _transport.RegisterHandler(MsgType.UserJoin, OnUserJoinReceived);
+            _transport.RegisterHandler(MsgType.UserLeave, OnUserLeaveReceived);
+            _transport.RegisterHandler(MsgType.UserList, OnUserListReceived);
+            _transport.RegisterHandler(MsgType.Ping, OnPingReceived);
+            _transport.RegisterHandler(MsgType.Pong, OnPongReceived);
+        }
+
         public void OnSceneChanged()
         {
             Disconnect();
@@ -110,36 +101,26 @@ namespace NanoCollab
             StartDiscovery(scene.path);
         }
 
-        /// <summary>
-        /// Main tick — called from EditorApplication.update.
-        /// </summary>
         public void Tick()
         {
             if (!NanoCollabSettings.instance.Enabled) return;
 
-            // Tick discovery
             _discovery?.Tick();
 
-            // Check if we should promote to host
             if (_state == SessionState.Discovering)
             {
                 float now = (float)EditorApplication.timeSinceStartup;
                 if (now - _discoverStartTime > HostPromotionDelay)
-                    PromoteToHost();
+                    CheckHostElection();
             }
 
-            // Poll transport
             if (_state == SessionState.Hosting || _state == SessionState.Connected)
             {
-                var messages = _transport.Poll();
-                if (messages.Count > 0)
-                    _router.Route(messages);
+                _transport.PollAndDispatch();
 
-                // Tick sync modules
                 _transformSync.Tick();
                 _hierarchySync.Tick();
 
-                // Ping/pong
                 float now = (float)EditorApplication.timeSinceStartup;
                 if (now - _lastPingTime > PingInterval)
                 {
@@ -158,21 +139,79 @@ namespace NanoCollab
             CollabWindow.Bind(null);
         }
 
-        // --- Internal State Machine ---
+        // --- Host Election & Discovery ---
 
         private void StartDiscovery(string scenePath)
         {
             int port = NanoCollabSettings.instance.Port;
-            _sessionHash = Discovery.ComputeSessionHash(Application.dataPath, scenePath);
+            _sessionHash = Discovery.ComputeSessionHash(scenePath);
 
-            _discovery = new Discovery(_localId, _sessionHash, _userName, port, (ushort)(port + 1));
+            _discovery = new Discovery(_localId, _sessionHash, _userName, port, (ushort)(port + 1), _sessionStartTimeTicks);
             _discovery.OnPeerFound += OnPeerDiscovered;
             _discovery.OnPeerGone  += OnPeerGone;
 
             _state = SessionState.Discovering;
             _discoverStartTime = (float)EditorApplication.timeSinceStartup;
+            _discoveredPeers.Clear();
 
             Debug.Log($"[NanoCollab] Discovering peers for session {_sessionHash:X16}...");
+        }
+
+        private void OnPeerDiscovered(DiscoveryPacket packet)
+        {
+            _discoveredPeers[packet.UserId] = packet;
+
+            if (_state == SessionState.Discovering)
+            {
+                // Immediate host election evaluation
+                CheckHostElection();
+            }
+        }
+
+        private void OnPeerGone(Guid userId)
+        {
+            _discoveredPeers.Remove(userId);
+            _presence.RemoveUser(userId);
+        }
+
+        /// <summary>
+        /// Deterministic host election: the peer with the earliest SessionStartTimeTicks becomes host.
+        /// </summary>
+        private void CheckHostElection()
+        {
+            if (_state != SessionState.Discovering) return;
+
+            // Find the peer with the earliest start time among known peers and ourselves
+            long oldestStartTime = _sessionStartTimeTicks;
+            DiscoveryPacket? hostCandidate = null;
+
+            foreach (var kv in _discoveredPeers)
+            {
+                if (kv.Value.SessionStartTimeTicks < oldestStartTime)
+                {
+                    oldestStartTime = kv.Value.SessionStartTimeTicks;
+                    hostCandidate = kv.Value;
+                }
+            }
+
+            if (hostCandidate.HasValue)
+            {
+                // Another peer is older — connect to them as client
+                var target = hostCandidate.Value;
+                _transport.ConnectToHost(target.Address, target.HostPort);
+                _state = SessionState.Connected;
+
+                var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
+                _transport.Broadcast(MsgType.UserJoin, payload);
+
+                _hierarchySync.RebuildSnapshot();
+                Debug.Log($"[NanoCollab] Connected as client to host {target.UserName} (oldest peer).");
+            }
+            else
+            {
+                // We are the oldest peer — promote to host!
+                PromoteToHost();
+            }
         }
 
         private void PromoteToHost()
@@ -183,55 +222,17 @@ namespace NanoCollab
             _transport.StartHost(port + 1);
             _state = SessionState.Hosting;
 
-            // Rebuild hierarchy snapshot for the new session
             _hierarchySync.RebuildSnapshot();
-
-            Debug.Log("[NanoCollab] No peers found — promoted to host.");
-        }
-
-        private void OnPeerDiscovered(DiscoveryPacket packet)
-        {
-            if (_knownPeers.Contains(packet.UserId)) return;
-            _knownPeers.Add(packet.UserId);
-
-            if (_state == SessionState.Discovering)
-            {
-                // Connect to their host port as a client
-                _transport.ConnectToHost(packet.Address, packet.HostPort);
-                _state = SessionState.Connected;
-
-                // Send our UserJoin
-                var payload = PresenceManager.WriteUserJoin(
-                    _localId, _userName, new Color(1, 1, 1)); // color assigned by host
-                _transport.Broadcast(MsgType.UserJoin, payload);
-
-                _hierarchySync.RebuildSnapshot();
-
-                Debug.Log($"[NanoCollab] Connected to {packet.UserName} at {packet.Address}:{packet.HostPort}");
-            }
-            else if (_state == SessionState.Hosting)
-            {
-                // They will connect to us via TCP — nothing to do here
-                Debug.Log($"[NanoCollab] Discovered peer {packet.UserName}, waiting for TCP connection.");
-            }
-        }
-
-        private void OnPeerGone(Guid userId)
-        {
-            _knownPeers.Remove(userId);
-            _presence.RemoveUser(userId);
+            Debug.Log("[NanoCollab] Promoted to host (oldest active peer in session).");
         }
 
         private void OnPeerTcpConnected(PeerConnection peer)
         {
-            // Host: send current user list to the new peer
             if (_state == SessionState.Hosting)
             {
-                // Add ourselves to the list first if not already there
-                _presence.AddUser(_localId, _userName);
-
+                _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
                 var listPayload = _presence.WriteUserList();
-                var frame = Serialization.Frame(MsgType.UserList, listPayload);
+                var frame = SerializationExtensions.FrameMessage(MsgType.UserList, listPayload);
                 peer.Send(frame);
             }
         }
@@ -241,24 +242,20 @@ namespace NanoCollab
             if (peer.UserId != Guid.Empty)
             {
                 _presence.RemoveUser(peer.UserId);
-                _knownPeers.Remove(peer.UserId);
+                _discoveredPeers.Remove(peer.UserId);
             }
 
-            // If we were a client and lost connection to host, go back to discovering
             if (_state == SessionState.Connected && _transport.PeerCount == 0)
             {
-                Debug.Log("[NanoCollab] Lost connection to host. Re-discovering...");
+                Debug.Log("[NanoCollab] Lost connection to host. Re-discovering & electing new host...");
                 _transport.Shutdown();
                 _transport = new Transport();
-                // Re-wire transport events
-                _transport.OnPeerConnected    += OnPeerTcpConnected;
-                _transport.OnPeerDisconnected += OnPeerTcpDisconnected;
-                // Re-create sync modules with new transport
+                RegisterHandlers();
                 RebindSyncModules();
 
                 _state = SessionState.Discovering;
                 _discoverStartTime = (float)EditorApplication.timeSinceStartup;
-                _knownPeers.Clear();
+                _discoveredPeers.Clear();
             }
         }
 
@@ -269,61 +266,46 @@ namespace NanoCollab
 
             if (_transport.CurrentMode != Transport.Mode.None)
             {
-                // Broadcast UserLeave before disconnecting
-                var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white);
+                var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
                 try { _transport.Broadcast(MsgType.UserLeave, payload); } catch { }
             }
 
             _transport.Shutdown();
             _transport = new Transport();
-            _transport.OnPeerConnected    += OnPeerTcpConnected;
-            _transport.OnPeerDisconnected += OnPeerTcpDisconnected;
-
+            RegisterHandlers();
             RebindSyncModules();
 
             _presence.Clear();
-            _knownPeers.Clear();
+            _discoveredPeers.Clear();
             _state = SessionState.Idle;
         }
 
         private void RebindSyncModules()
         {
-            // Re-create sync modules that hold a reference to transport
             _selectionSync?.Dispose();
             Undo.postprocessModifications -= _transformSync.OnPostprocessModifications;
 
-            _router = new MessageRouter();
-            _router.Register(MsgType.UserJoin, OnUserJoinReceived);
-            _router.Register(MsgType.UserLeave, OnUserLeaveReceived);
-            _router.Register(MsgType.UserList, OnUserListReceived);
-            _router.Register(MsgType.Ping, OnPingReceived);
-            _router.Register(MsgType.Pong, OnPongReceived);
-
-            _cameraSync    = new CameraSync(_transport, _presence, _router, _localId);
-            _transformSync = new TransformSync(_transport, _router);
-            _selectionSync = new SelectionSync(_transport, _presence, _router, _localId);
-            _hierarchySync = new HierarchySync(_transport, _router);
+            _cameraSync    = new CameraSync(_transport, _presence, _localId);
+            _transformSync = new TransformSync(_transport, _presence, _localId);
+            _selectionSync = new SelectionSync(_transport, _presence, _localId);
+            _hierarchySync = new HierarchySync(_transport);
 
             Undo.postprocessModifications += _transformSync.OnPostprocessModifications;
         }
 
-        // --- Message Handlers ---
+        // --- Handlers ---
 
         private void OnUserJoinReceived(BinaryReader r)
         {
-            var (id, name, _) = PresenceManager.ReadUserJoin(r);
-            var user = _presence.AddUser(id, name);
-
-            // Find the peer connection and tag it with the userId
-            // (so we can clean up on disconnect)
-            // This is a best-effort association
+            var (id, name, _, startTime) = PresenceManager.ReadUserJoin(r);
+            _presence.AddUser(id, name, startTime);
         }
 
         private void OnUserLeaveReceived(BinaryReader r)
         {
-            var (id, _, _) = PresenceManager.ReadUserJoin(r);
+            var (id, _, _, _) = PresenceManager.ReadUserJoin(r);
             _presence.RemoveUser(id);
-            _knownPeers.Remove(id);
+            _discoveredPeers.Remove(id);
         }
 
         private void OnUserListReceived(BinaryReader r)
@@ -346,11 +328,8 @@ namespace NanoCollab
             long now = Stopwatch.GetTimestamp();
             float latencyMs = (float)(now - sentTimestamp) / Stopwatch.Frequency * 1000f;
 
-            // Update latency for all users (simplified — ideally per-peer)
             foreach (var kv in _presence.Users)
-            {
                 _presence.UpdateUser(kv.Key, user => user.LatencyMs = latencyMs);
-            }
         }
 
         private void SendPing()
@@ -360,8 +339,6 @@ namespace NanoCollab
             w.Write(Stopwatch.GetTimestamp());
             _transport.Broadcast(MsgType.Ping, ms.ToArray());
         }
-
-        // --- SceneView Callback ---
 
         private void OnSceneGUI(SceneView sceneView)
         {

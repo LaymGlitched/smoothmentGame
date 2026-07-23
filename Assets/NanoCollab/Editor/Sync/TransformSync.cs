@@ -7,9 +7,9 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Detects local Transform changes and broadcasts them to peers.
-    /// Receives remote transform updates and applies them locally.
-    /// Delta-only: only changed properties above threshold are transmitted.
+    /// Detects local transform changes at 30Hz using GlobalObjectId.
+    /// Manages object manipulation presence (drag start/stop) and prevents
+    /// local Undo stack flooding during continuous remote drag streams.
     /// </summary>
     public sealed class TransformSync
     {
@@ -30,28 +30,36 @@ namespace NanoCollab
         }
 
         private const float PositionThreshold = 0.001f;
-        private const float RotationThreshold = 0.05f; // degrees
+        private const float RotationThreshold = 0.05f;
         private const float ScaleThreshold    = 0.001f;
-        private const float PollInterval      = 1f / 10f; // ~10 Hz
+        private const float PollInterval      = 1f / 30f; // ~30 Hz
 
-        private readonly Transport _transport;
-        private readonly Dictionary<string, Snapshot> _snapshots = new();
+        private readonly Transport       _transport;
+        private readonly PresenceManager _presence;
+        private readonly Guid            _localId;
+
+        private readonly Dictionary<GlobalObjectId, Snapshot> _snapshots = new();
         private float _lastPollTime;
 
-        // Suppress applying our own changes back
-        private readonly HashSet<string> _suppressPaths = new();
-        private const float SuppressionDuration = 0.2f;
-        private readonly Dictionary<string, float> _suppressExpiry = new();
+        // Manipulation state
+        private GlobalObjectId _activeDragTarget;
+        private float          _lastDragChangeTime;
+        private const float    DragTimeout = 0.4f;
 
-        public TransformSync(Transport transport, MessageRouter router)
+        private readonly HashSet<GlobalObjectId> _suppressObjects = new();
+        private readonly HashSet<GlobalObjectId> _remoteRecordedUndos = new();
+        private readonly Dictionary<GlobalObjectId, float> _suppressExpiry = new();
+
+        public TransformSync(Transport transport, PresenceManager presence, Guid localId)
         {
             _transport = transport;
-            router.Register(MsgType.TransformUpdate, OnTransformReceived);
+            _presence  = presence;
+            _localId   = localId;
+
+            _transport.RegisterHandler(MsgType.TransformUpdate, OnTransformReceived);
+            _transport.RegisterHandler(MsgType.Manipulation, OnManipulationReceived);
         }
 
-        /// <summary>
-        /// Called from EditorApplication.update to detect and broadcast changes.
-        /// </summary>
         public void Tick()
         {
             if (_transport.CurrentMode == Transport.Mode.None) return;
@@ -60,17 +68,19 @@ namespace NanoCollab
             if (now - _lastPollTime < PollInterval) return;
             _lastPollTime = now;
 
-            // Clean expired suppressions
             CleanSuppressions(now);
 
-            // Check currently selected transforms for changes (covers drag operations)
+            if (_activeDragTarget.IsValid() && now - _lastDragChangeTime > DragTimeout)
+            {
+                EndLocalDrag();
+            }
+
             var selection = Selection.transforms;
             if (selection == null || selection.Length == 0) return;
 
             using var ms = new MemoryStream(256);
             using var w  = new BinaryWriter(ms);
 
-            // Reserve space for count byte
             long countPos = ms.Position;
             w.Write((byte)0);
             int count = 0;
@@ -80,8 +90,9 @@ namespace NanoCollab
                 var t = selection[i];
                 if (t == null) continue;
 
-                string path = GetHierarchyPath(t.gameObject);
-                if (_suppressPaths.Contains(path)) continue;
+                var gid = GlobalObjectId.GetGlobalObjectIdSlow(t.gameObject);
+                if (!gid.IsValid()) continue;
+                if (_suppressObjects.Contains(gid)) continue;
 
                 var current = new Snapshot
                 {
@@ -92,7 +103,7 @@ namespace NanoCollab
 
                 DirtyFlags flags = DirtyFlags.None;
 
-                if (_snapshots.TryGetValue(path, out var prev))
+                if (_snapshots.TryGetValue(gid, out var prev))
                 {
                     if (Vector3.Distance(current.Position, prev.Position) > PositionThreshold)
                         flags |= DirtyFlags.Position;
@@ -103,44 +114,59 @@ namespace NanoCollab
                 }
                 else
                 {
-                    // First time seeing this object — send everything
                     flags = DirtyFlags.Position | DirtyFlags.Rotation | DirtyFlags.Scale;
                 }
 
                 if (flags == DirtyFlags.None) continue;
 
-                _snapshots[path] = current;
+                _snapshots[gid] = current;
 
-                // Write this transform
-                Serialization.WriteString(w, path);
+                if (!_activeDragTarget.Equals(gid))
+                {
+                    EndLocalDrag();
+                    _activeDragTarget = gid;
+                    BroadcastManipulation(true, gid);
+                }
+                _lastDragChangeTime = now;
+
+                w.WriteGlobalObjectId(gid);
                 w.Write((byte)flags);
-                if ((flags & DirtyFlags.Position) != 0)
-                    Serialization.WriteVector3(w, current.Position);
-                if ((flags & DirtyFlags.Rotation) != 0)
-                    Serialization.WriteQuaternion(w, current.Rotation);
-                if ((flags & DirtyFlags.Scale) != 0)
-                    Serialization.WriteVector3(w, current.Scale);
+                if ((flags & DirtyFlags.Position) != 0) w.WriteVector3(current.Position);
+                if ((flags & DirtyFlags.Rotation) != 0) w.WriteQuaternion(current.Rotation);
+                if ((flags & DirtyFlags.Scale)    != 0) w.WriteVector3(current.Scale);
 
                 count++;
             }
 
             if (count == 0) return;
 
-            // Patch count byte
             ms.Position = countPos;
             w.Write((byte)count);
 
             _transport.Broadcast(MsgType.TransformUpdate, ms.ToArray());
         }
 
-        /// <summary>
-        /// Called when any undo/redo operation modifies transforms.
-        /// Hook via Undo.postprocessModifications.
-        /// </summary>
-        public UndoPropertyModification[] OnPostprocessModifications(
-            UndoPropertyModification[] modifications)
+        private void EndLocalDrag()
         {
-            // Force an immediate poll on next tick
+            if (_activeDragTarget.IsValid())
+            {
+                BroadcastManipulation(false, _activeDragTarget);
+                _activeDragTarget = default;
+            }
+        }
+
+        private void BroadcastManipulation(bool isDragging, GlobalObjectId gid)
+        {
+            using var ms = new MemoryStream(64);
+            using var w  = new BinaryWriter(ms);
+            w.WriteGuid(_localId);
+            w.Write(isDragging);
+            w.WriteGlobalObjectId(gid);
+            _transport.Broadcast(MsgType.Manipulation, ms.ToArray());
+        }
+
+        public UndoPropertyModification[] OnPostprocessModifications(UndoPropertyModification[] modifications)
+        {
             _lastPollTime = 0;
             return modifications;
         }
@@ -152,35 +178,36 @@ namespace NanoCollab
 
             for (int i = 0; i < count; i++)
             {
-                string path = Serialization.ReadString(r);
-                var flags   = (DirtyFlags)r.ReadByte();
+                var gid   = r.ReadGlobalObjectId();
+                var flags = (DirtyFlags)r.ReadByte();
 
                 Vector3    pos   = default;
                 Quaternion rot   = default;
                 Vector3    scale = default;
 
-                if ((flags & DirtyFlags.Position) != 0) pos   = Serialization.ReadVector3(r);
-                if ((flags & DirtyFlags.Rotation) != 0) rot   = Serialization.ReadQuaternion(r);
-                if ((flags & DirtyFlags.Scale)    != 0) scale = Serialization.ReadVector3(r);
+                if ((flags & DirtyFlags.Position) != 0) pos   = r.ReadVector3();
+                if ((flags & DirtyFlags.Rotation) != 0) rot   = r.ReadQuaternion();
+                if ((flags & DirtyFlags.Scale)    != 0) scale = r.ReadVector3();
 
-                // Find the object by path
-                var go = GameObject.Find(path);
-                if (go == null) continue;
+                var targetObj = gid.ToGameObject();
+                if (targetObj == null) continue;
 
-                var t = go.transform;
+                var t = targetObj.transform;
 
-                // Suppress this path so we don't echo it back
-                _suppressPaths.Add(path);
-                _suppressExpiry[path] = now + SuppressionDuration;
+                _suppressObjects.Add(gid);
+                _suppressExpiry[gid] = now + 0.2f;
 
-                Undo.RecordObject(t, "NanoCollab Sync");
+                if (!_remoteRecordedUndos.Contains(gid))
+                {
+                    Undo.RecordObject(t, "NanoCollab Remote Drag");
+                    _remoteRecordedUndos.Add(gid);
+                }
 
                 if ((flags & DirtyFlags.Position) != 0) t.localPosition = pos;
                 if ((flags & DirtyFlags.Rotation) != 0) t.localRotation = rot;
                 if ((flags & DirtyFlags.Scale)    != 0) t.localScale    = scale;
 
-                // Update our snapshot so we don't re-send
-                _snapshots[path] = new Snapshot
+                _snapshots[gid] = new Snapshot
                 {
                     Position = t.localPosition,
                     Rotation = t.localRotation,
@@ -189,34 +216,38 @@ namespace NanoCollab
             }
         }
 
-        private void CleanSuppressions(float now)
+        private void OnManipulationReceived(BinaryReader r)
         {
-            var expired = new List<string>();
-            foreach (var kv in _suppressExpiry)
+            var userId     = r.ReadGuid();
+            bool isDragging = r.ReadBoolean();
+            var gid        = r.ReadGlobalObjectId();
+
+            _presence.UpdateUser(userId, user =>
             {
-                if (now > kv.Value)
-                    expired.Add(kv.Key);
-            }
-            foreach (var path in expired)
+                user.DraggingObject = isDragging ? gid : default;
+            });
+
+            if (!isDragging)
             {
-                _suppressPaths.Remove(path);
-                _suppressExpiry.Remove(path);
+                _remoteRecordedUndos.Remove(gid);
             }
+
+            SceneView.RepaintAll();
         }
 
-        /// <summary>
-        /// Gets the full hierarchy path of a GameObject (e.g. "/Root/Child/Grandchild").
-        /// </summary>
-        public static string GetHierarchyPath(GameObject go)
+        private void CleanSuppressions(float now)
         {
-            var path = "/" + go.name;
-            var parent = go.transform.parent;
-            while (parent != null)
+            var expired = new List<GlobalObjectId>();
+            foreach (var kv in _suppressExpiry)
             {
-                path = "/" + parent.name + path;
-                parent = parent.parent;
+                if (now > kv.Value) expired.Add(kv.Key);
             }
-            return path;
+            foreach (var gid in expired)
+            {
+                _suppressObjects.Remove(gid);
+                _suppressExpiry.Remove(gid);
+                _remoteRecordedUndos.Remove(gid);
+            }
         }
     }
 }

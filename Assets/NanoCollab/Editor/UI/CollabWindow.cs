@@ -1,3 +1,4 @@
+using System;
 using UnityEditor;
 using UnityEngine;
 
@@ -5,7 +6,8 @@ namespace NanoCollab
 {
     /// <summary>
     /// Lightweight EditorWindow showing connection status, connected users,
-    /// and basic settings. Accessible via Window > NanoCollab.
+    /// latency, and Right-Click 'Follow Camera' option.
+    /// Accessible via Window > NanoCollab.
     /// </summary>
     public sealed class CollabWindow : EditorWindow
     {
@@ -19,7 +21,6 @@ namespace NanoCollab
             win.minSize = new Vector2(240, 200);
         }
 
-        /// <summary>Called by SessionManager to provide the reference.</summary>
         public static void Bind(SessionManager session)
         {
             _session = session;
@@ -27,7 +28,6 @@ namespace NanoCollab
 
         private void OnEnable()
         {
-            // Repaint periodically for live status
             EditorApplication.update += RepaintTick;
         }
 
@@ -52,7 +52,7 @@ namespace NanoCollab
             if (_session == null)
             {
                 EditorGUILayout.HelpBox(
-                    "NanoCollab is not active. Make sure it is enabled in Edit > Preferences > NanoCollab.",
+                    "NanoCollab is inactive. Enable it in Edit > Preferences > NanoCollab.",
                     MessageType.Info);
                 return;
             }
@@ -68,7 +68,6 @@ namespace NanoCollab
         {
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
 
-            // Status indicator
             var state = _session.State;
             string statusText;
             Color statusColor;
@@ -100,7 +99,6 @@ namespace NanoCollab
 
             GUILayout.FlexibleSpace();
 
-            // Scene name
             var sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             GUILayout.Label(sceneName, EditorStyles.miniLabel);
 
@@ -112,40 +110,66 @@ namespace NanoCollab
             var presence = _session.Presence;
             if (presence == null || presence.Users.Count == 0)
             {
-                EditorGUILayout.LabelField("No collaborators connected.",
-                    EditorStyles.centeredGreyMiniLabel);
+                EditorGUILayout.LabelField("No collaborators connected.", EditorStyles.centeredGreyMiniLabel);
                 return;
             }
 
-            EditorGUILayout.LabelField("Collaborators", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("Collaborators (Right-Click to Follow)", EditorStyles.boldLabel);
             EditorGUILayout.Space(2);
 
             _scrollPos = EditorGUILayout.BeginScrollView(_scrollPos);
 
+            var currentFollowId = _session.CameraSync != null ? _session.CameraSync.FollowUserId : null;
+
             foreach (var kv in presence.Users)
             {
                 var user = kv.Value;
-                EditorGUILayout.BeginHorizontal();
+                var rowRect = EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
                 // Color dot
                 var dotRect = GUILayoutUtility.GetRect(14, 14, GUILayout.Width(14));
                 dotRect.y += 2;
                 EditorGUI.DrawRect(dotRect, user.Color);
 
-                // Name
-                EditorGUILayout.LabelField(user.Name, GUILayout.MinWidth(80));
+                // Name & Follow indicator
+                string displayName = user.Name;
+                if (currentFollowId.HasValue && currentFollowId.Value == user.Id)
+                    displayName += " [Following]";
 
-                // Latency
+                EditorGUILayout.LabelField(displayName, EditorStyles.label, GUILayout.MinWidth(100));
+
                 if (user.LatencyMs > 0)
                 {
                     GUILayout.FlexibleSpace();
-                    EditorGUILayout.LabelField(
-                        $"{user.LatencyMs:F0}ms",
-                        EditorStyles.miniLabel,
-                        GUILayout.Width(50));
+                    EditorGUILayout.LabelField($"{user.LatencyMs:F0}ms", EditorStyles.miniLabel, GUILayout.Width(45));
                 }
 
                 EditorGUILayout.EndHorizontal();
+
+                // Context Menu on Right Click
+                if (Event.current.type == EventType.ContextClick && rowRect.Contains(Event.current.mousePosition))
+                {
+                    var menu = new GenericMenu();
+                    bool isFollowing = currentFollowId.HasValue && currentFollowId.Value == user.Id;
+
+                    if (isFollowing)
+                    {
+                        menu.AddItem(new GUIContent("Stop Following Camera"), false, () =>
+                        {
+                            _session.CameraSync?.SetFollowUser(null);
+                        });
+                    }
+                    else
+                    {
+                        menu.AddItem(new GUIContent($"Follow Camera ({user.Name})"), false, () =>
+                        {
+                            _session.CameraSync?.SetFollowUser(user.Id);
+                        });
+                    }
+
+                    menu.ShowAsContext();
+                    Event.current.Use();
+                }
             }
 
             EditorGUILayout.EndScrollView();

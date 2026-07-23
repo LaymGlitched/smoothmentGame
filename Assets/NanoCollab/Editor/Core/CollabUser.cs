@@ -1,4 +1,5 @@
 using System;
+using UnityEditor;
 using UnityEngine;
 
 namespace NanoCollab
@@ -13,26 +14,30 @@ namespace NanoCollab
         public Guid   Id;
         public string Name;
         public Color  Color;
+        public long   SessionStartTimeTicks;
 
-        // Live state (updated by sync modules)
-        public Vector3    CameraPosition;
-        public Quaternion CameraRotation;
-        public string[]   SelectedPaths;
-        public float      LatencyMs;
+        // Live state
+        public Vector3        CameraPosition;
+        public Quaternion     CameraRotation;
+        public GlobalObjectId[] SelectedObjects;
+        public GlobalObjectId   DraggingObject; // Manipulation awareness
+        public float          LatencyMs;
 
         // Timestamps for interpolation
         public double CameraLastUpdated;
 
-        public CollabUser(Guid id, string name, Color color)
+        public CollabUser(Guid id, string name, Color color, long sessionStartTimeTicks = 0)
         {
-            Id              = id;
-            Name            = name;
-            Color           = color;
-            CameraPosition  = Vector3.zero;
-            CameraRotation  = Quaternion.identity;
-            SelectedPaths   = Array.Empty<string>();
-            LatencyMs       = 0f;
-            CameraLastUpdated = 0.0;
+            Id                    = id;
+            Name                  = name;
+            Color                 = color;
+            SessionStartTimeTicks = sessionStartTimeTicks;
+            CameraPosition        = Vector3.zero;
+            CameraRotation        = Quaternion.identity;
+            SelectedObjects       = Array.Empty<GlobalObjectId>();
+            DraggingObject        = default;
+            LatencyMs             = 0f;
+            CameraLastUpdated     = 0.0;
         }
     }
 }
