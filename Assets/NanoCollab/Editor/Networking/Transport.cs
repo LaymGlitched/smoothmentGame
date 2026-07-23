@@ -10,7 +10,7 @@ namespace NanoCollab
     /// <summary>
     /// TCP transport layer with integrated message routing and framing.
     /// Operates in Host mode (TcpListener + peer relay) or Client mode.
-    /// All I/O is non-blocking.
+    /// Streams use standard blocking sockets with DataAvailable polling to prevent WouldBlock socket errors over LAN/VPN.
     /// </summary>
     public sealed class Transport : IDisposable
     {
@@ -50,10 +50,18 @@ namespace NanoCollab
             if (_mode != Mode.None) return;
             _mode = Mode.Host;
 
-            _listener = new TcpListener(IPAddress.Any, port);
-            _listener.Start();
-            _listener.Server.Blocking = false;
-            Debug.Log($"[NanoCollab] Hosting on port {port}");
+            try
+            {
+                _listener = new TcpListener(IPAddress.Any, port);
+                _listener.Start();
+                _listener.Server.Blocking = false; // Only listener socket is non-blocking for Poll accept
+                Debug.Log($"[NanoCollab] Hosting TCP server on port {port}");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogError($"[NanoCollab] Failed to start host on port {port}: {ex.Message}");
+                _mode = Mode.None;
+            }
         }
 
         public void ConnectToHost(IPAddress address, int port)
@@ -66,20 +74,22 @@ namespace NanoCollab
                 var tcp = new TcpClient();
                 tcp.Connect(address, port);
                 tcp.NoDelay = true;
-                tcp.Client.Blocking = false;
+                tcp.SendTimeout = 5000;
+                tcp.ReceiveTimeout = 5000;
+
                 _hostConn = new PeerConnection(tcp);
                 _peers.Add(_hostConn);
-                Debug.Log($"[NanoCollab] Connected to host {address}:{port}");
+                Debug.Log($"[NanoCollab] Connected TCP to host {address}:{port}");
             }
             catch (SocketException ex)
             {
-                Debug.LogWarning($"[NanoCollab] Failed to connect to host: {ex.Message}");
+                Debug.LogWarning($"[NanoCollab] Failed to connect to host {address}:{port}: {ex.Message}");
                 _mode = Mode.None;
             }
         }
 
         /// <summary>
-        /// Polls non-blocking network socket and immediately dispatches messages to handlers.
+        /// Polls TCP socket streams and dispatches messages to registered handlers.
         /// Host automatically relays messages to all other peers.
         /// </summary>
         public void PollAndDispatch()
@@ -95,11 +105,13 @@ namespace NanoCollab
                     {
                         var tcp = _listener.AcceptTcpClient();
                         tcp.NoDelay = true;
-                        tcp.Client.Blocking = false;
+                        tcp.SendTimeout = 5000;
+                        tcp.ReceiveTimeout = 5000;
+
                         var peer = new PeerConnection(tcp);
                         _peers.Add(peer);
                         OnPeerConnected?.Invoke(peer);
-                        Debug.Log($"[NanoCollab] Peer connected: {tcp.Client.RemoteEndPoint}");
+                        Debug.Log($"[NanoCollab] Host accepted TCP peer: {peer.RemoteEndPoint}");
                     }
                     catch (SocketException) { break; }
                 }
@@ -111,6 +123,7 @@ namespace NanoCollab
                 var peer = _peers[i];
                 if (!peer.IsConnected)
                 {
+                    Debug.Log($"[NanoCollab] Peer disconnected: {peer.RemoteEndPoint}");
                     _peers.RemoveAt(i);
                     OnPeerDisconnected?.Invoke(peer);
                     peer.Dispose();
@@ -150,7 +163,7 @@ namespace NanoCollab
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[NanoCollab] Peer read error: {ex.Message}");
+                    Debug.LogWarning($"[NanoCollab] Peer read error from {peer.RemoteEndPoint}: {ex.Message}");
                     _peers.RemoveAt(i);
                     OnPeerDisconnected?.Invoke(peer);
                     peer.Dispose();
@@ -164,7 +177,9 @@ namespace NanoCollab
             for (int i = _peers.Count - 1; i >= 0; i--)
             {
                 if (_peers[i].IsConnected)
+                {
                     _peers[i].Send(frame);
+                }
                 else
                 {
                     var peer = _peers[i];
@@ -208,13 +223,20 @@ namespace NanoCollab
             if (read < 3) return false;
 
             ushort len = (ushort)(_headerBuf[0] | (_headerBuf[1] << 8));
+            if (len < 1) return false;
+
             msgType = (MsgType)_headerBuf[2];
 
             int payloadLen = len - 1;
             if (payloadLen > 0)
             {
                 payload = new byte[payloadLen];
-                ReadExact(stream, payload, 0, payloadLen);
+                int readPayload = ReadExact(stream, payload, 0, payloadLen);
+                if (readPayload < payloadLen)
+                {
+                    Debug.LogWarning($"[NanoCollab] Incomplete payload read from {peer.RemoteEndPoint} (expected {payloadLen}, got {readPayload})");
+                    return false;
+                }
             }
             else
             {
@@ -250,7 +272,14 @@ namespace NanoCollab
         {
             get
             {
-                try { return _tcp != null && _tcp.Connected && !(_tcp.Client.Poll(0, SelectMode.SelectRead) && _tcp.Available == 0); }
+                try
+                {
+                    if (_tcp == null || !_tcp.Connected) return false;
+                    // Test if remote end has closed connection cleanly (FIN)
+                    if (_tcp.Client.Poll(0, SelectMode.SelectRead) && _tcp.Available == 0)
+                        return false;
+                    return true;
+                }
                 catch { return false; }
             }
         }
@@ -272,7 +301,7 @@ namespace NanoCollab
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[NanoCollab] Send failed: {ex.Message}");
+                Debug.LogWarning($"[NanoCollab] Send failed to {RemoteEndPoint}: {ex.Message}");
             }
         }
 

@@ -56,6 +56,8 @@ namespace NanoCollab
         private float _lastPingTime;
         private const float PingInterval = 5.0f;
 
+        private bool _pendingUserJoinBroadcast;
+
         public SessionManager()
         {
             _userName = NanoCollabSettings.instance.DisplayName;
@@ -89,10 +91,6 @@ namespace NanoCollab
             _transport.RegisterHandler(MsgType.Pong, OnPongReceived);
         }
 
-        /// <summary>
-        /// Subscribes to Transport peer connect/disconnect events.
-        /// Must be called every time _transport is replaced.
-        /// </summary>
         private void BindTransportEvents()
         {
             _transport.OnPeerConnected    += OnPeerTcpConnected;
@@ -120,24 +118,22 @@ namespace NanoCollab
             {
                 int port = NanoCollabSettings.instance.Port;
                 _transport.ConnectToHost(ip, port + 1);
-                _state = SessionState.Connected;
 
-                // Small delay: let the TCP connection fully establish before sending UserJoin.
-                // OnPeerTcpConnected on the host fires during PollAndDispatch(), so the host
-                // needs to accept the TCP client first. We send UserJoin on our next Tick().
-                _pendingUserJoinBroadcast = true;
+                if (_transport.CurrentMode == Transport.Mode.Client)
+                {
+                    _state = SessionState.Connected;
+                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+                    _pendingUserJoinBroadcast = true;
 
-                _hierarchySync.RebuildSnapshot();
-                Debug.Log($"[NanoCollab] Direct connected to LAN host at {ip}:{port + 1}");
+                    _hierarchySync.RebuildSnapshot();
+                    Debug.Log($"[NanoCollab] Direct connected to LAN host at {ip}:{port + 1}");
+                }
             }
             else
             {
                 Debug.LogWarning($"[NanoCollab] Invalid LAN IP address: '{hostIp}'");
             }
         }
-
-        // Deferred UserJoin so the host has time to accept the TCP connection first.
-        private bool _pendingUserJoinBroadcast;
 
         public void Tick()
         {
@@ -156,7 +152,6 @@ namespace NanoCollab
             {
                 _transport.PollAndDispatch();
 
-                // Send deferred UserJoin after TCP is established
                 if (_pendingUserJoinBroadcast)
                 {
                     _pendingUserJoinBroadcast = false;
@@ -238,13 +233,16 @@ namespace NanoCollab
             {
                 var target = hostCandidate.Value;
                 _transport.ConnectToHost(target.Address, target.HostPort);
-                _state = SessionState.Connected;
 
-                // Defer UserJoin to next Tick so host has time to accept the TCP peer
-                _pendingUserJoinBroadcast = true;
+                if (_transport.CurrentMode == Transport.Mode.Client)
+                {
+                    _state = SessionState.Connected;
+                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+                    _pendingUserJoinBroadcast = true;
 
-                _hierarchySync.RebuildSnapshot();
-                Debug.Log($"[NanoCollab] Connected to LAN host {target.UserName} at {target.Address}:{target.HostPort}");
+                    _hierarchySync.RebuildSnapshot();
+                    Debug.Log($"[NanoCollab] Connected to LAN host {target.UserName} at {target.Address}:{target.HostPort}");
+                }
             }
             else
             {
@@ -260,7 +258,6 @@ namespace NanoCollab
             _transport.StartHost(port + 1);
             _state = SessionState.Hosting;
 
-            // Add ourselves to the presence list immediately so the UI shows us.
             _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
 
             _hierarchySync.RebuildSnapshot();
@@ -273,7 +270,6 @@ namespace NanoCollab
 
             if (_state == SessionState.Hosting)
             {
-                // Make sure host is in the user list before sending it
                 _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
 
                 var listPayload = _presence.WriteUserList();
@@ -284,7 +280,7 @@ namespace NanoCollab
 
         private void OnPeerTcpDisconnected(PeerConnection peer)
         {
-            Debug.Log($"[NanoCollab] TCP peer disconnected: {peer.UserId}");
+            Debug.Log($"[NanoCollab] TCP peer disconnected: {peer.RemoteEndPoint} (UserId: {peer.UserId})");
 
             if (peer.UserId != Guid.Empty)
             {
@@ -319,16 +315,12 @@ namespace NanoCollab
             _state = SessionState.Idle;
         }
 
-        /// <summary>
-        /// Creates a fresh Transport, re-registers all handlers and events,
-        /// and rebuilds sync modules to point at the new transport.
-        /// </summary>
         private void ReplaceTransport()
         {
             _transport.Shutdown();
             _transport = new Transport();
             RegisterHandlers();
-            BindTransportEvents();   // Critical: re-wire OnPeerConnected/Disconnected
+            BindTransportEvents();
             RebindSyncModules();
         }
 
@@ -345,9 +337,6 @@ namespace NanoCollab
             Undo.postprocessModifications += _transformSync.OnPostprocessModifications;
         }
 
-        /// <summary>
-        /// Broadcasts our local user identity to all connected peers.
-        /// </summary>
         private void BroadcastLocalUserJoin()
         {
             var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
@@ -359,12 +348,10 @@ namespace NanoCollab
 
         private void OnUserJoinReceived(BinaryReader r)
         {
-            var (id, name, _, startTime) = PresenceManager.ReadUserJoin(r);
+            var (id, name, color, startTime) = PresenceManager.ReadUserJoin(r);
             _presence.AddUser(id, name, startTime);
-            Debug.Log($"[NanoCollab] User joined: {name} ({id})");
+            Debug.Log($"[NanoCollab] User joined session: {name} ({id})");
 
-            // If we're the host, broadcast updated user list to ALL peers
-            // so everyone sees the new user immediately.
             if (_state == SessionState.Hosting)
             {
                 _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
@@ -378,13 +365,13 @@ namespace NanoCollab
             var (id, name, _, _) = PresenceManager.ReadUserJoin(r);
             _presence.RemoveUser(id);
             _discoveredPeers.Remove(id);
-            Debug.Log($"[NanoCollab] User left: {name} ({id})");
+            Debug.Log($"[NanoCollab] User left session: {name} ({id})");
         }
 
         private void OnUserListReceived(BinaryReader r)
         {
             _presence.ReadUserList(r);
-            Debug.Log($"[NanoCollab] Received user list ({_presence.Users.Count} users)");
+            Debug.Log($"[NanoCollab] Received updated user list from host ({_presence.Users.Count} active users in presence)");
         }
 
         private void OnPingReceived(BinaryReader r)
