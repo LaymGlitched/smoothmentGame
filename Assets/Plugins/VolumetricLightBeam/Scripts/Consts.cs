@@ -105,7 +105,7 @@ namespace VLB
             public const float NoiseIntensityMin = 0.0f;
             public const float NoiseIntensityMax = 1.0f;
             public const float NoiseIntensityDefault = 0.5f;
-            public const float NoiseScaleMin = 0.01f;
+            public const float NoiseScaleMin = 0f;
             public const float NoiseScaleMax = 2f;
             public const float NoiseScaleDefault = 0.5f;
 

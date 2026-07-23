@@ -13,13 +13,11 @@ namespace GameCode.Spirits.Editor.Drawers
             SerializedProperty valueProp = property.FindPropertyRelative("Value");
             string currentValue = valueProp.stringValue;
 
-            // Find all GameplayEventDefinition assets
-            string[] guids = AssetDatabase.FindAssets("t:GameplayEventDefinition");
-            var events = guids.Select(g => AssetDatabase.LoadAssetAtPath<GameplayEventDefinition>(AssetDatabase.GUIDToAssetPath(g)))
-                              .Where(e => e != null)
-                              .OrderBy(e => e.Category)
-                              .ThenBy(e => e.DisplayName)
-                              .ToList();
+            // Retrieve cached GameplayEventDefinition assets (fast O(1) memory lookup)
+            var events = EditorAssetCache<GameplayEventDefinition>.GetAssets()
+                .OrderBy(e => e.Category)
+                .ThenBy(e => e.DisplayName)
+                .ToList();
 
             if (events.Count == 0)
             {

@@ -13,12 +13,10 @@ namespace GameCode.Spirits.Editor.Drawers
             SerializedProperty valueProp = property.FindPropertyRelative("Value");
             string currentValue = valueProp.stringValue;
 
-            // Find all SpiritDefinition assets
-            string[] guids = AssetDatabase.FindAssets("t:SpiritDefinition");
-            var spirits = guids.Select(g => AssetDatabase.LoadAssetAtPath<SpiritDefinition>(AssetDatabase.GUIDToAssetPath(g)))
-                              .Where(s => s != null)
-                              .OrderBy(s => s.DisplayName)
-                              .ToList();
+            // Retrieve cached SpiritDefinition assets (fast O(1) memory lookup)
+            var spirits = EditorAssetCache<SpiritDefinition>.GetAssets()
+                .OrderBy(s => s.DisplayName)
+                .ToList();
 
             if (spirits.Count == 0)
             {

@@ -24,6 +24,12 @@ namespace GameCode.Spirits.Communication
         public event Action<DialogueRequest> OnDialogueStarted;
         public event Action<DialogueRequest> OnDialogueInterrupted;
 
+        /// <summary>
+        /// Fired when a conversation-sourced dialogue line finishes displaying.
+        /// The ConversationDirector subscribes to this to advance to the next node.
+        /// </summary>
+        public event Action OnConversationLineFinished;
+
         private void Awake()
         {
             if (Instance == null)
@@ -77,6 +83,14 @@ namespace GameCode.Spirits.Communication
                 }
             }
 
+            // Suppress one-shot intents from Spirits currently in an active conversation.
+            // The ConversationDirector handles their dialogue — independent impulses would conflict.
+            if (Conversation.Runtime.ConversationDirector.Instance != null &&
+                Conversation.Runtime.ConversationDirector.Instance.IsSpiritSuppressed(spirit.Id))
+            {
+                return;
+            }
+
             // The Resolver determines IF and HOW the intent becomes a concrete request.
             var request = resolver.ResolveIntent(intent);
             if (request.HasValue)
@@ -108,6 +122,36 @@ namespace GameCode.Spirits.Communication
             }
         }
 
+        /// <summary>
+        /// Submits a dialogue request originating from the Conversation System.
+        /// When this line finishes, the ConversationDirector is notified so it can advance.
+        /// </summary>
+        /// <param name="request">The fully resolved dialogue request.</param>
+        /// <param name="source">The ConversationDirector that owns this line.</param>
+        public void SubmitConversationRequest(DialogueRequest request, Conversation.Runtime.ConversationDirector source)
+        {
+            isCurrentLineConversationSourced = true;
+
+            // Use the same interruption and queuing logic
+            if (currentSpeaker.HasValue && request.Priority > currentSpeaker.Value.Priority)
+            {
+                InterruptCurrentSpeaker();
+                PlayDialogue(request);
+                return;
+            }
+
+            requestQueue.Add(request);
+            SortQueue();
+
+            if (!currentSpeaker.HasValue)
+            {
+                PlayNext();
+            }
+        }
+
+        // Tracks whether the current line was submitted by the Conversation System
+        private bool isCurrentLineConversationSourced;
+
         private void SortQueue()
         {
             // Sort by priority descending (Critical -> Ambient)
@@ -136,11 +180,16 @@ namespace GameCode.Spirits.Communication
             SpiritManager.Instance?.BroadcastEvent(heardEvent);
         }
 
-        private void InterruptCurrentSpeaker()
+        /// <summary>
+        /// Interrupts the current speaker. Made public so the ConversationDirector
+        /// can interrupt during conversation takeover.
+        /// </summary>
+        public void InterruptCurrentSpeaker()
         {
             if (currentSpeaker.HasValue)
             {
                 OnDialogueInterrupted?.Invoke(currentSpeaker.Value);
+                isCurrentLineConversationSourced = false;
                 currentSpeaker = null;
             }
         }
@@ -150,7 +199,16 @@ namespace GameCode.Spirits.Communication
         /// </summary>
         public void NotifyDialogueFinished()
         {
+            bool wasConversationLine = isCurrentLineConversationSourced;
+            isCurrentLineConversationSourced = false;
             currentSpeaker = null;
+
+            // Notify the ConversationDirector if this was a conversation line
+            if (wasConversationLine)
+            {
+                OnConversationLineFinished?.Invoke();
+            }
+
             PlayNext();
         }
     }

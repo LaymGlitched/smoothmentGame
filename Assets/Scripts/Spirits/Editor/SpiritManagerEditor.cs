@@ -13,6 +13,8 @@ namespace GameCode.Spirits.EditorScripts
     [CustomEditor(typeof(SpiritManager))]
     public class SpiritManagerEditor : UnityEditor.Editor
     {
+        private readonly Dictionary<string, bool> foldoutStates = new Dictionary<string, bool>();
+
         public override bool RequiresConstantRepaint()
         {
             // Ensures progress bars animate and timestamps update continuously while playing
@@ -57,14 +59,13 @@ namespace GameCode.Spirits.EditorScripts
             if (isForegrounded) title += " [FOREGROUNDED]";
 
             // Store foldout state in a temporary dictionary or use EditorGUI utility. For simplicity, we can use EditorPrefs or just keep it open.
-            // Using a simple foldout based on spirit ID
-            string foldoutKey = $"SpiritDebug_{spirit.Id}";
-            bool foldout = EditorPrefs.GetBool(foldoutKey, false);
+            string foldoutKey = spirit.Id ?? spirit.Definition?.name ?? "unknown";
+            foldoutStates.TryGetValue(foldoutKey, out bool foldout);
             bool newFoldout = EditorGUILayout.Foldout(foldout, title, true, EditorStyles.foldoutHeader);
             
             if (newFoldout != foldout)
             {
-                EditorPrefs.SetBool(foldoutKey, newFoldout);
+                foldoutStates[foldoutKey] = newFoldout;
             }
 
             if (newFoldout)

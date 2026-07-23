@@ -13,13 +13,11 @@ namespace GameCode.Spirits.Editor.Drawers
             SerializedProperty valueProp = property.FindPropertyRelative("Value");
             string currentValue = valueProp.stringValue;
 
-            // Find all TopicDefinition assets
-            string[] guids = AssetDatabase.FindAssets("t:TopicDefinition");
-            var topics = guids.Select(g => AssetDatabase.LoadAssetAtPath<TopicDefinition>(AssetDatabase.GUIDToAssetPath(g)))
-                              .Where(t => t != null)
-                              .OrderBy(t => t.Category)
-                              .ThenBy(t => t.DisplayName)
-                              .ToList();
+            // Retrieve cached TopicDefinition assets (fast O(1) memory lookup)
+            var topics = EditorAssetCache<TopicDefinition>.GetAssets()
+                .OrderBy(t => t.Category)
+                .ThenBy(t => t.DisplayName)
+                .ToList();
 
             if (topics.Count == 0)
             {

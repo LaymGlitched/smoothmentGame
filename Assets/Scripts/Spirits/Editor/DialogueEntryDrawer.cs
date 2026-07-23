@@ -19,8 +19,8 @@ namespace GameCode.Spirits.EditorScripts
         {
             if (Application.isPlaying) return;
 
-            // Refresh cache every 5 seconds to catch edits to the JSON files
-            if (_editorCache == null || EditorApplication.timeSinceStartup - _lastCacheTime > 5.0)
+            // Refresh cache every 15 seconds to catch edits to the JSON files
+            if (_editorCache == null || EditorApplication.timeSinceStartup - _lastCacheTime > 15.0)
             {
                 _editorCache = new Dictionary<string, string>();
                 _lastCacheTime = EditorApplication.timeSinceStartup;
@@ -35,12 +35,15 @@ namespace GameCode.Spirits.EditorScripts
                         try
                         {
                             string json = File.ReadAllText(file);
-                            var entries = JsonConvert.DeserializeObject<Dictionary<string, LocalizedEntry>>(json);
+                            var entries = LocalizationJsonParser.Parse(json);
                             if (entries != null)
                             {
                                 foreach (var kvp in entries)
                                 {
-                                    _editorCache[kvp.Key] = kvp.Value.Text;
+                                    string preview = kvp.Value.HasVariants
+                                        ? $"[{kvp.Value.Variants.Length} variants] {kvp.Value.Text}"
+                                        : kvp.Value.Text;
+                                    _editorCache[kvp.Key] = preview;
                                 }
                             }
                         }

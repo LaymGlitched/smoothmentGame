@@ -8,6 +8,7 @@ namespace Reiteki.Localization.Core
 {
     /// <summary>
     /// The central manager that orchestrates the localization providers and serves localized strings.
+    /// Supports automatic unique random selection for keys defined with variant arrays.
     /// </summary>
     public class LocalizationManager
     {
@@ -17,6 +18,9 @@ namespace Reiteki.Localization.Core
         private string _defaultLocale = "en-US";
         private HashSet<string> _missingKeys = new HashSet<string>();
         private int _currentLoadRequestId = 0;
+
+        // Tracks the index of the last selected variant for each key to prevent selecting the same variant twice in a row
+        private readonly Dictionary<string, int> _lastPlayedVariantIndices = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
 
         private readonly ILocalizationProvider _cachedProvider;
         private readonly ILocalizationProvider _streamingAssetsProvider;
@@ -48,7 +52,6 @@ namespace Reiteki.Localization.Core
 
         /// <summary>
         /// Initializes a new LocalizationManager with default providers.
-        /// The caller is responsible for maintaining the lifetime of this manager (e.g. via Dependency Injection or Service Locator).
         /// </summary>
         public LocalizationManager()
         {
@@ -68,12 +71,8 @@ namespace Reiteki.Localization.Core
         }
 
         /// <summary>
-        /// Asynchronously loads a locale following the startup flow:
-        /// 1. Try Cache
-        /// 2. If no cache, try StreamingAssets
-        /// 3. In the background, check GitHub and hot-reload if a newer version is downloaded.
+        /// Asynchronously loads a locale.
         /// </summary>
-        /// <param name="locale">The locale code, e.g., "en-US".</param>
         public async Task LoadLocale(string locale)
         {
             if (string.IsNullOrEmpty(locale))
@@ -83,8 +82,8 @@ namespace Reiteki.Localization.Core
             IsLoading = true;
             _currentLocale = locale;
             _missingKeys.Clear();
+            _lastPlayedVariantIndices.Clear();
 
-            // Reset current locale data so entries from previous language don't persist
             _currentLocaleData = new Dictionary<string, LocalizedEntry>(StringComparer.OrdinalIgnoreCase);
             LocaleChanged?.Invoke();
 
@@ -92,7 +91,7 @@ namespace Reiteki.Localization.Core
 
             // 1. Try Cache
             var cacheData = await _cachedProvider.LoadLocaleAsync(locale);
-            if (requestId != _currentLoadRequestId) return; // Discard if superseded
+            if (requestId != _currentLoadRequestId) return;
 
             if (cacheData != null && cacheData.Count > 0)
             {
@@ -104,7 +103,7 @@ namespace Reiteki.Localization.Core
             {
                 // 2. Try StreamingAssets
                 var streamingData = await _streamingAssetsProvider.LoadLocaleAsync(locale);
-                if (requestId != _currentLoadRequestId) return; // Discard if superseded
+                if (requestId != _currentLoadRequestId) return;
 
                 if (streamingData != null && streamingData.Count > 0)
                 {
@@ -118,7 +117,6 @@ namespace Reiteki.Localization.Core
                 }
             }
 
-            // Keep fallback data if this is the default locale
             if (locale.Equals(_defaultLocale, StringComparison.OrdinalIgnoreCase) && _currentLocaleData.Count > 0)
             {
                 _fallbackLocaleData = new Dictionary<string, LocalizedEntry>(_currentLocaleData);
@@ -151,7 +149,7 @@ namespace Reiteki.Localization.Core
                 var newData = await fetchTask;
 
                 if (requestId != _currentLoadRequestId)
-                    return; // Request superseded by another LoadLocale call
+                    return;
 
                 if (newData != null && newData.Count > 0)
                 {
@@ -188,8 +186,10 @@ namespace Reiteki.Localization.Core
 
         /// <summary>
         /// Gets the translated text for a given key.
+        /// If the key defines multiple variants, randomly selects a variant, ensuring
+        /// the exact same variant is never selected twice in a row.
         /// </summary>
-        /// <param name="key">The translation key (e.g., 'zenka.warning.vesselsafety.01').</param>
+        /// <param name="key">The translation key (e.g., 'zenka.warning.vessel_safety').</param>
         /// <returns>The translated text, or default fallback, or missing key error.</returns>
         public string Get(string key)
         {
@@ -198,12 +198,12 @@ namespace Reiteki.Localization.Core
 
             if (_currentLocaleData.TryGetValue(key, out LocalizedEntry entry))
             {
-                return entry.Text;
+                return ResolveEntryText(key, entry);
             }
 
             if (_fallbackLocaleData.TryGetValue(key, out LocalizedEntry fallbackEntry))
             {
-                return fallbackEntry.Text;
+                return ResolveEntryText(key, fallbackEntry);
             }
 
             if (_missingKeys.Add(key))
@@ -223,7 +223,7 @@ namespace Reiteki.Localization.Core
         }
 
         /// <summary>
-        /// Attempts to get the translated text for a key.
+        /// Attempts to get the translated text for a key, resolving variants if present.
         /// </summary>
         public bool TryGet(string key, out string value)
         {
@@ -231,19 +231,75 @@ namespace Reiteki.Localization.Core
             {
                 if (_currentLocaleData.TryGetValue(key, out LocalizedEntry entry))
                 {
-                    value = entry.Text;
+                    value = ResolveEntryText(key, entry);
                     return true;
                 }
 
                 if (_fallbackLocaleData.TryGetValue(key, out LocalizedEntry fallbackEntry))
                 {
-                    value = fallbackEntry.Text;
+                    value = ResolveEntryText(key, fallbackEntry);
                     return true;
                 }
             }
 
             value = key;
             return false;
+        }
+
+        /// <summary>
+        /// Attempts to get the raw LocalizedEntry for a key.
+        /// </summary>
+        public bool TryGetEntry(string key, out LocalizedEntry entry)
+        {
+            if (!string.IsNullOrEmpty(key))
+            {
+                if (_currentLocaleData.TryGetValue(key, out entry))
+                    return true;
+                if (_fallbackLocaleData.TryGetValue(key, out entry))
+                    return true;
+            }
+
+            entry = default;
+            return false;
+        }
+
+        /// <summary>
+        /// Resolves the text payload for an entry. If entry contains variants,
+        /// performs unique random selection excluding the last played variant index.
+        /// </summary>
+        private string ResolveEntryText(string key, LocalizedEntry entry)
+        {
+            if (!entry.HasVariants)
+            {
+                return entry.Text;
+            }
+
+            var variants = entry.Variants;
+            int count = variants.Length;
+
+            if (count == 1)
+            {
+                _lastPlayedVariantIndices[key] = 0;
+                return variants[0].Text;
+            }
+
+            // Retrieve last selected variant index for this key
+            _lastPlayedVariantIndices.TryGetValue(key, out int lastIndex);
+
+            int selectedIndex;
+            if (lastIndex >= 0 && lastIndex < count)
+            {
+                // Exclude lastIndex from random selection
+                int roll = UnityEngine.Random.Range(0, count - 1);
+                selectedIndex = (roll >= lastIndex) ? roll + 1 : roll;
+            }
+            else
+            {
+                selectedIndex = UnityEngine.Random.Range(0, count);
+            }
+
+            _lastPlayedVariantIndices[key] = selectedIndex;
+            return variants[selectedIndex].Text;
         }
     }
 }

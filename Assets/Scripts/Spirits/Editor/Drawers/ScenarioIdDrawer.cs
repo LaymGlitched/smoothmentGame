@@ -13,12 +13,10 @@ namespace GameCode.Spirits.Editor.Drawers
             SerializedProperty valueProp = property.FindPropertyRelative("Value");
             string currentValue = valueProp.stringValue;
 
-            // Find all ScenarioDefinition assets
-            string[] guids = AssetDatabase.FindAssets("t:ScenarioDefinition");
-            var scenarios = guids.Select(g => AssetDatabase.LoadAssetAtPath<ScenarioDefinition>(AssetDatabase.GUIDToAssetPath(g)))
-                                 .Where(s => s != null)
-                                 .OrderBy(s => s.Id.Value)
-                                 .ToList();
+            // Retrieve cached ScenarioDefinition assets (fast O(1) memory lookup)
+            var scenarios = EditorAssetCache<ScenarioDefinition>.GetAssets()
+                .OrderBy(s => s.Id.Value)
+                .ToList();
 
             if (scenarios.Count == 0)
             {

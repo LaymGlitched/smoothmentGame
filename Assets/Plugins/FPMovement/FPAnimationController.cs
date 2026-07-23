@@ -16,6 +16,19 @@ namespace FPMovement
         [Tooltip("The Animator component, typically on a child model object.")]
         public Animator animator;
 
+        [Header("Death Camera Follow")]
+        [Tooltip("Transform of the Camera or Camera pivot that follows the head during death.")]
+        public Transform cameraTransform;
+
+        [Tooltip("Transform of the character's head bone. If null, auto-detected from Animator.")]
+        public Transform headTransform;
+
+        [Tooltip("Smoothing speed for the camera following the head during death.")]
+        public float deathCameraSmoothSpeed = 10f;
+
+        private Vector3 defaultCameraLocalPosition;
+        private Quaternion defaultCameraLocalRotation;
+
         [Header("Animation Rigging (IK)")]
         [Tooltip("Upper body IK rigs (arms/hands).")]
         public MonoBehaviour[] upperIkRigs;
@@ -60,6 +73,8 @@ namespace FPMovement
         public string isHoldingSpellParam = "HoldingSpell";
         public string dashTriggerParam = "Dash";
         public string isDashingParam = "IsDashing";
+        public string deathTriggerParam = "Die";
+        public string isDeadParam = "IsDead";
 
         private RigidbodyFPController controller;
         private WallRunController wallRunController;
@@ -85,6 +100,11 @@ namespace FPMovement
         private int isHoldingSpellHash;
         private int dashHash;
         private int isDashingHash;
+        private int deathHash;
+        private int isDeadHash;
+
+        private bool isDead;
+        public bool IsDead => isDead;
 
         public event Action SpellCasted;
 
@@ -122,9 +142,20 @@ namespace FPMovement
             isHoldingSpellHash = Animator.StringToHash(isHoldingSpellParam);
             dashHash = Animator.StringToHash(dashTriggerParam);
             isDashingHash = Animator.StringToHash(isDashingParam);
+            deathHash = Animator.StringToHash(deathTriggerParam);
+            isDeadHash = Animator.StringToHash(isDeadParam);
 
             upperIkTargets = CacheIKTargets(upperIkRigs);
             lowerIkTargets = CacheIKTargets(lowerIkRigs);
+
+            if (cameraTransform == null) cameraTransform = FindCameraTransform();
+            if (headTransform == null) headTransform = FindHeadTransform();
+
+            if (cameraTransform != null)
+            {
+                defaultCameraLocalPosition = cameraTransform.localPosition;
+                defaultCameraLocalRotation = cameraTransform.localRotation;
+            }
         }
 
         private IIKWeightTarget[] CacheIKTargets(MonoBehaviour[] rigs)
@@ -215,6 +246,61 @@ namespace FPMovement
             }
         }
 
+        /// <summary>
+        /// Triggers the death animation and locks movement animation parameters.
+        /// </summary>
+        public void Die()
+        {
+            TriggerDeath();
+        }
+
+        /// <summary>
+        /// Triggers the death animation and locks movement animation parameters.
+        /// </summary>
+        public void TriggerDeath()
+        {
+            isDead = true;
+            if (cameraTransform == null) cameraTransform = FindCameraTransform();
+            if (headTransform == null) headTransform = FindHeadTransform();
+
+            if (cameraTransform != null && defaultCameraLocalPosition == Vector3.zero)
+            {
+                defaultCameraLocalPosition = cameraTransform.localPosition;
+                defaultCameraLocalRotation = cameraTransform.localRotation;
+            }
+
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.SetTrigger(deathHash);
+                animator.SetBool(isDeadHash, true);
+                animator.SetFloat(speedHash, 0f);
+                animator.SetBool(isSprintingHash, false);
+                animator.SetBool(isSlidingHash, false);
+                animator.SetBool(isWallRunningHash, false);
+                animator.SetBool(isTraversingHash, false);
+                animator.SetBool(isDashingHash, false);
+            }
+        }
+
+        /// <summary>
+        /// Resets the death state for respawning.
+        /// </summary>
+        public void Revive()
+        {
+            isDead = false;
+            if (animator != null && animator.gameObject.activeInHierarchy)
+            {
+                animator.ResetTrigger(deathHash);
+                animator.SetBool(isDeadHash, false);
+            }
+
+            if (cameraTransform != null)
+            {
+                cameraTransform.localPosition = defaultCameraLocalPosition;
+                cameraTransform.localRotation = defaultCameraLocalRotation;
+            }
+        }
+
         public void CastSpell()
         {
             if (animator != null && animator.gameObject.activeInHierarchy)
@@ -297,6 +383,26 @@ namespace FPMovement
         {
             if (animator == null || !animator.gameObject.activeInHierarchy)
                 return;
+
+            if (isDead)
+            {
+                animator.SetFloat(speedHash, 0f);
+                animator.SetBool(isDeadHash, true);
+
+                targetUpperIkWeight = 0f;
+                targetLowerIkWeight = 0f;
+                if (Mathf.Abs(currentUpperIkWeight - targetUpperIkWeight) > 0.01f)
+                {
+                    currentUpperIkWeight = Mathf.Lerp(currentUpperIkWeight, 0f, Time.deltaTime * ikBlendSpeed * 3f);
+                    SetRigWeights(upperIkTargets, currentUpperIkWeight);
+                }
+                if (Mathf.Abs(currentLowerIkWeight - targetLowerIkWeight) > 0.01f)
+                {
+                    currentLowerIkWeight = Mathf.Lerp(currentLowerIkWeight, 0f, Time.deltaTime * ikBlendSpeed * 3f);
+                    SetRigWeights(lowerIkTargets, currentLowerIkWeight);
+                }
+                return;
+            }
 
             UpdateAnimatorParameters();
             UpdateIKWeights();
@@ -416,6 +522,72 @@ namespace FPMovement
                     target.weight = weight;
                 }
             }
+        }
+
+        private void LateUpdate()
+        {
+            if (!isDead)
+                return;
+
+            if (cameraTransform == null)
+                cameraTransform = FindCameraTransform();
+            if (headTransform == null)
+                headTransform = FindHeadTransform();
+
+            if (cameraTransform != null && headTransform != null)
+            {
+                cameraTransform.position = Vector3.Lerp(
+                    cameraTransform.position,
+                    headTransform.position,
+                    Time.deltaTime * deathCameraSmoothSpeed
+                );
+
+                cameraTransform.rotation = Quaternion.Slerp(
+                    cameraTransform.rotation,
+                    headTransform.rotation,
+                    Time.deltaTime * deathCameraSmoothSpeed
+                );
+            }
+        }
+
+        private Transform FindCameraTransform()
+        {
+            MouseLookController ml = GetComponentInChildren<MouseLookController>();
+            if (ml != null && ml.transform != null) return ml.transform;
+            if (Camera.main != null) return Camera.main.transform;
+            Camera cam = GetComponentInChildren<Camera>();
+            if (cam != null) return cam.transform;
+            return null;
+        }
+
+        private Transform FindHeadTransform()
+        {
+            if (animator != null)
+            {
+                if (animator.isHuman)
+                {
+                    Transform humanHead = animator.GetBoneTransform(HumanBodyBones.Head);
+                    if (humanHead != null) return humanHead;
+                }
+
+                Transform childHead = FindChildRecursive(animator.transform, "head");
+                if (childHead != null) return childHead;
+            }
+            return null;
+        }
+
+        private Transform FindChildRecursive(Transform parent, string nameSubstring)
+        {
+            foreach (Transform child in parent)
+            {
+                if (child.name.IndexOf(nameSubstring, StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return child;
+                }
+                Transform result = FindChildRecursive(child, nameSubstring);
+                if (result != null) return result;
+            }
+            return null;
         }
     }
 }

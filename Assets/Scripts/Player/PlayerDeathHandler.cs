@@ -39,6 +39,12 @@ namespace GameCode.PlayerScripts
         [SerializeField]
         private HeadBobEffect headBob;
 
+        [SerializeField]
+        private FPAnimationController animationController;
+
+        [SerializeField]
+        private PlayerInputHandler inputHandler;
+
         [Header("Legacy Systems (Optional)")]
         [SerializeField]
         private MonoBehaviour[] legacySystemsToDisable;
@@ -88,6 +94,16 @@ namespace GameCode.PlayerScripts
 
             if (mouseLook == null)
                 mouseLook = GetComponentInChildren<MouseLookController>();
+
+            if (animationController == null)
+                animationController = GetComponent<FPAnimationController>();
+            if (animationController == null)
+                animationController = GetComponentInChildren<FPAnimationController>();
+
+            if (inputHandler == null)
+                inputHandler = GetComponent<PlayerInputHandler>();
+            if (inputHandler == null)
+                inputHandler = GetComponentInChildren<PlayerInputHandler>();
         }
 
         private void OnEnable()
@@ -109,12 +125,25 @@ namespace GameCode.PlayerScripts
             respawnRotation = transform.rotation;
         }
 
+        private void FixedUpdate()
+        {
+            if (isDead && !enableRagdoll && rb != null)
+            {
+                rb.linearVelocity = new Vector3(0f, rb.linearVelocity.y, 0f);
+                rb.angularVelocity = Vector3.zero;
+            }
+        }
+
         private void HandleDeath()
         {
             if (isDead)
                 return;
 
             isDead = true;
+
+            // Trigger death animation
+            if (animationController != null)
+                animationController.Die();
 
             // Disable new FPMovement systems
             DisableFPMovementSystems();
@@ -164,6 +193,16 @@ namespace GameCode.PlayerScripts
 
             if (headBob != null)
                 headBob.enabled = false;
+
+            if (inputHandler != null)
+                inputHandler.enabled = false;
+
+            // Immediately stop linear and angular momentum so the player doesn't slide
+            if (rb != null)
+            {
+                rb.linearVelocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
         }
 
         private void DisableLegacySystems()
@@ -254,6 +293,10 @@ namespace GameCode.PlayerScripts
             // Re-enable legacy systems
             EnableLegacySystems();
 
+            // Reset animation controller death state
+            if (animationController != null)
+                animationController.Revive();
+
             isDead = false;
         }
 
@@ -279,6 +322,9 @@ namespace GameCode.PlayerScripts
 
             if (headBob != null)
                 headBob.enabled = true;
+
+            if (inputHandler != null)
+                inputHandler.enabled = true;
         }
 
         private void EnableLegacySystems()
