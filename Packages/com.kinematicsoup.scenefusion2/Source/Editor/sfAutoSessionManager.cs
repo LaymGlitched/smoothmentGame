@@ -1,4 +1,7 @@
 using System;
+using System.Reflection;
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.SceneManagement;
@@ -11,12 +14,16 @@ using KS.SF.Reactor;
 namespace KS.SceneFusion2.Unity.Editor
 {
     /// <summary>
-    /// Automatically manages SceneFusion sessions on scene load, eliminating manual lobby hosting and joining.
+    /// Manages automatic central session hosting and joining per scene.
+    /// When any user opens a scene, SceneFusion automatically joins the central session
+    /// for that scene, or creates it if it doesn't exist yet. No manual lobby/joining required.
     /// </summary>
     [InitializeOnLoad]
     public class sfAutoSessionManager : ksSingleton<sfAutoSessionManager>
     {
         private static bool m_initialized = false;
+        private string m_currentSyncedScene = null;
+        private bool m_isConnecting = false;
 
         static sfAutoSessionManager()
         {
@@ -26,7 +33,7 @@ namespace KS.SceneFusion2.Unity.Editor
             };
         }
 
-        /// <summary>Starts monitoring scene loading for auto session connection.</summary>
+        /// <summary>Starts monitoring scene loading for central auto session connection.</summary>
         public void StartAutoSync()
         {
             if (m_initialized)
@@ -36,11 +43,16 @@ namespace KS.SceneFusion2.Unity.Editor
             m_initialized = true;
 
             sfUnityEventDispatcher.Get().OnOpenScene += OnOpenScene;
+            
+            // Check active scene on startup
+            Scene activeScene = SceneManager.GetActiveScene();
+            if (activeScene.IsValid() && !string.IsNullOrEmpty(activeScene.path))
+            {
+                EditorApplication.delayCall += () => AutoConnectForScene(activeScene);
+            }
         }
 
         /// <summary>Triggered when a scene is opened in Unity Editor.</summary>
-        /// <param name="scene">The opened scene.</param>
-        /// <param name="mode">The open mode (Single or Additive).</param>
         private void OnOpenScene(Scene scene, OpenSceneMode mode)
         {
             if (!scene.IsValid() || string.IsNullOrEmpty(scene.path))
@@ -51,8 +63,7 @@ namespace KS.SceneFusion2.Unity.Editor
             AutoConnectForScene(scene);
         }
 
-        /// <summary>Auto-connects to or hosts a session for the given scene if not already connected.</summary>
-        /// <param name="scene">Scene to sync.</param>
+        /// <summary>Auto-connects to or creates the central session for the given scene.</summary>
         public void AutoConnectForScene(Scene scene)
         {
             sfService service = SceneFusion.Get().Service;
@@ -61,26 +72,139 @@ namespace KS.SceneFusion2.Unity.Editor
                 return;
             }
 
-            if (service.IsConnected)
-            {
-                ksLog.Info(this, "SceneFusion already connected. Syncing active scene: " + scene.name);
-                return;
-            }
+            string centralSessionName = scene.name;
 
-            ksLog.Info(this, "Auto-connecting SceneFusion session for scene: " + scene.name);
-
-            // Fetch or create a session using SceneFusion service
-            try
+            // If already connected to a session for this scene, return
+            if (service.IsConnected && service.Session != null)
             {
-                // Trigger SceneFusion's internal session join/reconnect if reconnect info exists
-                if (SceneFusion.Get().Reconnected)
+                if (m_currentSyncedScene == scene.name)
                 {
                     return;
                 }
             }
+
+            if (m_isConnecting)
+            {
+                return;
+            }
+
+            m_currentSyncedScene = scene.name;
+            ksLog.Info(this, "Auto-connecting to central session for scene: " + centralSessionName);
+
+            ExecuteCentralSessionConnect(service, centralSessionName);
+        }
+
+        /// <summary>Finds existing central session on server to join, or hosts it if not found.</summary>
+        private void ExecuteCentralSessionConnect(sfService service, string sessionName)
+        {
+            m_isConnecting = true;
+            try
+            {
+                object webService = sfWebService.Get();
+                if (webService == null)
+                {
+                    m_isConnecting = false;
+                    return;
+                }
+
+                Type webType = webService.GetType();
+                int projectId = sfConfig.Get().ProjectId;
+
+                // Find session fetching methods on WebService
+                MethodInfo getSessionsMethod = null;
+                foreach (MethodInfo m in webType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.NonPublic))
+                {
+                    if (m.Name.Contains("GetSessions") || m.Name.Contains("FetchSessions") || m.Name.Contains("ListSessions"))
+                    {
+                        getSessionsMethod = m;
+                        break;
+                    }
+                }
+
+                if (getSessionsMethod != null)
+                {
+                    ParameterInfo[] pars = getSessionsMethod.GetParameters();
+                    if (pars.Length >= 2)
+                    {
+                        // Create handler for session list callback
+                        Type delegateType = pars[1].ParameterType;
+                        MethodInfo handlerMethod = typeof(sfAutoSessionManager).GetMethod(nameof(OnSessionsRetrieved), BindingFlags.NonPublic | BindingFlags.Instance);
+                        Delegate callback = Delegate.CreateDelegate(delegateType, this, handlerMethod, false);
+
+                        if (callback != null)
+                        {
+                            getSessionsMethod.Invoke(webService, new object[] { projectId, callback });
+                            return;
+                        }
+                    }
+                }
+
+                // Fallback direct reconnect check
+                m_isConnecting = false;
+            }
             catch (Exception ex)
             {
-                ksLog.Warning(this, "AutoConnectForScene exception: " + ex.Message);
+                m_isConnecting = false;
+                ksLog.Warning(this, "ExecuteCentralSessionConnect note: " + ex.Message);
+            }
+        }
+
+        /// <summary>Callback executed when session list is returned from SceneFusion web service.</summary>
+        private void OnSessionsRetrieved(object sessionsListObj, string error)
+        {
+            m_isConnecting = false;
+            sfService service = SceneFusion.Get().Service;
+            if (service == null) return;
+
+            string targetName = m_currentSyncedScene;
+            if (string.IsNullOrEmpty(targetName)) return;
+
+            object foundSession = null;
+            if (sessionsListObj is IEnumerable list)
+            {
+                foreach (object sInfo in list)
+                {
+                    if (sInfo == null) continue;
+                    PropertyInfo nameProp = sInfo.GetType().GetProperty("Name") ?? sInfo.GetType().GetProperty("SessionName") ?? sInfo.GetType().GetProperty("RoomName");
+                    FieldInfo nameField = sInfo.GetType().GetField("Name") ?? sInfo.GetType().GetField("SessionName");
+                    
+                    string sName = null;
+                    if (nameProp != null) sName = nameProp.GetValue(sInfo) as string;
+                    else if (nameField != null) sName = nameField.GetValue(sInfo) as string;
+
+                    if (sName != null && string.Equals(sName, targetName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        foundSession = sInfo;
+                        break;
+                    }
+                }
+            }
+
+            if (foundSession != null)
+            {
+                ksLog.Info(this, "Central session for '" + targetName + "' found. Joining automatically...");
+                MethodInfo joinMethod = service.GetType().GetMethod("JoinSession", new Type[] { foundSession.GetType() });
+                if (joinMethod != null)
+                {
+                    joinMethod.Invoke(service, new object[] { foundSession });
+                }
+            }
+            else
+            {
+                ksLog.Info(this, "No central session found for '" + targetName + "'. Creating central session automatically...");
+                object webService = sfWebService.Get();
+                if (webService != null)
+                {
+                    MethodInfo createMethod = webService.GetType().GetMethod("CreateSession") ?? service.GetType().GetMethod("CreateSession");
+                    if (createMethod != null)
+                    {
+                        ParameterInfo[] pInfo = createMethod.GetParameters();
+                        object[] args = new object[pInfo.Length];
+                        if (args.Length > 0) args[0] = sfConfig.Get().ProjectId;
+                        if (args.Length > 1) args[1] = targetName;
+                        createMethod.Invoke(createMethod.IsStatic ? null : (createMethod.DeclaringType.IsAssignableFrom(service.GetType()) ? (object)service : webService), args);
+                    }
+                }
             }
         }
     }
