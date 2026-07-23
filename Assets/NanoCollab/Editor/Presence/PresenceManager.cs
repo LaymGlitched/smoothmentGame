@@ -133,16 +133,27 @@ namespace NanoCollab
 
         public void ReadUserList(BinaryReader r)
         {
+            if (r.BaseStream.Position >= r.BaseStream.Length) return;
+
             int count = r.ReadByte();
             for (int i = 0; i < count; i++)
             {
+                if (r.BaseStream.Position >= r.BaseStream.Length) break;
+
                 var id        = r.ReadGuid();
                 var name      = r.ReadString();
                 var color     = r.ReadColor();
                 var startTime = r.ReadInt64();
                 if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-                if (!_users.ContainsKey(id))
+                if (_users.TryGetValue(id, out var existing))
+                {
+                    existing.Name = name;
+                    existing.Color = color;
+                    existing.SessionStartTimeTicks = startTime;
+                    _users[id] = existing;
+                }
+                else
                 {
                     var user = new CollabUser(id, name, color, startTime);
                     _users[id] = user;

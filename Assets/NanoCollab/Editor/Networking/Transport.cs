@@ -11,7 +11,7 @@ namespace NanoCollab
     /// <summary>
     /// TCP transport layer with integrated message routing and framing.
     /// Operates in Host mode (TcpListener + peer relay) or Client mode.
-    /// Uses robust socket stream handling to guarantee rock-solid stability over LAN/VPN.
+    /// Uses robust socket stream handling with framing error recovery to guarantee rock-solid stability over LAN/VPN.
     /// </summary>
     public sealed class Transport : IDisposable
     {
@@ -30,7 +30,6 @@ namespace NanoCollab
         private const float ConnectTimeoutSeconds = 2.5f;
 
         private readonly Dictionary<MsgType, Action<BinaryReader>> _handlers = new();
-        private readonly byte[] _headerBuf = new byte[3];
 
         public Mode CurrentMode => _mode;
         public int PeerCount => _peers.Count;
@@ -156,7 +155,7 @@ namespace NanoCollab
                     try
                     {
                         var tcp = _listener.AcceptTcpClient();
-                        tcp.Client.Blocking = true; // Ensure socket is blocking for NetworkStream constructor
+                        tcp.Client.Blocking = true;
                         tcp.NoDelay = true;
                         tcp.SendTimeout = 3000;
                         tcp.ReceiveTimeout = 3000;
@@ -216,7 +215,7 @@ namespace NanoCollab
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[NanoCollab] Peer read error from {peer.RemoteEndPoint}: {ex.Message}");
+                    Debug.LogWarning($"[NanoCollab] Peer read/framing error from {peer.RemoteEndPoint}: {ex.Message}");
                     _peers.RemoveAt(i);
                     OnPeerDisconnected?.Invoke(peer);
                     peer.Dispose();
@@ -282,19 +281,30 @@ namespace NanoCollab
             var stream = peer.Stream;
             if (stream == null) return false;
 
+            var headerBuf = new byte[3];
+
             // Step 1: Read 3-byte header if not already buffered
             if (!peer.HasHeader)
             {
                 if (tcp.Available < 3)
                     return false;
 
-                int read = ReadExact(stream, _headerBuf, 0, 3);
-                if (read < 3) return false;
+                int read = ReadExact(stream, headerBuf, 0, 3);
+                if (read < 3)
+                {
+                    peer.Dispose(); // Incomplete header stream read (EOF) -> close stream to prevent desync
+                    return false;
+                }
 
-                ushort len = (ushort)(_headerBuf[0] | (_headerBuf[1] << 8));
-                if (len < 1) return false;
+                ushort len = (ushort)(headerBuf[0] | (headerBuf[1] << 8));
+                if (len < 1 || len > 65000)
+                {
+                    Debug.LogWarning($"[NanoCollab] Invalid frame length ({len}) from {peer.RemoteEndPoint}. Disconnecting stream.");
+                    peer.Dispose();
+                    return false;
+                }
 
-                peer.PendingMsgType = (MsgType)_headerBuf[2];
+                peer.PendingMsgType = (MsgType)headerBuf[2];
                 peer.PendingPayloadLen = len - 1;
                 peer.HasHeader = true;
             }
@@ -308,7 +318,12 @@ namespace NanoCollab
 
                 payload = new byte[needed];
                 int readPayload = ReadExact(stream, payload, 0, needed);
-                if (readPayload < needed) return false;
+                if (readPayload < needed)
+                {
+                    peer.HasHeader = false;
+                    peer.Dispose(); // Incomplete payload stream read (EOF) -> close stream to prevent desync
+                    return false;
+                }
             }
             else
             {
