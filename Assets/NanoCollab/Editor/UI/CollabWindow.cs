@@ -86,7 +86,10 @@ namespace NanoCollab
                     statusColor = new Color(0.33f, 0.69f, 1.0f);
                     break;
                 case SessionManager.SessionState.Discovering:
-                    statusText  = "◌ Discovering…";
+                    if (_session.Transport != null && _session.Transport.IsConnecting)
+                        statusText = "◌ Connecting…";
+                    else
+                        statusText = "◌ Discovering…";
                     statusColor = new Color(1f, 0.8f, 0.27f);
                     break;
                 default:
