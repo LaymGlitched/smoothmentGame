@@ -11,7 +11,7 @@ namespace NanoCollab
     /// <summary>
     /// TCP transport layer with integrated message routing and framing.
     /// Operates in Host mode (TcpListener + peer relay) or Client mode.
-    /// Uses non-blocking BeginConnect with 2.5s timeout and tcp.Available checks to guarantee zero main-thread freezing.
+    /// Uses robust socket stream handling to guarantee rock-solid stability over LAN/VPN.
     /// </summary>
     public sealed class Transport : IDisposable
     {
@@ -89,8 +89,8 @@ namespace NanoCollab
             {
                 _pendingTcp = new TcpClient();
                 _pendingTcp.NoDelay = true;
-                _pendingTcp.SendTimeout = 2000;
-                _pendingTcp.ReceiveTimeout = 2000;
+                _pendingTcp.SendTimeout = 3000;
+                _pendingTcp.ReceiveTimeout = 3000;
 
                 _pendingConnectStartTime = (float)EditorApplication.timeSinceStartup;
                 _pendingConnectResult = _pendingTcp.BeginConnect(address, port, null, null);
@@ -121,7 +121,7 @@ namespace NanoCollab
                 {
                     if (elapsed > ConnectTimeoutSeconds)
                     {
-                        Debug.LogWarning($"[NanoCollab] Connection to host timed out after {ConnectTimeoutSeconds}s. If using ZeroTier, ensure Windows Firewall allows TCP port {_listener?.LocalEndpoint ?? (object)"7421"} for Unity.");
+                        Debug.LogWarning($"[NanoCollab] Connection to host timed out after {ConnectTimeoutSeconds}s. Ensure Windows Firewall allows TCP port 7421 for Unity.");
                         try { _pendingTcp?.Close(); } catch { }
                         CleanupPendingConnect();
                         _mode = Mode.None;
@@ -138,7 +138,7 @@ namespace NanoCollab
                 }
                 catch (Exception ex)
                 {
-                    Debug.LogWarning($"[NanoCollab] TCP connection failed ({ex.Message}). If using ZeroTier, check Windows Firewall on host PC for TCP port 7421.");
+                    Debug.LogWarning($"[NanoCollab] TCP connection failed ({ex.Message}). Check Windows Firewall on host PC for TCP port 7421.");
                     try { _pendingTcp?.Close(); } catch { }
                     _mode = Mode.None;
                 }
@@ -157,8 +157,8 @@ namespace NanoCollab
                     {
                         var tcp = _listener.AcceptTcpClient();
                         tcp.NoDelay = true;
-                        tcp.SendTimeout = 2000;
-                        tcp.ReceiveTimeout = 2000;
+                        tcp.SendTimeout = 3000;
+                        tcp.ReceiveTimeout = 3000;
 
                         var peer = new PeerConnection(tcp);
                         _peers.Add(peer);
@@ -287,7 +287,7 @@ namespace NanoCollab
                 if (tcp.Available < 3)
                     return false;
 
-                int read = stream.Read(_headerBuf, 0, 3);
+                int read = ReadExact(stream, _headerBuf, 0, 3);
                 if (read < 3) return false;
 
                 ushort len = (ushort)(_headerBuf[0] | (_headerBuf[1] << 8));
@@ -325,7 +325,7 @@ namespace NanoCollab
             while (totalRead < count)
             {
                 int n = stream.Read(buffer, offset + totalRead, count - totalRead);
-                if (n == 0) break;
+                if (n == 0) break; // EOF
                 totalRead += n;
             }
             return totalRead;
@@ -352,10 +352,7 @@ namespace NanoCollab
             {
                 try
                 {
-                    if (_tcp == null || !_tcp.Connected) return false;
-                    if (_tcp.Client.Poll(0, SelectMode.SelectRead) && _tcp.Available == 0)
-                        return false;
-                    return true;
+                    return _tcp != null && _tcp.Connected && _tcp.Client != null;
                 }
                 catch { return false; }
             }
