@@ -5,22 +5,24 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Lightweight EditorWindow showing connection status, connected users,
-    /// latency, Right-Click 'Follow Camera' option, and Direct LAN Connect.
-    /// Accessible via Window > NanoCollab.
+    /// Editor window for NanoCollab.
+    /// Displays connection status, active collaborator list with color swatches & latency,
+    /// camera follow toggle, direct IP join controls, and identity customization.
     /// </summary>
     public sealed class CollabWindow : EditorWindow
     {
         private static SessionManager _session;
         private Vector2 _scrollPos;
+        private bool _showDirectConnect;
+        private bool _showProfile = true;
         private string _directIpInput = "";
-        private bool _showDirectConnect = false;
 
-        [MenuItem("Window/NanoCollab")]
-        private static void ShowWindow()
+        [MenuItem("Window/NanoCollab", false, 2050)]
+        public static void Open()
         {
             var win = GetWindow<CollabWindow>("NanoCollab");
-            win.minSize = new Vector2(240, 220);
+            win.minSize = new Vector2(280, 360);
+            win.Show();
         }
 
         public static void Bind(SessionManager session)
@@ -60,6 +62,8 @@ namespace NanoCollab
             }
 
             DrawHeader();
+            EditorGUILayout.Space(4);
+            DrawProfileSection();
             EditorGUILayout.Space(4);
             DrawUserList();
             DrawDirectConnectSection();
@@ -109,6 +113,35 @@ namespace NanoCollab
             GUILayout.Label(sceneName, EditorStyles.miniLabel);
 
             EditorGUILayout.EndHorizontal();
+        }
+
+        private void DrawProfileSection()
+        {
+            var settings = NanoCollabSettings.instance;
+
+            _showProfile = EditorGUILayout.Foldout(_showProfile, "My Identity (Name & Color)", true);
+            if (_showProfile)
+            {
+                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+                EditorGUI.BeginChangeCheck();
+                string newName  = EditorGUILayout.TextField("Display Name", settings.DisplayName);
+                Color  newColor = EditorGUILayout.ColorField("Avatar Color", settings.UserColor);
+
+                if (EditorGUI.EndChangeCheck())
+                {
+                    settings.DisplayName = newName;
+                    settings.UserColor   = newColor;
+
+                    if (_session != null)
+                    {
+                        _session.Presence.AddUser(_session.LocalId, newName, customColor: newColor);
+                        _session.BroadcastLocalUserJoin();
+                    }
+                }
+
+                EditorGUILayout.EndVertical();
+            }
         }
 
         private void DrawUserList()
@@ -176,6 +209,27 @@ namespace NanoCollab
             }
 
             EditorGUILayout.EndScrollView();
+
+            DrawBotSection();
+        }
+
+        private void DrawBotSection()
+        {
+            if (_session?.Bot == null) return;
+
+            EditorGUILayout.Space(6);
+            bool isBotActive = _session.Bot.IsActive;
+
+            var oldBg = GUI.backgroundColor;
+            GUI.backgroundColor = isBotActive ? new Color(1f, 0.4f, 0.4f) : new Color(0.6f, 0.9f, 0.6f);
+
+            string btnText = isBotActive ? "Despawn Simulated Bot" : "🤖 Spawn Test Bot (Single-Editor)";
+            if (GUILayout.Button(btnText, GUILayout.Height(24)))
+            {
+                _session.Bot.ToggleBot();
+            }
+
+            GUI.backgroundColor = oldBg;
         }
 
         private void DrawDirectConnectSection()
@@ -202,6 +256,7 @@ namespace NanoCollab
             EditorGUILayout.BeginHorizontal(EditorStyles.toolbar);
 
             var settings = NanoCollabSettings.instance;
+
             GUILayout.Label($"You: {settings.DisplayName}", EditorStyles.miniLabel);
             GUILayout.FlexibleSpace();
 

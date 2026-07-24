@@ -29,7 +29,7 @@ namespace NanoCollab
         private float _pendingConnectStartTime;
         private const float ConnectTimeoutSeconds = 2.5f;
 
-        private readonly Dictionary<MsgType, Action<BinaryReader>> _handlers = new();
+        private readonly Dictionary<MsgType, Action<PeerConnection, BinaryReader>> _handlers = new();
 
         public Mode CurrentMode => _mode;
         public int PeerCount => _peers.Count;
@@ -45,9 +45,14 @@ namespace NanoCollab
 
         // --- Message Router Integration ---
 
-        public void RegisterHandler(MsgType type, Action<BinaryReader> handler)
+        public void RegisterHandler(MsgType type, Action<PeerConnection, BinaryReader> handler)
         {
             _handlers[type] = handler;
+        }
+
+        public void RegisterHandler(MsgType type, Action<BinaryReader> handler)
+        {
+            _handlers[type] = (_, r) => handler(r);
         }
 
         public void UnregisterHandler(MsgType type)
@@ -193,7 +198,7 @@ namespace NanoCollab
                             using var r = new BinaryReader(ms);
                             try
                             {
-                                handler(r);
+                                handler(peer, r);
                             }
                             catch (Exception ex)
                             {

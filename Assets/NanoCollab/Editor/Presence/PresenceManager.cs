@@ -31,21 +31,21 @@ namespace NanoCollab
         public event Action<CollabUser> OnUserJoined;
         public event Action<CollabUser> OnUserLeft;
 
-        public CollabUser AddUser(Guid id, string name, long sessionStartTimeTicks = 0)
+        public CollabUser AddUser(Guid id, string name, long sessionStartTimeTicks = 0, Color? customColor = null)
         {
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
+            Color color = customColor ?? Palette[_colorIndex % Palette.Length];
+
             if (_users.TryGetValue(id, out var existing))
             {
-                if (existing.Name != name)
-                {
-                    existing.Name = name;
-                    _users[id] = existing;
-                }
+                existing.Name  = name;
+                existing.Color = color;
+                _users[id] = existing;
                 return existing;
             }
 
-            var user = new CollabUser(id, name, Palette[_colorIndex % Palette.Length], sessionStartTimeTicks);
+            var user = new CollabUser(id, name, color, sessionStartTimeTicks);
             _colorIndex++;
             _users[id] = user;
             OnUserJoined?.Invoke(user);
@@ -140,7 +140,6 @@ namespace NanoCollab
                 int count = r.ReadByte();
                 for (int i = 0; i < count; i++)
                 {
-                    // Require at least 42 bytes (Guid 16 + ushort len 2 + color 16 + long 8) to read next record safely
                     if (r.BaseStream.Position + 40 > r.BaseStream.Length) break;
 
                     var id        = r.ReadGuid();

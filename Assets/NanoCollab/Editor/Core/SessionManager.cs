@@ -28,9 +28,10 @@ namespace NanoCollab
         public SessionState State => _state;
 
         // Identity
-        private readonly Guid   _localId                = Guid.NewGuid();
-        private readonly long   _sessionStartTimeTicks  = DateTime.UtcNow.Ticks;
-        private readonly string _userName;
+        private readonly Guid _localId               = Guid.NewGuid();
+        private readonly long _sessionStartTimeTicks = DateTime.UtcNow.Ticks;
+
+        public string UserName => NanoCollabSettings.instance.DisplayName;
 
         // Subsystems
         private Discovery        _discovery;
@@ -41,11 +42,15 @@ namespace NanoCollab
         private TransformSync    _transformSync;
         private SelectionSync    _selectionSync;
         private HierarchySync    _hierarchySync;
-        private SceneOverlay     _sceneOverlay;
+        private SceneOverlay              _sceneOverlay;
+        private SimulatedBot              _bot;
+        private CollaboratorAvatarManager _avatarManager;
 
         public PresenceManager Presence   => _presence;
         public Transport       Transport  => _transport;
         public CameraSync      CameraSync => _cameraSync;
+        public SimulatedBot    Bot        => _bot;
+        public Guid            LocalId    => _localId;
 
         private ulong _sessionHash;
         private float _discoverStartTime;
@@ -63,16 +68,12 @@ namespace NanoCollab
 
         public SessionManager()
         {
-            _userName = NanoCollabSettings.instance.DisplayName;
-            if (string.IsNullOrWhiteSpace(_userName))
-                _userName = System.Environment.UserName;
-            if (string.IsNullOrWhiteSpace(_userName))
-                _userName = "User_" + UnityEngine.Random.Range(100, 999);
-
             _transport    = new Transport();
             _presence     = new PresenceManager();
             _notification = new Notification(_presence);
-            _sceneOverlay = new SceneOverlay(_presence);
+            _sceneOverlay = new SceneOverlay(_presence, _localId);
+            _bot          = new SimulatedBot(_presence);
+            _avatarManager= new CollaboratorAvatarManager(_presence, _localId);
 
             RegisterHandlers();
             BindTransportEvents();
@@ -138,6 +139,8 @@ namespace NanoCollab
         {
             if (!NanoCollabSettings.instance.Enabled) return;
 
+            _bot?.Tick();
+            _avatarManager?.Tick();
             _discovery?.Tick();
 
             if (_state == SessionState.Discovering)
@@ -145,7 +148,7 @@ namespace NanoCollab
                 if (_transport.IsConnectedClient)
                 {
                     _state = SessionState.Connected;
-                    _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+                    _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
                     _pendingUserJoinBroadcast = true;
                     Debug.Log("[NanoCollab] Successfully connected to host.");
                 }
@@ -188,6 +191,7 @@ namespace NanoCollab
             SceneView.duringSceneGui -= OnSceneGUI;
             Undo.postprocessModifications -= _transformSync.OnPostprocessModifications;
             _selectionSync?.Dispose();
+            _avatarManager?.Dispose();
             CollabWindow.Bind(null);
         }
 
@@ -198,7 +202,7 @@ namespace NanoCollab
             int port = NanoCollabSettings.instance.Port;
             _sessionHash = Discovery.ComputeSessionHash(scenePath);
 
-            _discovery = new Discovery(_localId, _sessionHash, _userName, port, (ushort)(port + 1), _sessionStartTimeTicks);
+            _discovery = new Discovery(_localId, _sessionHash, UserName, port, (ushort)(port + 1), _sessionStartTimeTicks);
             _discovery.OnPeerFound += OnPeerDiscovered;
             _discovery.OnPeerGone  += OnPeerGone;
 
@@ -266,7 +270,7 @@ namespace NanoCollab
             _transport.StartHost(port + 1);
             _state = SessionState.Hosting;
 
-            _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+            _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
 
             _hierarchySync.RebuildSnapshot();
             Debug.Log("[NanoCollab] Promoted to host (oldest active peer in LAN session).");
@@ -278,7 +282,7 @@ namespace NanoCollab
 
             if (_state == SessionState.Hosting)
             {
-                _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
+                _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
 
                 var listPayload = _presence.WriteUserList();
                 var frame = SerializationExtensions.FrameMessage(MsgType.UserList, listPayload);
@@ -313,7 +317,7 @@ namespace NanoCollab
 
             if (_transport.CurrentMode != Transport.Mode.None)
             {
-                var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
+                var payload = PresenceManager.WriteUserJoin(_localId, UserName, NanoCollabSettings.instance.UserColor, _sessionStartTimeTicks);
                 try { _transport.Broadcast(MsgType.UserLeave, payload); } catch { }
             }
 
@@ -345,26 +349,38 @@ namespace NanoCollab
             Undo.postprocessModifications += _transformSync.OnPostprocessModifications;
         }
 
-        private void BroadcastLocalUserJoin()
+        public void BroadcastLocalUserJoin()
         {
-            var payload = PresenceManager.WriteUserJoin(_localId, _userName, Color.white, _sessionStartTimeTicks);
+            var name  = NanoCollabSettings.instance.DisplayName;
+            var color = NanoCollabSettings.instance.UserColor;
+            _presence.AddUser(_localId, name, _sessionStartTimeTicks, color);
+            var payload = PresenceManager.WriteUserJoin(_localId, name, color, _sessionStartTimeTicks);
             _transport.Broadcast(MsgType.UserJoin, payload);
-            Debug.Log($"[NanoCollab] Sent UserJoin as '{_userName}' ({_localId})");
+            Debug.Log($"[NanoCollab] Sent UserJoin as '{name}' ({_localId})");
         }
 
         // --- Handlers ---
 
-        private void OnUserJoinReceived(BinaryReader r)
+        private void OnUserJoinReceived(PeerConnection peer, BinaryReader r)
         {
-            var (id, name, color, startTime) = PresenceManager.ReadUserJoin(r);
-            _presence.AddUser(id, name, startTime);
-            Debug.Log($"[NanoCollab] User joined session: {name} ({id})");
-
-            if (_state == SessionState.Hosting)
+            try
             {
-                _presence.AddUser(_localId, _userName, _sessionStartTimeTicks);
-                var listPayload = _presence.WriteUserList();
-                _transport.Broadcast(MsgType.UserList, listPayload);
+                var (id, name, color, startTime) = PresenceManager.ReadUserJoin(r);
+                if (peer != null) peer.UserId = id;
+
+                _presence.AddUser(id, name, startTime);
+                Debug.Log($"[NanoCollab] User joined session: {name} ({id})");
+
+                if (_state == SessionState.Hosting)
+                {
+                    _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
+                    var listPayload = _presence.WriteUserList();
+                    _transport.Broadcast(MsgType.UserList, listPayload);
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[NanoCollab] Safe OnUserJoinReceived caught stream error: {ex.Message}");
             }
         }
 

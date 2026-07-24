@@ -6,10 +6,10 @@ namespace NanoCollab
 {
     /// <summary>
     /// Represents a connected collaborator's identity and live state.
-    /// Mutable struct — updated in-place by sync modules.
+    /// Reference class — updated in-place by sync modules and presence manager.
     /// </summary>
     [Serializable]
-    public struct CollabUser
+    public sealed class CollabUser
     {
         public Guid   Id;
         public string Name;
@@ -17,11 +17,11 @@ namespace NanoCollab
         public long   SessionStartTimeTicks;
 
         // Live state
-        public Vector3        CameraPosition;
-        public Quaternion     CameraRotation;
+        public Vector3          CameraPosition;
+        public Quaternion       CameraRotation;
         public GlobalObjectId[] SelectedObjects;
         public GlobalObjectId   DraggingObject; // Manipulation awareness
-        public float          LatencyMs;
+        public float            LatencyMs;
 
         // Timestamps for interpolation
         public double CameraLastUpdated;

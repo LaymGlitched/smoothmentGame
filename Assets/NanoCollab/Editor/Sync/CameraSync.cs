@@ -6,12 +6,13 @@ using UnityEngine;
 namespace NanoCollab
 {
     /// <summary>
-    /// Broadcasts local SceneView camera position/rotation to peers at ~30Hz.
-    /// Also supports 'Camera Follow' mode to align local SceneView camera to a peer.
+    /// Broadcasts local SceneView camera position/rotation to peers at ~30Hz (and heartbeat every 1s).
+    /// Also supports 'Camera Follow' mode to align local SceneView camera to a peer using sceneView.LookAt.
     /// </summary>
     public sealed class CameraSync
     {
         private const float SendInterval     = 1f / 30f; // ~30 Hz
+        private const float HeartbeatInterval= 1.0f;     // Force send every 1s so new peers get initial position
         private const float PositionThreshold = 0.005f;
         private const float RotationThreshold = 0.05f; // degrees
 
@@ -22,6 +23,7 @@ namespace NanoCollab
         private Vector3    _lastSentPos;
         private Quaternion _lastSentRot;
         private float      _lastSendTime;
+        private float      _lastHeartbeatTime;
 
         // Camera Follow state
         public Guid? FollowUserId { get; private set; }
@@ -38,8 +40,8 @@ namespace NanoCollab
         public void SetFollowUser(Guid? userId)
         {
             FollowUserId = userId;
-            if (userId.HasValue)
-                Debug.Log($"[NanoCollab] Following camera of collaborator {userId.Value}");
+            if (userId.HasValue && _presence.TryGetUser(userId.Value, out var u))
+                Debug.Log($"[NanoCollab] Following camera of collaborator '{u.Name}' ({userId.Value})");
             else
                 Debug.Log("[NanoCollab] Stopped following camera.");
         }
@@ -54,20 +56,16 @@ namespace NanoCollab
             {
                 if (_presence.TryGetUser(FollowUserId.Value, out var targetUser))
                 {
-                    sceneView.pivot = targetUser.CameraPosition;
-                    sceneView.rotation = targetUser.CameraRotation;
+                    if (targetUser.CameraPosition != Vector3.zero || targetUser.CameraRotation != Quaternion.identity)
+                    {
+                        sceneView.LookAt(targetUser.CameraPosition, targetUser.CameraRotation);
+                    }
                 }
                 else
                 {
-                    // User disconnected — stop following
                     FollowUserId = null;
                 }
             }
-
-            if (_transport.CurrentMode == Transport.Mode.None) return;
-
-            float now = (float)EditorApplication.timeSinceStartup;
-            if (now - _lastSendTime < SendInterval) return;
 
             var cam = sceneView.camera;
             if (cam == null) return;
@@ -75,16 +73,30 @@ namespace NanoCollab
             var pos = cam.transform.position;
             var rot = cam.transform.rotation;
 
-            // Delta check
+            // Update local presence user camera position
+            _presence.UpdateUser(_localId, user =>
+            {
+                user.CameraPosition = pos;
+                user.CameraRotation = rot;
+            });
+
+            if (_transport.CurrentMode == Transport.Mode.None) return;
+
+            float now = (float)EditorApplication.timeSinceStartup;
+            if (now - _lastSendTime < SendInterval) return;
+
+            // Delta & heartbeat check
             float posDelta = Vector3.Distance(pos, _lastSentPos);
             float rotDelta = Quaternion.Angle(rot, _lastSentRot);
+            bool isHeartbeat = (now - _lastHeartbeatTime >= HeartbeatInterval);
 
-            if (posDelta < PositionThreshold && rotDelta < RotationThreshold)
+            if (posDelta < PositionThreshold && rotDelta < RotationThreshold && !isHeartbeat)
                 return;
 
-            _lastSentPos  = pos;
-            _lastSentRot  = rot;
-            _lastSendTime = now;
+            _lastSentPos       = pos;
+            _lastSentRot       = rot;
+            _lastSendTime      = now;
+            _lastHeartbeatTime = now;
 
             // Serialize and send
             using var ms = new MemoryStream(48);
