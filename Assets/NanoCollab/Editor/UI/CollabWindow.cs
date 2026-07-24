@@ -115,6 +115,8 @@ namespace NanoCollab
             EditorGUILayout.EndHorizontal();
         }
 
+        private float _lastColorBroadcastTime;
+
         private void DrawProfileSection()
         {
             var settings = NanoCollabSettings.instance;
@@ -130,13 +132,20 @@ namespace NanoCollab
 
                 if (EditorGUI.EndChangeCheck())
                 {
+                    newColor.a           = 1.0f;
                     settings.DisplayName = newName;
                     settings.UserColor   = newColor;
 
                     if (_session != null)
                     {
                         _session.Presence.AddUser(_session.LocalId, newName, customColor: newColor);
-                        _session.BroadcastLocalUserJoin();
+
+                        float now = (float)EditorApplication.timeSinceStartup;
+                        if (now - _lastColorBroadcastTime >= 0.08f) // ~12Hz rate limit
+                        {
+                            _lastColorBroadcastTime = now;
+                            _session.BroadcastLocalUserJoin();
+                        }
                     }
                 }
 

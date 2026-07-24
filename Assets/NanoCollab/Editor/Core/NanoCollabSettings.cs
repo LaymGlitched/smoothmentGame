@@ -11,7 +11,7 @@ namespace NanoCollab
     public sealed class NanoCollabSettings : ScriptableSingleton<NanoCollabSettings>
     {
         [SerializeField] private string _displayName = "";
-        [SerializeField] private Color  _userColor   = new Color(0.33f, 0.69f, 1.00f); // Default Sky Blue
+        [SerializeField] private Color  _userColor   = new Color(0.33f, 0.69f, 1.00f, 1.0f); // Default Sky Blue Opaque
         [SerializeField] private int    _port        = 7420;
         [SerializeField] private bool   _enabled     = true;
 
@@ -35,18 +35,18 @@ namespace NanoCollab
             }
         }
 
-        /// <summary>User presence color shown in SceneView gizmos and user list.</summary>
+        /// <summary>User presence color shown in SceneView gizmos and user list. Always 100% opaque.</summary>
         public Color UserColor
         {
             get
             {
-                if (_userColor.a < 0.1f)
-                    _userColor = new Color(0.33f, 0.69f, 1.00f);
+                _userColor.a = 1.0f;
                 return _userColor;
             }
             set
             {
                 _userColor = value;
+                _userColor.a = 1.0f;
                 Save(true);
             }
         }
@@ -104,6 +104,7 @@ namespace NanoCollab
             if (EditorGUI.EndChangeCheck())
             {
                 s._displayName = newName;
+                newColor.a     = 1.0f;
                 s._userColor   = newColor;
                 s._port        = Mathf.Clamp(newPort, 1024, 65535);
                 s.Save(true);

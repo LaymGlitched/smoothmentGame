@@ -131,6 +131,7 @@ namespace NanoCollab
         private static void SetMaterialColor(Material mat, Color col)
         {
             if (mat == null) return;
+            col.a = 1.0f; // Force opaque to prevent transparent/bright flickering
             mat.color = col;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
             if (mat.HasProperty("_Color")) mat.SetColor("_Color", col);
