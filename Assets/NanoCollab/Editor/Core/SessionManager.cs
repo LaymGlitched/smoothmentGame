@@ -368,7 +368,7 @@ namespace NanoCollab
                 var (id, name, color, startTime) = PresenceManager.ReadUserJoin(r);
                 if (peer != null) peer.UserId = id;
 
-                _presence.AddUser(id, name, startTime);
+                _presence.AddUser(id, name, startTime, color);
                 Debug.Log($"[NanoCollab] User joined session: {name} ({id})");
 
                 if (_state == SessionState.Hosting)

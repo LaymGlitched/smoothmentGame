@@ -8,6 +8,7 @@ namespace NanoCollab
 {
     /// <summary>
     /// Manages connected user identities, active object drag manipulations, and user palette colors.
+    /// Preserves custom user colors and safely serializes user lists across network streams.
     /// </summary>
     public sealed class PresenceManager
     {
@@ -35,16 +36,18 @@ namespace NanoCollab
         {
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-            Color color = customColor ?? Palette[_colorIndex % Palette.Length];
-
             if (_users.TryGetValue(id, out var existing))
             {
-                existing.Name  = name;
-                existing.Color = color;
+                existing.Name = name;
+                if (customColor.HasValue)
+                {
+                    existing.Color = customColor.Value;
+                }
                 _users[id] = existing;
                 return existing;
             }
 
+            Color color = customColor ?? Palette[_colorIndex % Palette.Length];
             var user = new CollabUser(id, name, color, sessionStartTimeTicks);
             _colorIndex++;
             _users[id] = user;
@@ -140,7 +143,7 @@ namespace NanoCollab
                 int count = r.ReadByte();
                 for (int i = 0; i < count; i++)
                 {
-                    if (r.BaseStream.Position + 40 > r.BaseStream.Length) break;
+                    if (r.BaseStream.Position >= r.BaseStream.Length) break;
 
                     var id        = r.ReadGuid();
                     var name      = r.ReadString();
@@ -150,14 +153,14 @@ namespace NanoCollab
 
                     if (_users.TryGetValue(id, out var existing))
                     {
-                        existing.Name = name;
-                        existing.Color = color;
+                        existing.Name                  = name;
+                        existing.Color                 = color;
                         existing.SessionStartTimeTicks = startTime;
-                        _users[id] = existing;
+                        _users[id]                     = existing;
                     }
                     else
                     {
-                        var user = new CollabUser(id, name, color, startTime);
+                        var user   = new CollabUser(id, name, color, startTime);
                         _users[id] = user;
                         _colorIndex++;
                         OnUserJoined?.Invoke(user);

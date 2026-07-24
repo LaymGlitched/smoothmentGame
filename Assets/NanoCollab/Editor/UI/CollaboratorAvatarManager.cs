@@ -199,15 +199,18 @@ namespace NanoCollab
                 {
                     var labelStyle = new GUIStyle(EditorStyles.boldLabel)
                     {
-                        normal = { textColor = Color.white },
+                        normal    = { textColor = Color.white },
                         alignment = TextAnchor.MiddleCenter,
-                        fontSize = 11,
-                        fontStyle = FontStyle.Bold
+                        fontSize  = 11,
+                        fontStyle = FontStyle.Bold,
+                        clipping  = TextClipping.Overflow,
+                        padding   = new RectOffset(4, 4, 0, 0)
                     };
 
-                    var content = new GUIContent($"📷 {user.Name}");
+                    var content  = new GUIContent(user.Name);
                     var textSize = labelStyle.CalcSize(content);
-                    var rect = new Rect(screenPos.x - (textSize.x + 16) / 2f, screenPos.y - 12, textSize.x + 16, 22);
+                    float padding = 28f;
+                    var rect     = new Rect(screenPos.x - (textSize.x + padding) / 2f, screenPos.y - 12, textSize.x + padding, 22);
 
                     Handles.BeginGUI();
 
