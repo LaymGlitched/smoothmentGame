@@ -29,8 +29,9 @@ namespace NanoCollab
         {
             _presence = presence;
             _localId  = localId;
-            _presence.OnUserJoined += OnUserJoined;
-            _presence.OnUserLeft   += OnUserLeft;
+            _presence.OnUserJoined  += OnUserJoined;
+            _presence.OnUserLeft    += OnUserLeft;
+            _presence.OnUserUpdated += OnUserUpdated;
 
             SceneView.duringSceneGui += OnSceneGUI;
         }
@@ -93,6 +94,10 @@ namespace NanoCollab
                          ?? Shader.Find("Unlit/Color")
                          ?? Shader.Find("Standard");
 
+            Color bodyColor = SanitizeColor(user.Color);
+            Color lensColor = Color.Lerp(bodyColor, Color.white, 0.5f);
+            lensColor.a = 1f;
+
             // 1. Sphere Body
             var body = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             body.name = "Body";
@@ -103,7 +108,7 @@ namespace NanoCollab
 
             var bodyRen = body.GetComponent<Renderer>();
             var bodyMat = new Material(shader);
-            SetMaterialColor(bodyMat, user.Color);
+            SetMaterialColor(bodyMat, bodyColor);
             bodyRen.material = bodyMat;
 
             // 2. Cube Lens
@@ -117,7 +122,7 @@ namespace NanoCollab
 
             var lensRen = lens.GetComponent<Renderer>();
             var lensMat = new Material(shader);
-            SetMaterialColor(lensMat, Color.Lerp(user.Color, Color.white, 0.5f));
+            SetMaterialColor(lensMat, lensColor);
             lensRen.material = lensMat;
 
             return new AvatarInstance
@@ -128,13 +133,26 @@ namespace NanoCollab
             };
         }
 
+        /// <summary>
+        /// Clamps all color channels to [0, 1] and forces alpha to 1.
+        /// This prevents HDR/emission values from reaching URP materials and causing bright flickering.
+        /// </summary>
+        private static Color SanitizeColor(Color c)
+        {
+            return new Color(
+                Mathf.Clamp01(c.r),
+                Mathf.Clamp01(c.g),
+                Mathf.Clamp01(c.b),
+                1f);
+        }
+
         private static void SetMaterialColor(Material mat, Color col)
         {
             if (mat == null) return;
-            col.a = 1.0f; // Force opaque to prevent transparent/bright flickering
+            col = SanitizeColor(col);
             mat.color = col;
             if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
-            if (mat.HasProperty("_Color")) mat.SetColor("_Color", col);
+            if (mat.HasProperty("_Color"))     mat.SetColor("_Color", col);
         }
 
         private static void UpdateAvatarTransform(AvatarInstance avatar, CollabUser user)
@@ -152,7 +170,7 @@ namespace NanoCollab
                 avatar.Root.transform.rotation = user.CameraRotation;
 
                 SetMaterialColor(avatar.BodyMat, user.Color);
-                SetMaterialColor(avatar.LensMat, Color.Lerp(user.Color, Color.white, 0.5f));
+                SetMaterialColor(avatar.LensMat, Color.Lerp(SanitizeColor(user.Color), Color.white, 0.5f));
             }
         }
 
@@ -162,6 +180,20 @@ namespace NanoCollab
             if (!_avatars.ContainsKey(user.Id))
             {
                 _avatars[user.Id] = CreateAvatar(user);
+            }
+        }
+
+        private void OnUserUpdated(CollabUser user)
+        {
+            if (user.Id == _localId) return;
+            if (_avatars.TryGetValue(user.Id, out var avatar) && avatar.Root != null)
+            {
+                // Update the avatar name in hierarchy
+                avatar.Root.name = $"[Collaborator] {user.Name}";
+
+                // Update colors immediately
+                SetMaterialColor(avatar.BodyMat, user.Color);
+                SetMaterialColor(avatar.LensMat, Color.Lerp(SanitizeColor(user.Color), Color.white, 0.5f));
             }
         }
 
@@ -189,6 +221,7 @@ namespace NanoCollab
                 var user = kv.Value;
                 if (user.Id == _localId) continue;
                 if (user.CameraPosition == Vector3.zero && user.CameraRotation == Quaternion.identity) continue;
+                if (string.IsNullOrWhiteSpace(user.Name)) continue;
 
                 var labelWorldPos = user.CameraPosition + Vector3.up * 0.75f;
                 var screenPos = HandleUtility.WorldToGUIPoint(labelWorldPos);
@@ -215,7 +248,7 @@ namespace NanoCollab
 
                     Handles.BeginGUI();
 
-                    var bgCol = user.Color;
+                    var bgCol = SanitizeColor(user.Color);
                     bgCol.a = 0.9f;
                     EditorGUI.DrawRect(rect, bgCol);
                     EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1), Color.black);
@@ -230,8 +263,9 @@ namespace NanoCollab
         public void Dispose()
         {
             SceneView.duringSceneGui -= OnSceneGUI;
-            _presence.OnUserJoined -= OnUserJoined;
-            _presence.OnUserLeft   -= OnUserLeft;
+            _presence.OnUserJoined  -= OnUserJoined;
+            _presence.OnUserLeft    -= OnUserLeft;
+            _presence.OnUserUpdated -= OnUserUpdated;
 
             var keys = new List<Guid>(_avatars.Keys);
             foreach (var id in keys) DestroyAvatar(id);

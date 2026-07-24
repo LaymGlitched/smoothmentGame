@@ -8,7 +8,7 @@ namespace NanoCollab
 {
     /// <summary>
     /// Manages connected user identities, active object drag manipulations, and user palette colors.
-    /// Preserves custom user colors and safely serializes user lists across network streams.
+    /// Colors are serialized as 4-byte RGBA32 (not floats) to eliminate precision/HDR flickering.
     /// </summary>
     public sealed class PresenceManager
     {
@@ -29,25 +29,47 @@ namespace NanoCollab
 
         public IReadOnlyDictionary<Guid, CollabUser> Users => _users;
 
+        /// <summary>Fired when a brand-new user is added to the session.</summary>
         public event Action<CollabUser> OnUserJoined;
+
+        /// <summary>Fired when a user leaves or is removed.</summary>
         public event Action<CollabUser> OnUserLeft;
 
+        /// <summary>Fired when an existing user's name or color changes.</summary>
+        public event Action<CollabUser> OnUserUpdated;
+
+        /// <summary>
+        /// Adds or updates a user. Returns the CollabUser instance.
+        /// Fires OnUserJoined for new users, OnUserUpdated for existing ones.
+        /// </summary>
         public CollabUser AddUser(Guid id, string name, long sessionStartTimeTicks = 0, Color? customColor = null)
         {
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
+            // Force color to be fully opaque
+            Color color;
+            if (customColor.HasValue)
+            {
+                color = customColor.Value;
+                color.a = 1f;
+            }
+            else
+            {
+                color = Palette[_colorIndex % Palette.Length];
+            }
+
             if (_users.TryGetValue(id, out var existing))
             {
-                existing.Name = name;
-                if (customColor.HasValue)
-                {
-                    existing.Color = customColor.Value;
-                }
+                bool changed = existing.Name != name || !ColorsEqual(existing.Color, color);
+                existing.Name  = name;
+                existing.Color = color;
+                if (sessionStartTimeTicks != 0)
+                    existing.SessionStartTimeTicks = sessionStartTimeTicks;
                 _users[id] = existing;
+                if (changed) OnUserUpdated?.Invoke(existing);
                 return existing;
             }
 
-            Color color = customColor ?? Palette[_colorIndex % Palette.Length];
             var user = new CollabUser(id, name, color, sessionStartTimeTicks);
             _colorIndex++;
             _users[id] = user;
@@ -96,15 +118,43 @@ namespace NanoCollab
             _colorIndex = 0;
         }
 
-        // --- Serialization Helpers ---
+        // --- Color Comparison (ignores tiny floating-point drift) ---
+
+        private static bool ColorsEqual(Color a, Color b)
+        {
+            return Mathf.Abs(a.r - b.r) < 0.004f
+                && Mathf.Abs(a.g - b.g) < 0.004f
+                && Mathf.Abs(a.b - b.b) < 0.004f;
+        }
+
+        // --- RGBA32 Color Serialization (4 bytes, no float precision issues) ---
+
+        private static void WriteColorRGBA32(BinaryWriter w, Color c)
+        {
+            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.r * 255f), 0, 255));
+            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.g * 255f), 0, 255));
+            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255));
+            w.Write((byte)255); // Always fully opaque
+        }
+
+        private static Color ReadColorRGBA32(BinaryReader r)
+        {
+            float red   = r.ReadByte() / 255f;
+            float green = r.ReadByte() / 255f;
+            float blue  = r.ReadByte() / 255f;
+            r.ReadByte(); // Skip alpha byte (always 255)
+            return new Color(red, green, blue, 1f);
+        }
+
+        // --- Network Serialization ---
 
         public static byte[] WriteUserJoin(Guid id, string name, Color color, long sessionStartTimeTicks)
         {
-            using var ms = new MemoryStream(80);
+            using var ms = new MemoryStream(64);
             using var w  = new BinaryWriter(ms);
             w.WriteGuid(id);
             w.WriteString(name ?? "");
-            w.WriteColor(color);
+            WriteColorRGBA32(w, color);
             w.Write(sessionStartTimeTicks);
             return ms.ToArray();
         }
@@ -113,7 +163,7 @@ namespace NanoCollab
         {
             var id        = r.ReadGuid();
             var name      = r.ReadString();
-            var color     = r.ReadColor();
+            var color     = ReadColorRGBA32(r);
             var startTime = r.ReadInt64();
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
             return (id, name, color, startTime);
@@ -128,7 +178,7 @@ namespace NanoCollab
             {
                 w.WriteGuid(kv.Value.Id);
                 w.WriteString(kv.Value.Name ?? "");
-                w.WriteColor(kv.Value.Color);
+                WriteColorRGBA32(w, kv.Value.Color);
                 w.Write(kv.Value.SessionStartTimeTicks);
             }
             return ms.ToArray();
@@ -147,24 +197,12 @@ namespace NanoCollab
 
                     var id        = r.ReadGuid();
                     var name      = r.ReadString();
-                    var color     = r.ReadColor();
+                    var color     = ReadColorRGBA32(r);
                     var startTime = r.ReadInt64();
                     if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-                    if (_users.TryGetValue(id, out var existing))
-                    {
-                        existing.Name                  = name;
-                        existing.Color                 = color;
-                        existing.SessionStartTimeTicks = startTime;
-                        _users[id]                     = existing;
-                    }
-                    else
-                    {
-                        var user   = new CollabUser(id, name, color, startTime);
-                        _users[id] = user;
-                        _colorIndex++;
-                        OnUserJoined?.Invoke(user);
-                    }
+                    // Use AddUser so events fire correctly
+                    AddUser(id, name, startTime, color);
                 }
             }
             catch (Exception ex)

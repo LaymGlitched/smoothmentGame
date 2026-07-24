@@ -17,6 +17,12 @@ namespace NanoCollab
         private bool _showProfile = true;
         private string _directIpInput = "";
 
+        // Rate-limiting for color broadcast during live dragging
+        private float  _lastBroadcastTime;
+        private string _pendingName;
+        private Color  _pendingColor;
+        private bool   _hasPendingChange;
+
         [MenuItem("Window/NanoCollab", false, 2050)]
         public static void Open()
         {
@@ -48,6 +54,15 @@ namespace NanoCollab
             {
                 _lastRepaint = now;
                 Repaint();
+            }
+
+            // Flush any pending color/name change that was rate-limited
+            if (_hasPendingChange && _session != null)
+            {
+                if (now - _lastBroadcastTime >= 0.1f)
+                {
+                    FlushPendingIdentityChange();
+                }
             }
         }
 
@@ -115,42 +130,71 @@ namespace NanoCollab
             EditorGUILayout.EndHorizontal();
         }
 
-        private float _lastColorBroadcastTime;
-
         private void DrawProfileSection()
         {
             var settings = NanoCollabSettings.instance;
 
             _showProfile = EditorGUILayout.Foldout(_showProfile, "My Identity (Name & Color)", true);
-            if (_showProfile)
+            if (!_showProfile) return;
+
+            EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+
+            // Name field
+            EditorGUI.BeginChangeCheck();
+            string newName = EditorGUILayout.TextField("Display Name", settings.DisplayName);
+            bool nameChanged = EditorGUI.EndChangeCheck();
+
+            // Color field (always show alpha = false so user only picks RGB)
+            EditorGUI.BeginChangeCheck();
+            Color newColor = EditorGUILayout.ColorField(
+                new GUIContent("Avatar Color"),
+                settings.UserColor,
+                showEyedropper: true,
+                showAlpha: false,
+                hdr: false);
+            bool colorChanged = EditorGUI.EndChangeCheck();
+
+            if (nameChanged || colorChanged)
             {
-                EditorGUILayout.BeginVertical(EditorStyles.helpBox);
+                // Clamp color to 0–1 and force opaque
+                newColor.r = Mathf.Clamp01(newColor.r);
+                newColor.g = Mathf.Clamp01(newColor.g);
+                newColor.b = Mathf.Clamp01(newColor.b);
+                newColor.a = 1f;
 
-                EditorGUI.BeginChangeCheck();
-                string newName  = EditorGUILayout.TextField("Display Name", settings.DisplayName);
-                Color  newColor = EditorGUILayout.ColorField("Avatar Color", settings.UserColor);
+                // Save to settings immediately (local)
+                settings.DisplayName = newName;
+                settings.UserColor   = newColor;
 
-                if (EditorGUI.EndChangeCheck())
+                // Update local presence immediately (so local UI reflects changes)
+                if (_session != null)
                 {
-                    newColor.a           = 1.0f;
-                    settings.DisplayName = newName;
-                    settings.UserColor   = newColor;
-
-                    if (_session != null)
-                    {
-                        _session.Presence.AddUser(_session.LocalId, newName, customColor: newColor);
-
-                        float now = (float)EditorApplication.timeSinceStartup;
-                        if (now - _lastColorBroadcastTime >= 0.08f) // ~12Hz rate limit
-                        {
-                            _lastColorBroadcastTime = now;
-                            _session.BroadcastLocalUserJoin();
-                        }
-                    }
+                    _session.Presence.AddUser(
+                        _session.LocalId, newName,
+                        customColor: newColor);
                 }
 
-                EditorGUILayout.EndVertical();
+                // Stage for rate-limited network broadcast
+                _pendingName      = newName;
+                _pendingColor     = newColor;
+                _hasPendingChange = true;
+
+                float now = (float)EditorApplication.timeSinceStartup;
+                if (now - _lastBroadcastTime >= 0.1f)
+                {
+                    FlushPendingIdentityChange();
+                }
             }
+
+            EditorGUILayout.EndVertical();
+        }
+
+        private void FlushPendingIdentityChange()
+        {
+            if (!_hasPendingChange || _session == null) return;
+            _hasPendingChange = false;
+            _lastBroadcastTime = (float)EditorApplication.timeSinceStartup;
+            _session.BroadcastLocalUserJoin();
         }
 
         private void DrawUserList()
@@ -172,19 +216,30 @@ namespace NanoCollab
             foreach (var kv in presence.Users)
             {
                 var user = kv.Value;
+
+                // Skip users with no name (shouldn't happen, but defensive)
+                if (string.IsNullOrWhiteSpace(user.Name)) continue;
+
                 var rowRect = EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
+                // Color swatch
                 var dotRect = GUILayoutUtility.GetRect(14, 14, GUILayout.Width(14));
                 dotRect.y += 2;
-                EditorGUI.DrawRect(dotRect, user.Color);
+                Color swatchColor = user.Color;
+                swatchColor.a = 1f;
+                EditorGUI.DrawRect(dotRect, swatchColor);
 
+                // User name
                 string displayName = user.Name;
+                if (user.Id == _session.LocalId)
+                    displayName += " (You)";
                 if (currentFollowId.HasValue && currentFollowId.Value == user.Id)
                     displayName += " [Following]";
 
                 EditorGUILayout.LabelField(displayName, EditorStyles.label, GUILayout.MinWidth(100));
 
-                if (user.LatencyMs > 0)
+                // Latency badge
+                if (user.LatencyMs > 0 && user.Id != _session.LocalId)
                 {
                     GUILayout.FlexibleSpace();
                     EditorGUILayout.LabelField($"{user.LatencyMs:F0}ms", EditorStyles.miniLabel, GUILayout.Width(45));
@@ -192,7 +247,10 @@ namespace NanoCollab
 
                 EditorGUILayout.EndHorizontal();
 
-                if (Event.current.type == EventType.ContextClick && rowRect.Contains(Event.current.mousePosition))
+                // Right-click context menu for following
+                if (user.Id != _session.LocalId
+                    && Event.current.type == EventType.ContextClick
+                    && rowRect.Contains(Event.current.mousePosition))
                 {
                     var menu = new GenericMenu();
                     bool isFollowing = currentFollowId.HasValue && currentFollowId.Value == user.Id;

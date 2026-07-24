@@ -387,11 +387,19 @@ namespace NanoCollab
                 var (id, name, color, startTime) = PresenceManager.ReadUserJoin(r);
                 if (peer != null) peer.UserId = id;
 
-                _presence.AddUser(id, name, startTime, color);
-                Debug.Log($"[NanoCollab] User joined session: {name} ({id})");
+                // Clamp color to sane values
+                color.r = Mathf.Clamp01(color.r);
+                color.g = Mathf.Clamp01(color.g);
+                color.b = Mathf.Clamp01(color.b);
+                color.a = 1f;
 
+                _presence.AddUser(id, name, startTime, color);
+                Debug.Log($"[NanoCollab] User joined/updated: '{name}' color=({color.r:F2},{color.g:F2},{color.b:F2}) ({id})");
+
+                // Host relays the full user list so all clients have the complete picture
                 if (_state == SessionState.Hosting)
                 {
+                    // Ensure host's own identity is current before broadcasting
                     _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
                     var listPayload = _presence.WriteUserList();
                     _transport.Broadcast(MsgType.UserList, listPayload);
@@ -405,16 +413,23 @@ namespace NanoCollab
 
         private void OnUserLeaveReceived(BinaryReader r)
         {
-            var (id, name, _, _) = PresenceManager.ReadUserJoin(r);
-            _presence.RemoveUser(id);
-            _discoveredPeers.Remove(id);
-            Debug.Log($"[NanoCollab] User left session: {name} ({id})");
+            try
+            {
+                var (id, name, _, _) = PresenceManager.ReadUserJoin(r);
+                _presence.RemoveUser(id);
+                _discoveredPeers.Remove(id);
+                Debug.Log($"[NanoCollab] User left session: '{name}' ({id})");
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[NanoCollab] Safe OnUserLeaveReceived caught stream error: {ex.Message}");
+            }
         }
 
         private void OnUserListReceived(BinaryReader r)
         {
             _presence.ReadUserList(r);
-            Debug.Log($"[NanoCollab] Received updated user list from host ({_presence.Users.Count} active users in presence)");
+            Debug.Log($"[NanoCollab] Received user list from host ({_presence.Users.Count} users)");
         }
 
         private void OnPingReceived(BinaryReader r)

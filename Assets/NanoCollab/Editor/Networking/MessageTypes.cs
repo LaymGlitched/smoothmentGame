@@ -147,22 +147,6 @@ namespace NanoCollab
             return path;
         }
 
-        // --- Color ---
-
-        public static void WriteColor(this BinaryWriter w, Color c)
-        {
-            w.Write(c.r);
-            w.Write(c.g);
-            w.Write(c.b);
-            w.Write(c.a);
-        }
-
-        public static Color ReadColor(this BinaryReader r)
-        {
-            return new Color(
-                r.ReadSingle(), r.ReadSingle(),
-                r.ReadSingle(), r.ReadSingle());
-        }
 
         // --- Framed Message Helper ---
 
