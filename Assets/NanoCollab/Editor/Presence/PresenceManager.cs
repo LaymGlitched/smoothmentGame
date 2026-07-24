@@ -133,23 +133,61 @@ namespace NanoCollab
 
         public static byte[] WriteUserJoin(Guid id, string name, Color color, long sessionStartTimeTicks)
         {
+            // Force color values sane before serialization
+            color = new Color(
+                Mathf.Clamp01(color.r),
+                Mathf.Clamp01(color.g),
+                Mathf.Clamp01(color.b),
+                1f);
+
             using var ms = new MemoryStream(80);
             using var w  = new BinaryWriter(ms);
             w.WriteGuid(id);
             w.WriteString(name ?? "");
             w.WriteColor(color);
             w.Write(sessionStartTimeTicks);
-            return ms.ToArray();
+
+            var result = ms.ToArray();
+            Debug.Log($"[NanoCollab:WIRE:SEND] UserJoin name='{name}' color=({color.r:F3},{color.g:F3},{color.b:F3}) payloadSize={result.Length} hex={BytesToHex(result)}");
+            return result;
         }
 
         public static (Guid id, string name, Color color, long startTimeTicks) ReadUserJoin(BinaryReader r)
         {
+            // Log the raw payload bytes for diagnostics
+            long startPos = r.BaseStream.Position;
+            long totalLen = r.BaseStream.Length;
+            int available = (int)(totalLen - startPos);
+
+            byte[] rawDump = null;
+            if (r.BaseStream.CanSeek)
+            {
+                rawDump = new byte[Math.Min(available, 128)];
+                r.BaseStream.Read(rawDump, 0, rawDump.Length);
+                r.BaseStream.Position = startPos; // Seek back
+            }
+
             var id        = r.ReadGuid();
             var name      = r.ReadString();
             var color     = r.ReadColor();
             var startTime = r.ReadInt64();
+
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
+
+            Debug.Log($"[NanoCollab:WIRE:RECV] UserJoin name='{name}' color=({color.r:F3},{color.g:F3},{color.b:F3}) payloadSize={available} hex={BytesToHex(rawDump)}");
             return (id, name, color, startTime);
+        }
+
+        private static string BytesToHex(byte[] data)
+        {
+            if (data == null || data.Length == 0) return "(empty)";
+            var sb = new System.Text.StringBuilder(data.Length * 3);
+            for (int i = 0; i < data.Length; i++)
+            {
+                if (i > 0) sb.Append(' ');
+                sb.Append(data[i].ToString("X2"));
+            }
+            return sb.ToString();
         }
 
         public byte[] WriteUserList()
