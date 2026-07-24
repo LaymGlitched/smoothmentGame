@@ -54,7 +54,7 @@ namespace NanoCollab
 
         private ulong _sessionHash;
         private float _discoverStartTime;
-        private const float HostPromotionDelay = 2.5f;
+        private const float HostPromotionDelay = 4.0f;
 
         private float _lastConnectAttemptTime;
         private const float ConnectRetryCooldown = 4.0f;
@@ -228,8 +228,6 @@ namespace NanoCollab
             _discoveredPeers.Remove(userId);
             _presence.RemoveUser(userId);
         }
-
-        private const float HostPromotionDelay = 4.0f;
 
         private void CheckHostElection()
         {
