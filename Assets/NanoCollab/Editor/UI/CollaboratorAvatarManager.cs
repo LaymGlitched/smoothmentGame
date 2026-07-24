@@ -149,10 +149,10 @@ namespace NanoCollab
         private static void SetMaterialColor(Material mat, Color col)
         {
             if (mat == null) return;
-            col = SanitizeColor(col);
-            mat.color = col;
-            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", col);
-            if (mat.HasProperty("_Color"))     mat.SetColor("_Color", col);
+            Color matCol = col.ToMaterialColor();
+            mat.color = matCol;
+            if (mat.HasProperty("_BaseColor")) mat.SetColor("_BaseColor", matCol);
+            if (mat.HasProperty("_Color"))     mat.SetColor("_Color", matCol);
         }
 
         private static void UpdateAvatarTransform(AvatarInstance avatar, CollabUser user)
@@ -248,8 +248,7 @@ namespace NanoCollab
 
                     Handles.BeginGUI();
 
-                    var borderCol = SanitizeColor(user.Color);
-                    borderCol.a = 1f;
+                    var borderCol = user.Color.ToGUIColor();
 
                     // High-contrast dark badge background
                     EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.15f, 0.88f));

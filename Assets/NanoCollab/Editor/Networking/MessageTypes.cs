@@ -147,25 +147,25 @@ namespace NanoCollab
             return path;
         }
 
-        // --- Color (4 floats, clamped to 0–1, alpha forced to 1) ---
+        // --- Color (Color32 4 bytes: RGBA 0–255, alpha forced to 255) ---
 
         public static void WriteColor(this BinaryWriter w, Color c)
         {
-            w.Write(Mathf.Clamp01(c.r));
-            w.Write(Mathf.Clamp01(c.g));
-            w.Write(Mathf.Clamp01(c.b));
-            w.Write(1f); // Always fully opaque
+            Color32 c32 = c;
+            w.Write(c32.r);
+            w.Write(c32.g);
+            w.Write(c32.b);
+            w.Write((byte)255); // Always fully opaque
         }
 
         public static Color ReadColor(this BinaryReader r)
         {
-            float red   = Mathf.Clamp01(r.ReadSingle());
-            float green = Mathf.Clamp01(r.ReadSingle());
-            float blue  = Mathf.Clamp01(r.ReadSingle());
-            r.ReadSingle(); // Skip alpha (always treat as 1)
-            return new Color(red, green, blue, 1f);
+            byte red   = r.ReadByte();
+            byte green = r.ReadByte();
+            byte blue  = r.ReadByte();
+            r.ReadByte(); // Skip alpha (always treat as 255)
+            return new Color32(red, green, blue, 255);
         }
-
 
         // --- Framed Message Helper ---
 
@@ -180,6 +180,41 @@ namespace NanoCollab
             if (payloadLen > 0)
                 Buffer.BlockCopy(payload, 0, frame, 3, payloadLen);
             return frame;
+        }
+    }
+
+    public static class ColorExtensions
+    {
+        /// <summary>
+        /// Converts color to sRGB Gamma space for IMGUI / GUI rendering when in Linear Color Space.
+        /// </summary>
+        public static Color ToGUIColor(this Color c)
+        {
+            c.r = Mathf.Clamp01(c.r);
+            c.g = Mathf.Clamp01(c.g);
+            c.b = Mathf.Clamp01(c.b);
+            c.a = 1f;
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                return c.gamma;
+            }
+            return c;
+        }
+
+        /// <summary>
+        /// Converts color to Linear space for Shader / Material properties when in Linear Color Space.
+        /// </summary>
+        public static Color ToMaterialColor(this Color c)
+        {
+            c.r = Mathf.Clamp01(c.r);
+            c.g = Mathf.Clamp01(c.g);
+            c.b = Mathf.Clamp01(c.b);
+            c.a = 1f;
+            if (QualitySettings.activeColorSpace == ColorSpace.Linear)
+            {
+                return c.linear;
+            }
+            return c;
         }
     }
 }

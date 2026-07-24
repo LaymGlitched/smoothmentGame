@@ -226,8 +226,7 @@ namespace NanoCollab
                 // Color swatch
                 var dotRect = GUILayoutUtility.GetRect(14, 14, GUILayout.Width(14));
                 dotRect.y += 2;
-                Color swatchColor = user.Color;
-                swatchColor.a = 1f;
+                Color swatchColor = user.Color.ToGUIColor();
                 EditorGUI.DrawRect(dotRect, swatchColor);
 
                 // User name
@@ -237,13 +236,13 @@ namespace NanoCollab
                 if (currentFollowId.HasValue && currentFollowId.Value == user.Id)
                     displayName += " [Following]";
 
-                EditorGUILayout.LabelField(displayName, EditorStyles.label, GUILayout.MinWidth(100));
+                GUILayout.Label(displayName, EditorStyles.label);
 
                 // Latency badge
                 if (user.LatencyMs > 0 && user.Id != _session.LocalId)
                 {
                     GUILayout.FlexibleSpace();
-                    EditorGUILayout.LabelField($"{user.LatencyMs:F0}ms", EditorStyles.miniLabel, GUILayout.Width(45));
+                    GUILayout.Label($"{user.LatencyMs:F0}ms", EditorStyles.miniLabel, GUILayout.Width(45));
                 }
 
                 EditorGUILayout.EndHorizontal();
