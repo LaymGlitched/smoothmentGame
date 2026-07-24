@@ -80,7 +80,7 @@ namespace NanoCollab
 
             var labelStyle = new GUIStyle(EditorStyles.boldLabel)
             {
-                normal = { textColor = color },
+                normal = new GUIStyleState { textColor = color },
                 alignment = TextAnchor.MiddleCenter,
                 fontSize = 12,
             };

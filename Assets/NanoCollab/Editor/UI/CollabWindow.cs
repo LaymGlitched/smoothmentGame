@@ -217,8 +217,9 @@ namespace NanoCollab
             {
                 var user = kv.Value;
 
-                // Skip users with no name (shouldn't happen, but defensive)
-                if (string.IsNullOrWhiteSpace(user.Name)) continue;
+                string userName = user.Name;
+                if (string.IsNullOrWhiteSpace(userName))
+                    userName = "User_" + user.Id.ToString().Substring(0, 4);
 
                 var rowRect = EditorGUILayout.BeginHorizontal(EditorStyles.helpBox);
 
@@ -230,7 +231,7 @@ namespace NanoCollab
                 EditorGUI.DrawRect(dotRect, swatchColor);
 
                 // User name
-                string displayName = user.Name;
+                string displayName = userName;
                 if (user.Id == _session.LocalId)
                     displayName += " (You)";
                 if (currentFollowId.HasValue && currentFollowId.Value == user.Id)

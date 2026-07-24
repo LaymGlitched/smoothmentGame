@@ -92,8 +92,16 @@ namespace NanoCollab
         {
             if (_users.TryGetValue(id, out var user))
             {
+                string oldName = user.Name;
+                Color  oldColor = user.Color;
+
                 mutate(user);
                 _users[id] = user;
+
+                if (user.Name != oldName || !ColorsEqual(user.Color, oldColor))
+                {
+                    OnUserUpdated?.Invoke(user);
+                }
             }
         }
 

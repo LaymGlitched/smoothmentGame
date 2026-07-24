@@ -195,7 +195,7 @@ namespace NanoCollab
 
         private void ProcessPacket(byte[] data, IPEndPoint sender)
         {
-            if (data.Length < 39) return;
+            if (data.Length < 41) return;
 
             using var ms = new MemoryStream(data);
             using var r  = new BinaryReader(ms);

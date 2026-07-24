@@ -70,17 +70,17 @@ namespace NanoCollab
                 else if (elapsed > Duration - FadeTime)
                     alpha = (Duration - elapsed) / FadeTime;
 
+                var col = toast.Color;
+                col.a = alpha;
+
                 var style = new GUIStyle(EditorStyles.helpBox)
                 {
                     fontSize  = 12,
                     fontStyle = FontStyle.Bold,
                     padding   = new RectOffset(10, 10, 6, 6),
                     alignment = TextAnchor.MiddleLeft,
+                    normal    = new GUIStyleState { textColor = col }
                 };
-
-                var col = toast.Color;
-                col.a = alpha;
-                style.normal.textColor = col;
 
                 var rect = sceneView.position;
                 float width  = 200f;

@@ -90,9 +90,9 @@ namespace NanoCollab
 
             // Universal Render Pipeline & Built-in shader fallback
             Shader shader = Shader.Find("Universal Render Pipeline/Unlit")
-                         ?? Shader.Find("Sprites/Default")
                          ?? Shader.Find("Unlit/Color")
-                         ?? Shader.Find("Standard");
+                         ?? Shader.Find("Standard")
+                         ?? Shader.Find("Legacy Shaders/Diffuse");
 
             Color bodyColor = SanitizeColor(user.Color);
             Color lensColor = Color.Lerp(bodyColor, Color.white, 0.5f);
@@ -233,7 +233,7 @@ namespace NanoCollab
                 {
                     var labelStyle = new GUIStyle(EditorStyles.boldLabel)
                     {
-                        normal    = { textColor = Color.white },
+                        normal    = new GUIStyleState { textColor = Color.white },
                         alignment = TextAnchor.MiddleCenter,
                         fontSize  = 11,
                         fontStyle = FontStyle.Bold,
@@ -243,16 +243,24 @@ namespace NanoCollab
 
                     var content  = new GUIContent(user.Name);
                     var textSize = labelStyle.CalcSize(content);
-                    float padding = 28f;
+                    float padding = 20f;
                     var rect     = new Rect(screenPos.x - (textSize.x + padding) / 2f, screenPos.y - 12, textSize.x + padding, 22);
 
                     Handles.BeginGUI();
 
-                    var bgCol = SanitizeColor(user.Color);
-                    bgCol.a = 0.9f;
-                    EditorGUI.DrawRect(rect, bgCol);
-                    EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 1), Color.black);
-                    EditorGUI.DrawRect(new Rect(rect.x, rect.y + rect.height - 1, rect.width, 1), Color.black);
+                    var borderCol = SanitizeColor(user.Color);
+                    borderCol.a = 1f;
+
+                    // High-contrast dark badge background
+                    EditorGUI.DrawRect(rect, new Color(0.12f, 0.12f, 0.15f, 0.88f));
+
+                    // Top user color accent bar
+                    EditorGUI.DrawRect(new Rect(rect.x, rect.y, rect.width, 2.5f), borderCol);
+
+                    // Border outline
+                    EditorGUI.DrawRect(new Rect(rect.x, rect.y, 1, rect.height), new Color(borderCol.r * 0.7f, borderCol.g * 0.7f, borderCol.b * 0.7f, 1f));
+                    EditorGUI.DrawRect(new Rect(rect.x + rect.width - 1, rect.y, 1, rect.height), new Color(borderCol.r * 0.7f, borderCol.g * 0.7f, borderCol.b * 0.7f, 1f));
+                    EditorGUI.DrawRect(new Rect(rect.x, rect.y + rect.height - 1, rect.width, 1), new Color(borderCol.r * 0.7f, borderCol.g * 0.7f, borderCol.b * 0.7f, 1f));
 
                     GUI.Label(rect, content, labelStyle);
                     Handles.EndGUI();

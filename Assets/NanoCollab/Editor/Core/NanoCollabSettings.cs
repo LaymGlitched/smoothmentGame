@@ -25,6 +25,7 @@ namespace NanoCollab
                     _displayName = System.Environment.UserName;
                     if (string.IsNullOrWhiteSpace(_displayName))
                         _displayName = "Developer_" + Random.Range(100, 999);
+                    Save(true);
                 }
                 return _displayName;
             }
@@ -40,6 +41,12 @@ namespace NanoCollab
         {
             get
             {
+                // Fallback if asset loaded uninitialized or pitch black (0,0,0)
+                if (_userColor.a == 0f || (_userColor.r < 0.01f && _userColor.g < 0.01f && _userColor.b < 0.01f))
+                {
+                    _userColor = new Color(0.33f, 0.69f, 1.00f, 1.0f);
+                    Save(true);
+                }
                 _userColor.a = 1.0f;
                 return _userColor;
             }
