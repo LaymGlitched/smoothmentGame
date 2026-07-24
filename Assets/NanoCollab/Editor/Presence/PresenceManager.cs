@@ -8,7 +8,7 @@ namespace NanoCollab
 {
     /// <summary>
     /// Manages connected user identities, active object drag manipulations, and user palette colors.
-    /// Colors are serialized as 4-byte RGBA32 (not floats) to eliminate precision/HDR flickering.
+    /// Preserves custom user colors and safely serializes user lists across network streams.
     /// </summary>
     public sealed class PresenceManager
     {
@@ -46,12 +46,14 @@ namespace NanoCollab
         {
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-            // Force color to be fully opaque
             Color color;
             if (customColor.HasValue)
             {
-                color = customColor.Value;
-                color.a = 1f;
+                color = new Color(
+                    Mathf.Clamp01(customColor.Value.r),
+                    Mathf.Clamp01(customColor.Value.g),
+                    Mathf.Clamp01(customColor.Value.b),
+                    1.0f);
             }
             else
             {
@@ -118,7 +120,7 @@ namespace NanoCollab
             _colorIndex = 0;
         }
 
-        // --- Color Comparison (ignores tiny floating-point drift) ---
+        // --- Color Comparison ---
 
         private static bool ColorsEqual(Color a, Color b)
         {
@@ -128,12 +130,9 @@ namespace NanoCollab
         }
 
         // --- Network Serialization ---
-        // Colors are serialized as 4 floats (16 bytes) via WriteColor/ReadColor
-        // extension methods in MessageTypes.cs, which clamp to [0,1] and force alpha=1.
 
         public static byte[] WriteUserJoin(Guid id, string name, Color color, long sessionStartTimeTicks)
         {
-            // Force color values sane before serialization
             color = new Color(
                 Mathf.Clamp01(color.r),
                 Mathf.Clamp01(color.g),
@@ -146,27 +145,11 @@ namespace NanoCollab
             w.WriteString(name ?? "");
             w.WriteColor(color);
             w.Write(sessionStartTimeTicks);
-
-            var result = ms.ToArray();
-            Debug.Log($"[NanoCollab:WIRE:SEND] UserJoin name='{name}' color=({color.r:F3},{color.g:F3},{color.b:F3}) payloadSize={result.Length} hex={BytesToHex(result)}");
-            return result;
+            return ms.ToArray();
         }
 
         public static (Guid id, string name, Color color, long startTimeTicks) ReadUserJoin(BinaryReader r)
         {
-            // Log the raw payload bytes for diagnostics
-            long startPos = r.BaseStream.Position;
-            long totalLen = r.BaseStream.Length;
-            int available = (int)(totalLen - startPos);
-
-            byte[] rawDump = null;
-            if (r.BaseStream.CanSeek)
-            {
-                rawDump = new byte[Math.Min(available, 128)];
-                r.BaseStream.Read(rawDump, 0, rawDump.Length);
-                r.BaseStream.Position = startPos; // Seek back
-            }
-
             var id        = r.ReadGuid();
             var name      = r.ReadString();
             var color     = r.ReadColor();
@@ -174,20 +157,7 @@ namespace NanoCollab
 
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-            Debug.Log($"[NanoCollab:WIRE:RECV] UserJoin name='{name}' color=({color.r:F3},{color.g:F3},{color.b:F3}) payloadSize={available} hex={BytesToHex(rawDump)}");
             return (id, name, color, startTime);
-        }
-
-        private static string BytesToHex(byte[] data)
-        {
-            if (data == null || data.Length == 0) return "(empty)";
-            var sb = new System.Text.StringBuilder(data.Length * 3);
-            for (int i = 0; i < data.Length; i++)
-            {
-                if (i > 0) sb.Append(' ');
-                sb.Append(data[i].ToString("X2"));
-            }
-            return sb.ToString();
         }
 
         public byte[] WriteUserList()
@@ -222,7 +192,6 @@ namespace NanoCollab
                     var startTime = r.ReadInt64();
                     if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
-                    // Use AddUser so events fire correctly
                     AddUser(id, name, startTime, color);
                 }
             }

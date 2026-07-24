@@ -12,14 +12,14 @@ namespace NanoCollab
     /// <summary>
     /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi, ZeroTier).
     /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 1.5s).
-    /// Sends instant UDP announce replies when new peers are discovered for sub-10ms connection time.
+    /// Prevents infinite ping-pong broadcast storms by tracking recently seen peer timestamps.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
-        private const uint   Magic           = 0x4E434F4C;
-        private const byte   ProtocolVersion = 4; // Bumped for IsHost flag
-        private const byte   MsgAnnounce     = 0x01;
-        private const byte   MsgGoodbye      = 0x02;
+        private const uint   Magic             = 0x4E434F4C;
+        private const byte   ProtocolVersion   = 4;
+        private const byte   MsgAnnounce       = 0x01;
+        private const byte   MsgGoodbye        = 0x02;
         private const float  HeartbeatInterval = 1.5f;
 
         private UdpClient _udp;
@@ -38,6 +38,8 @@ namespace NanoCollab
         private static List<IPAddress> _cachedBroadcastAddresses;
         private static float           _lastAddressScanTime;
         private const float            AddressScanInterval = 30.0f;
+
+        private readonly Dictionary<Guid, float> _peerLastSeen = new();
 
         public event Action<DiscoveryPacket> OnPeerFound;
         public event Action<Guid> OnPeerGone;
@@ -217,9 +219,14 @@ namespace NanoCollab
 
             if (msgType == MsgGoodbye)
             {
+                _peerLastSeen.Remove(userId);
                 OnPeerGone?.Invoke(userId);
                 return;
             }
+
+            float now = (float)EditorApplication.timeSinceStartup;
+            bool isNewPeer = !_peerLastSeen.TryGetValue(userId, out float lastTime) || (now - lastTime > 10.0f);
+            _peerLastSeen[userId] = now;
 
             if (msgType == MsgAnnounce)
             {
@@ -233,8 +240,12 @@ namespace NanoCollab
                     IsHost                = isHost
                 });
 
-                // Respond immediately with announce so newly joined peer gets instant 2-way discovery
-                SendImmediateAnnounce();
+                // ONLY respond immediately if this is a brand new peer we haven't seen in 10s!
+                // This eliminates the infinite UDP ping-pong broadcast storm!
+                if (isNewPeer)
+                {
+                    SendImmediateAnnounce();
+                }
             }
         }
 
@@ -255,11 +266,11 @@ namespace NanoCollab
 
     public struct DiscoveryPacket
     {
-        public Guid      UserId;
-        public string    UserName;
-        public IPAddress Address;
-        public ushort    HostPort;
-        public long      SessionStartTimeTicks;
-        public bool      IsHost;
+        public Guid       UserId;
+        public string     UserName;
+        public IPAddress  Address;
+        public ushort     HostPort;
+        public long       SessionStartTimeTicks;
+        public bool       IsHost;
     }
 }
