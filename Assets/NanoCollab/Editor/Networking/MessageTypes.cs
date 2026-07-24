@@ -147,6 +147,25 @@ namespace NanoCollab
             return path;
         }
 
+        // --- Color (4 floats, clamped to 0–1, alpha forced to 1) ---
+
+        public static void WriteColor(this BinaryWriter w, Color c)
+        {
+            w.Write(Mathf.Clamp01(c.r));
+            w.Write(Mathf.Clamp01(c.g));
+            w.Write(Mathf.Clamp01(c.b));
+            w.Write(1f); // Always fully opaque
+        }
+
+        public static Color ReadColor(this BinaryReader r)
+        {
+            float red   = Mathf.Clamp01(r.ReadSingle());
+            float green = Mathf.Clamp01(r.ReadSingle());
+            float blue  = Mathf.Clamp01(r.ReadSingle());
+            r.ReadSingle(); // Skip alpha (always treat as 1)
+            return new Color(red, green, blue, 1f);
+        }
+
 
         // --- Framed Message Helper ---
 

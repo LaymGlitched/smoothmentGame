@@ -127,34 +127,17 @@ namespace NanoCollab
                 && Mathf.Abs(a.b - b.b) < 0.004f;
         }
 
-        // --- RGBA32 Color Serialization (4 bytes, no float precision issues) ---
-
-        private static void WriteColorRGBA32(BinaryWriter w, Color c)
-        {
-            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.r * 255f), 0, 255));
-            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.g * 255f), 0, 255));
-            w.Write((byte)Mathf.Clamp(Mathf.RoundToInt(c.b * 255f), 0, 255));
-            w.Write((byte)255); // Always fully opaque
-        }
-
-        private static Color ReadColorRGBA32(BinaryReader r)
-        {
-            float red   = r.ReadByte() / 255f;
-            float green = r.ReadByte() / 255f;
-            float blue  = r.ReadByte() / 255f;
-            r.ReadByte(); // Skip alpha byte (always 255)
-            return new Color(red, green, blue, 1f);
-        }
-
         // --- Network Serialization ---
+        // Colors are serialized as 4 floats (16 bytes) via WriteColor/ReadColor
+        // extension methods in MessageTypes.cs, which clamp to [0,1] and force alpha=1.
 
         public static byte[] WriteUserJoin(Guid id, string name, Color color, long sessionStartTimeTicks)
         {
-            using var ms = new MemoryStream(64);
+            using var ms = new MemoryStream(80);
             using var w  = new BinaryWriter(ms);
             w.WriteGuid(id);
             w.WriteString(name ?? "");
-            WriteColorRGBA32(w, color);
+            w.WriteColor(color);
             w.Write(sessionStartTimeTicks);
             return ms.ToArray();
         }
@@ -163,7 +146,7 @@ namespace NanoCollab
         {
             var id        = r.ReadGuid();
             var name      = r.ReadString();
-            var color     = ReadColorRGBA32(r);
+            var color     = r.ReadColor();
             var startTime = r.ReadInt64();
             if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
             return (id, name, color, startTime);
@@ -178,7 +161,7 @@ namespace NanoCollab
             {
                 w.WriteGuid(kv.Value.Id);
                 w.WriteString(kv.Value.Name ?? "");
-                WriteColorRGBA32(w, kv.Value.Color);
+                w.WriteColor(kv.Value.Color);
                 w.Write(kv.Value.SessionStartTimeTicks);
             }
             return ms.ToArray();
@@ -197,7 +180,7 @@ namespace NanoCollab
 
                     var id        = r.ReadGuid();
                     var name      = r.ReadString();
-                    var color     = ReadColorRGBA32(r);
+                    var color     = r.ReadColor();
                     var startTime = r.ReadInt64();
                     if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
 
