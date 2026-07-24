@@ -229,6 +229,8 @@ namespace NanoCollab
             _presence.RemoveUser(userId);
         }
 
+        private const float HostPromotionDelay = 4.0f;
+
         private void CheckHostElection()
         {
             if (_state != SessionState.Discovering) return;
@@ -237,15 +239,29 @@ namespace NanoCollab
             float now = (float)EditorApplication.timeSinceStartup;
             if (now - _lastConnectAttemptTime < ConnectRetryCooldown) return;
 
-            long oldestStartTime = _sessionStartTimeTicks;
             DiscoveryPacket? hostCandidate = null;
 
+            // 1. Prefer explicit active hosts first
             foreach (var kv in _discoveredPeers)
             {
-                if (kv.Value.SessionStartTimeTicks < oldestStartTime)
+                if (kv.Value.IsHost)
                 {
-                    oldestStartTime = kv.Value.SessionStartTimeTicks;
                     hostCandidate = kv.Value;
+                    break;
+                }
+            }
+
+            // 2. Fallback to oldest active peer if no active host announced yet
+            if (!hostCandidate.HasValue)
+            {
+                long oldestStartTime = _sessionStartTimeTicks;
+                foreach (var kv in _discoveredPeers)
+                {
+                    if (kv.Value.SessionStartTimeTicks < oldestStartTime)
+                    {
+                        oldestStartTime = kv.Value.SessionStartTimeTicks;
+                        hostCandidate   = kv.Value;
+                    }
                 }
             }
 
@@ -255,10 +271,14 @@ namespace NanoCollab
                 _lastConnectAttemptTime = now;
                 _transport.ConnectToHost(target.Address, target.HostPort);
                 _hierarchySync.RebuildSnapshot();
+                Debug.Log($"[NanoCollab] Connecting to host '{target.UserName}' at {target.Address}:{target.HostPort}...");
             }
             else
             {
-                PromoteToHost();
+                if (now - _discoverStartTime > HostPromotionDelay)
+                {
+                    PromoteToHost();
+                }
             }
         }
 
@@ -269,6 +289,7 @@ namespace NanoCollab
             int port = NanoCollabSettings.instance.Port;
             _transport.StartHost(port + 1);
             _state = SessionState.Hosting;
+            if (_discovery != null) _discovery.IsHost = true;
 
             _presence.AddUser(_localId, UserName, _sessionStartTimeTicks, NanoCollabSettings.instance.UserColor);
 

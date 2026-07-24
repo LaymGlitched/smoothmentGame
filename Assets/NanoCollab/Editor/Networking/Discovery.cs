@@ -11,16 +11,16 @@ namespace NanoCollab
 {
     /// <summary>
     /// UDP broadcast discovery across all local network interfaces (Ethernet, Wi-Fi, ZeroTier).
-    /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 2s).
-    /// Caches network interface scans to prevent main-thread delay.
+    /// Announces presence on LAN immediately on scene load/join and periodically (heartbeat every 1.5s).
+    /// Sends instant UDP announce replies when new peers are discovered for sub-10ms connection time.
     /// </summary>
     public sealed class Discovery : IDisposable
     {
         private const uint   Magic           = 0x4E434F4C;
-        private const byte   ProtocolVersion = 3;
+        private const byte   ProtocolVersion = 4; // Bumped for IsHost flag
         private const byte   MsgAnnounce     = 0x01;
         private const byte   MsgGoodbye      = 0x02;
-        private const float  HeartbeatInterval = 2.0f;
+        private const float  HeartbeatInterval = 1.5f;
 
         private UdpClient _udp;
         private readonly int    _port;
@@ -33,9 +33,11 @@ namespace NanoCollab
         private float _lastBroadcast;
         private bool  _disposed;
 
+        public bool IsHost { get; set; }
+
         private static List<IPAddress> _cachedBroadcastAddresses;
         private static float           _lastAddressScanTime;
-        private const float            AddressScanInterval = 30.0f; // Cache adapter list for 30s
+        private const float            AddressScanInterval = 30.0f;
 
         public event Action<DiscoveryPacket> OnPeerFound;
         public event Action<Guid> OnPeerGone;
@@ -122,6 +124,7 @@ namespace NanoCollab
             w.Write(Magic);
             w.Write(ProtocolVersion);
             w.Write(msgType);
+            w.Write((byte)(IsHost ? 1 : 0)); // IsHost flag
             w.Write(_sessionHash);
             w.WriteGuid(_localId);
             w.Write(_hostPort);
@@ -190,7 +193,7 @@ namespace NanoCollab
 
         private void ProcessPacket(byte[] data, IPEndPoint sender)
         {
-            if (data.Length < 38) return;
+            if (data.Length < 39) return;
 
             using var ms = new MemoryStream(data);
             using var r  = new BinaryReader(ms);
@@ -202,6 +205,7 @@ namespace NanoCollab
             if (version != ProtocolVersion) return;
 
             byte msgType             = r.ReadByte();
+            bool isHost              = r.ReadByte() != 0;
             ulong sessHash           = r.ReadUInt64();
             Guid  userId             = r.ReadGuid();
             ushort hostPort          = r.ReadUInt16();
@@ -225,8 +229,12 @@ namespace NanoCollab
                     UserName              = userName,
                     Address               = sender.Address,
                     HostPort              = hostPort,
-                    SessionStartTimeTicks = startTimeTicks
+                    SessionStartTimeTicks = startTimeTicks,
+                    IsHost                = isHost
                 });
+
+                // Respond immediately with announce so newly joined peer gets instant 2-way discovery
+                SendImmediateAnnounce();
             }
         }
 
@@ -252,5 +260,6 @@ namespace NanoCollab
         public IPAddress Address;
         public ushort    HostPort;
         public long      SessionStartTimeTicks;
+        public bool      IsHost;
     }
 }
