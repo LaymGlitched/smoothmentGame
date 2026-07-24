@@ -133,33 +133,41 @@ namespace NanoCollab
 
         public void ReadUserList(BinaryReader r)
         {
-            if (r.BaseStream.Position >= r.BaseStream.Length) return;
-
-            int count = r.ReadByte();
-            for (int i = 0; i < count; i++)
+            try
             {
-                if (r.BaseStream.Position >= r.BaseStream.Length) break;
+                if (r.BaseStream.Position >= r.BaseStream.Length) return;
 
-                var id        = r.ReadGuid();
-                var name      = r.ReadString();
-                var color     = r.ReadColor();
-                var startTime = r.ReadInt64();
-                if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
+                int count = r.ReadByte();
+                for (int i = 0; i < count; i++)
+                {
+                    // Require at least 42 bytes (Guid 16 + ushort len 2 + color 16 + long 8) to read next record safely
+                    if (r.BaseStream.Position + 40 > r.BaseStream.Length) break;
 
-                if (_users.TryGetValue(id, out var existing))
-                {
-                    existing.Name = name;
-                    existing.Color = color;
-                    existing.SessionStartTimeTicks = startTime;
-                    _users[id] = existing;
+                    var id        = r.ReadGuid();
+                    var name      = r.ReadString();
+                    var color     = r.ReadColor();
+                    var startTime = r.ReadInt64();
+                    if (string.IsNullOrWhiteSpace(name)) name = "User_" + id.ToString().Substring(0, 4);
+
+                    if (_users.TryGetValue(id, out var existing))
+                    {
+                        existing.Name = name;
+                        existing.Color = color;
+                        existing.SessionStartTimeTicks = startTime;
+                        _users[id] = existing;
+                    }
+                    else
+                    {
+                        var user = new CollabUser(id, name, color, startTime);
+                        _users[id] = user;
+                        _colorIndex++;
+                        OnUserJoined?.Invoke(user);
+                    }
                 }
-                else
-                {
-                    var user = new CollabUser(id, name, color, startTime);
-                    _users[id] = user;
-                    _colorIndex++;
-                    OnUserJoined?.Invoke(user);
-                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogWarning($"[NanoCollab] Safe ReadUserList caught stream boundary issue: {ex.Message}");
             }
         }
     }
