@@ -1016,24 +1016,24 @@ MonoBehaviour:
   serializeData2:
     selectionData:
       positions:
-      - x: 0.00000023841858
+      - x: -0.0000000018626451
         y: 0
-        z: -0.00000011920929
-      - x: 0.0015764236
-        y: 0.00000047683716
-        z: -0.006323755
-      - x: 0.002781868
-        y: 0.00000047683716
-        z: -0.012165427
-      - x: 0.0039875507
-        y: 0.00000047683716
-        z: -0.01782167
+        z: 0.000000029802322
+      - x: 0.0015763324
+        y: 0
+        z: -0.0063236356
+      - x: 0.0027817618
+        y: 0.000000007450581
+        z: -0.012165323
+      - x: 0.0039871763
+        y: -0.000000007450581
+        z: -0.017821565
       attributes:
       - Value: 1
       - Value: 2
       - Value: 2
       - Value: 2
-      maxConnectionDistance: 0.0065171104
+      maxConnectionDistance: 0.006517175
       userEdit: 0
     preBuildData:
       enabled: 0
@@ -1232,7 +1232,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 57d86f1401bc49a9b7e75924a187e1f1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: FPMovement::FPMovement.ProceduralCameraController
-  settings: {fileID: 0}
+  settings: {fileID: 11400000, guid: 6aefad1c98795e945ace74f67f6f3c27, type: 2}
   movementSettings: {fileID: 11400000, guid: ae419ac8d142ef744afe53259543e9e2, type: 2}
   controller: {fileID: 7980212506707991174}
   mouseLook: {fileID: 105633403665301567}
@@ -8680,27 +8680,27 @@ MonoBehaviour:
   serializeData2:
     selectionData:
       positions:
-      - x: 0
-        y: 0
-        z: -0.00000047683716
-      - x: -0.0026359558
+      - x: 0.000000014901161
+        y: -0.000000029802322
+        z: -0.000000011175871
+      - x: -0.002635911
         y: -0.0007382035
-        z: 0.014962673
-      - x: -0.006267786
-        y: -0.0007381737
-        z: 0.026583672
-      - x: -0.008836985
-        y: -0.0007381737
-        z: 0.034028053
-      - x: -0.011016607
-        y: -0.0007381737
-        z: 0.04034424
-      - x: -0.012495995
-        y: -0.0007381737
-        z: 0.044631004
-      - x: -0.014403343
-        y: -0.0007381737
-        z: 0.050157547
+        z: 0.01496318
+      - x: -0.0062679052
+        y: -0.0007382035
+        z: 0.026584748
+      - x: -0.008836955
+        y: -0.0007382035
+        z: 0.03402903
+      - x: -0.011016756
+        y: -0.0007382035
+        z: 0.040345393
+      - x: -0.012495905
+        y: -0.0007382035
+        z: 0.044631492
+      - x: -0.014403224
+        y: -0.0007382035
+        z: 0.050158296
       attributes:
       - Value: 1
       - Value: 2
@@ -8709,7 +8709,7 @@ MonoBehaviour:
       - Value: 2
       - Value: 2
       - Value: 2
-      maxConnectionDistance: 0.015211478
+      maxConnectionDistance: 0.015211511
       userEdit: 0
     preBuildData:
       enabled: 0
@@ -9421,7 +9421,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 1000
-  field of view: 105
+  field of view: 100
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -9464,7 +9464,7 @@ MonoBehaviour:
   m_VolumeFrameworkUpdateModeOption: 2
   m_RenderPostProcessing: 1
   m_Antialiasing: 2
-  m_AntialiasingQuality: 1
+  m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 1
   m_ClearDepth: 1
