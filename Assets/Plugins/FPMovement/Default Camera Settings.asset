@@ -15,17 +15,17 @@ MonoBehaviour:
   enableSystem: 1
   enableIdleMotion: 1
   idleFrequency: 1.2
-  idlePosAmplitude: 0.005
+  idlePosAmplitude: 0.01
   idleHorizontalRatio: 0.5
-  idleRotDriftDegrees: 0.1
+  idleRotDriftDegrees: 0.3
   idleNoiseSpeed: 0.4
   enableHeadBob: 1
   bobFrequencyWalk: 7.5
-  bobFrequencySprint: 11.5
+  bobFrequencySprint: 24
   bobAmplitudeWalk: 0.018
   sprintBobMultiplier: 1.25
   bobHorizontalRatio: 0.5
-  bobPitchTiltDegrees: 0.12
+  bobPitchTiltDegrees: 0.4
   bobSmoothSpeed: 12
   enableInertia: 1
   accelPitchDegrees: 0.2
@@ -42,8 +42,8 @@ MonoBehaviour:
   fallWindFrequency: 16
   fallWindRotAmplitude: 0.2
   enableLandingSpring: 1
-  landingSpringStiffness: 260
-  landingSpringDamping: 24
+  landingSpringStiffness: 100
+  landingSpringDamping: 12
   landingDisplacementFactor: 0.012
   landingMaxDisplacement: 0.1
   landingPitchKickDegrees: 2
@@ -58,7 +58,7 @@ MonoBehaviour:
   wallRunRollDegrees: 6
   vaultPitchDegrees: 1.5
   mantleVerticalBump: 0.04
-  traversalSmoothSpeed: 10
+  traversalSmoothSpeed: 2
   enableDamageImpulse: 1
   damagePitchFactor: 0.25
   damageRollFactor: 0.35
