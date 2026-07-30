@@ -16,9 +16,10 @@ MonoBehaviour:
     Value: HPCritical
   displayName: HPCritical
   description: 
-  triggers: []
+  triggers:
+  - Value: hp_critical
   entryConditions: []
-  basePriority: 1
+  basePriority: 2
   category: 1
   cooldownDuration: 120
   cooldownGroup: 
@@ -26,7 +27,9 @@ MonoBehaviour:
   isInterruptible: 1
   canResumeAfterInterrupt: 0
   requiredSpirits:
-  - Value: spark
+  - Value: zenka
+  - Value: ignis
+  - Value: gaia
   optionalSpirits: []
   baseScore: 50
   contextTags:
@@ -36,16 +39,70 @@ MonoBehaviour:
     Speaker:
       Value: zenka
     LineKey:
-      Value: 
-    Variants:
-    - Value: 
-    VariantWeights:
-    - 0
+      Value: conversation.hp_critical.intro
+    Variants: []
+    VariantWeights: []
     Duration: 0
     ReplyDelay: 0
     OverridePriority: 0
     LinePriority: 0
-    NextNodeIds: 00000000
+    NextNodeIds: 01000000
+    NextNodeWeights: []
+    NextNodeConditions: []
+  - NodeId: 1
+    Speaker:
+      Value: ignis
+    LineKey:
+      Value: conversation.hp_critical.reply
+    Variants: []
+    VariantWeights: []
+    Duration: 0
+    ReplyDelay: 0
+    OverridePriority: 0
+    LinePriority: 0
+    NextNodeIds: 02000000
+    NextNodeWeights: []
+    NextNodeConditions: []
+  - NodeId: 2
+    Speaker:
+      Value: zenka
+    LineKey:
+      Value: conversation.hp_critical.defence
+    Variants: []
+    VariantWeights: []
+    Duration: 0
+    ReplyDelay: 0
+    OverridePriority: 0
+    LinePriority: 0
+    NextNodeIds: 03000000
+    NextNodeWeights: []
+    NextNodeConditions: []
+  - NodeId: 3
+    Speaker:
+      Value: ignis
+    LineKey:
+      Value: conversation.hp_critical.replyAgain
+    Variants: []
+    VariantWeights: []
+    Duration: 0
+    ReplyDelay: 0
+    OverridePriority: 0
+    LinePriority: 0
+    NextNodeIds: 04000000
+    NextNodeWeights: []
+    NextNodeConditions: []
+  - NodeId: 4
+    Speaker:
+      Value: gaia
+    LineKey:
+      Value: conversation.hp_critical.end
+    Variants: []
+    VariantWeights: []
+    Duration: 0
+    ReplyDelay: 0
+    OverridePriority: 0
+    LinePriority: 0
+    NextNodeIds: 
     NextNodeWeights: []
     NextNodeConditions: []
   rootNodeId: 0

@@ -38,19 +38,47 @@ namespace GameCode.Spirits.Conversation.Runtime
             if (node == null || speaker == null)
                 return null;
 
-            // ── Select Localization Key ──
-            string locKey = SelectLineKey(node);
-            if (string.IsNullOrEmpty(locKey))
+            // Determine speaker ID string (prefer node.Speaker if set, else speaker.Id)
+            string speakerId = !string.IsNullOrEmpty(node.Speaker.Value) ? node.Speaker.Value : speaker.Id;
+
+            // ── Select Dialogue Key ──
+            string rawKey = SelectLineKey(node);
+            if (string.IsNullOrEmpty(rawKey))
                 return null;
 
-            // ── Resolve Localized Text ──
-            string localizedText = localizationManager != null
-                ? localizationManager.Get(locKey)
-                : locKey;
+            // ── Build Full spirits.json Key Path (e.g., "spark.death.vessel" or "zenka.conversation.hp_critical.intro") ──
+            string fullLocKey = BuildDialogueKey(speakerId, rawKey);
+            string convLocKey = BuildConversationKey(speakerId, rawKey);
+
+            // ── Resolve Localized Text from spirits.json via LocalizationManager ──
+            string localizedText = null;
+            if (localizationManager != null)
+            {
+                if (localizationManager.Has(fullLocKey))
+                {
+                    localizedText = localizationManager.Get(fullLocKey);
+                }
+                else if (!string.IsNullOrEmpty(convLocKey) && localizationManager.Has(convLocKey))
+                {
+                    localizedText = localizationManager.Get(convLocKey);
+                }
+                else if (localizationManager.Has(rawKey))
+                {
+                    localizedText = localizationManager.Get(rawKey);
+                }
+                else
+                {
+                    localizedText = localizationManager.Get(fullLocKey);
+                }
+            }
+            else
+            {
+                localizedText = fullLocKey;
+            }
 
             if (string.IsNullOrEmpty(localizedText))
             {
-                Debug.LogWarning($"[ConversationSystem] Empty localized text for key '{locKey}' in node {node.NodeId}");
+                Debug.LogWarning($"[ConversationSystem] Empty localized text for key '{fullLocKey}' in node {node.NodeId}");
                 return null;
             }
 
@@ -68,6 +96,59 @@ namespace GameCode.Spirits.Conversation.Runtime
             PriorityTier priority = node.OverridePriority ? node.LinePriority : conversationPriority;
 
             return new DialogueRequest(speaker, localizedText, priority, duration);
+        }
+
+        /// <summary>
+        /// Combines speaker ID and dialogue key into a single dot-delimited localization path (e.g. "spark" + "death.vessel" -> "spark.death.vessel").
+        /// Avoids duplicating the prefix if lineKey already starts with speakerId.
+        /// </summary>
+        private static string BuildDialogueKey(string speakerId, string lineKey)
+        {
+            if (string.IsNullOrEmpty(lineKey))
+                return string.Empty;
+
+            if (string.IsNullOrEmpty(speakerId))
+                return lineKey;
+
+            string prefix = speakerId + ".";
+            if (lineKey.StartsWith(prefix, System.StringComparison.OrdinalIgnoreCase))
+            {
+                return lineKey;
+            }
+
+            return $"{speakerId}.{lineKey}";
+        }
+
+        /// <summary>
+        /// Attempts to construct a key under the "conversation" namespace if lineKey doesn't already contain it.
+        /// E.g. ("zenka", "hp_critical.intro") -> "zenka.conversation.hp_critical.intro"
+        /// </summary>
+        private static string BuildConversationKey(string speakerId, string lineKey)
+        {
+            if (string.IsNullOrEmpty(lineKey))
+                return string.Empty;
+
+            // If lineKey already contains the conversation namespace, return standard BuildDialogueKey result
+            if (lineKey.IndexOf(".conversation.", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                lineKey.StartsWith("conversation.", System.StringComparison.OrdinalIgnoreCase))
+            {
+                return BuildDialogueKey(speakerId, lineKey);
+            }
+
+            // Insert conversation namespace between speakerId and lineKey
+            if (!string.IsNullOrEmpty(speakerId))
+            {
+                string speakerPrefix = speakerId + ".";
+                if (lineKey.StartsWith(speakerPrefix, System.StringComparison.OrdinalIgnoreCase))
+                {
+                    string keyWithoutSpeaker = lineKey.Substring(speakerPrefix.Length);
+                    return $"{speakerId}.conversation.{keyWithoutSpeaker}";
+                }
+
+                return $"{speakerId}.conversation.{lineKey}";
+            }
+
+            return $"conversation.{lineKey}";
         }
 
         /// <summary>
