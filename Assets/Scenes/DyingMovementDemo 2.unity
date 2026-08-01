@@ -657,315 +657,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 43191526341804940a1becb7292d53a3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: KinematicSoup.SceneFusion::KS.SceneFusion2.Unity.sfGuidList
-  ObjectGuids:
-  - GameObject: {fileID: 1710960926}
-    Guid: 59ea440d-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1382339471}
-    Guid: 59ea440e-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1798352270}
-    Guid: 9cefd6c8-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1107387882}
-    Guid: 5e7fceb3-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1365839118}
-    Guid: 0be9754d-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 638404159}
-    Guid: c98b4efe-969d-c30e-0000-c01f008004ad
-  - GameObject: {fileID: 974385224}
-    Guid: 766cc176-7531-89a8-0000-c01f0d87c153
-  - GameObject: {fileID: 1940158059}
-    Guid: 566e951f-209a-6cfb-0000-c01fb9baa2ae
-  - GameObject: {fileID: 1588161984}
-    Guid: 566e9520-f8c7-885e-0000-c01f881bee53
-  - GameObject: {fileID: 1188976743}
-    Guid: 566e951e-717e-6ce5-0000-c01f7867b3ae
-  - GameObject: {fileID: 679208133}
-    Guid: 566e9523-5677-7970-0000-c01f881bee53
-  - GameObject: {fileID: 2109179046}
-    Guid: 566e9529-b94f-6371-0000-c01f7867b3ae
-  - GameObject: {fileID: 1557121957}
-    Guid: 566e9522-c530-8133-0000-c01f881bee53
-  - GameObject: {fileID: 924724706}
-    Guid: 566e9528-0d21-688a-0000-c01f7867b3ae
-  - GameObject: {fileID: 869986437}
-    Guid: 566e951d-6ba5-0966-0000-c01f881bee53
-  - GameObject: {fileID: 1199341486}
-    Guid: 97d9b080-4952-1418-0000-c01f8e230d52
-  - GameObject: {fileID: 1854793546}
-    Guid: 3a81251b-24bc-145e-0000-c01fffd97652
-  - GameObject: {fileID: 883971141}
-    Guid: 6a946979-9946-138c-5dbd-7ee3d7098452
-  - GameObject: {fileID: 1938874285}
-    Guid: 67c66c22-a1bd-a3ed-0000-c01fffd97652
-  - GameObject: {fileID: 1418790047}
-    Guid: dd2899d7-af21-a2dd-5dbd-7ee3d7098452
-  - GameObject: {fileID: 1983220299}
-    Guid: 0a6de0bd-c51e-0e7f-0000-c01fffd97652
-  - GameObject: {fileID: 1181758184}
-    Guid: 7fd00e72-6f1e-14bf-5dbd-7ee3d7098452
-  - GameObject: {fileID: 1104994119}
-    Guid: 227782ec-339c-0eca-0000-c01fffd97652
-  - GameObject: {fileID: 322319876}
-    Guid: 97d9b0a1-dc06-1430-5dbd-7ee3d7098452
-  - GameObject: {fileID: 1356596520}
-    Guid: c51ef787-8447-0e4f-0000-c01fffd97652
-  - GameObject: {fileID: 1264160330}
-    Guid: 3a81253c-a8b2-13a1-5dbd-7ee3d7098452
-  - GameObject: {fileID: 84285758}
-    Guid: dd2899b6-9dca-6115-0000-c01f7867b3ae
-  - GameObject: {fileID: 1955130109}
-    Guid: 566e951c-f727-03d2-0000-c01f881bee53
-  - GameObject: {fileID: 1926832486}
-    Guid: 7fd00e51-1770-65f1-0000-c01f7867b3ae
-  - GameObject: {fileID: 1612773476}
-    Guid: b397d6d4-0d8b-f9e3-0000-c01f000060ce
-  - GameObject: {fileID: 1547751446}
-    Guid: ded82962-6168-1758-0000-c01ff24107ce
-  - GameObject: {fileID: 58983813}
-    Guid: c99c848a-0d8b-ef63-0000-c01f000080d1
-  - GameObject: {fileID: 272681446}
-    Guid: 26f50fef-26b1-fe59-0000-c01f00000050
-  - GameObject: {fileID: 871347944}
-    Guid: 844d9b54-c3cd-fb19-0000-c01f00001050
-  - GameObject: {fileID: 357658634}
-    Guid: f6e1cb91-ab18-bd42-0000-c01f00005051
-  - GameObject: {fileID: 1863755660}
-    Guid: 543a56f6-1416-c325-0000-c01f0000a052
-  - GameObject: {fileID: 1012172932}
-    Guid: b192e25b-69fd-ad43-0000-c01f0000a053
-  - GameObject: {fileID: 1915894602}
-    Guid: 817f9dfd-6fab-ac4f-0000-c01f0000a054
-  - GameObject: {fileID: 1378660297}
-    Guid: 0eeb6dc0-4183-af7b-0000-c01f00002052
-  - GameObject: {fileID: 747648181}
-    Guid: eb66a4a8-7ca2-5215-0000-c01f000060ce
-  - GameObject: {fileID: 1606665877}
-    Guid: c68719f1-0096-65b8-0000-c01f0000a8d0
-  - GameObject: {fileID: 53205586}
-    Guid: eb66a4ab-31b2-490a-0000-c01f000060ce
-  - GameObject: {fileID: 861318092}
-    Guid: 23dfa598-0b38-8db6-0000-c01ff82e15ae
-  - GameObject: {fileID: 1090635748}
-    Guid: c6871a33-ccef-c15f-0000-c01fff3814ae
-  - GameObject: {fileID: 669938800}
-    Guid: 391b4a4f-3e66-67a7-0000-c01f0000a8d0
-  - GameObject: {fileID: 725342771}
-    Guid: eb66a4aa-68b1-4814-0000-c01f000060ce
-  - GameObject: {fileID: 136406564}
-    Guid: dbc2beea-e13d-6863-0000-c01f0000a8d0
-  - GameObject: {fileID: 1900539046}
-    Guid: eb66a4a5-68b1-48d8-0000-c01f000060ce
-  - GameObject: {fileID: 1830184660}
-    Guid: f3cc6119-e13d-68b7-0000-c01f0000a8d0
-  - GameObject: {fileID: 1916174159}
-    Guid: 66609156-b03c-bc1a-0000-c01fa8793fd1
-  - GameObject: {fileID: 1279171854}
-    Guid: 9d14db81-e142-9f6a-0000-c01f000060ce
-  - GameObject: {fileID: 2033705201}
-    Guid: e93d0aad-da67-97ac-0000-c01f000060ce
-  - GameObject: {fileID: 1443657239}
-    Guid: e93d0aaa-8a1f-816a-0000-c01f000060ce
-  - GameObject: {fileID: 209994626}
-    Guid: 6de732db-6436-9cb2-0000-c01f000060ce
-  - GameObject: {fileID: 341699768}
-    Guid: c761be08-c224-1042-0000-c01f000060ce
-  - GameObject: {fileID: 1430361485}
-    Guid: c761be09-8680-1f60-0000-c01f000060ce
-  - GameObject: {fileID: 85423273}
-    Guid: c761be02-bf9a-226f-0000-c01f000060ce
-  - GameObject: {fileID: 1231780090}
-    Guid: c761be03-cfb4-1b50-ffff-22e5000060ce
-  - GameObject: {fileID: 1906036807}
-    Guid: c761be07-2b07-a0a3-0000-c01f000060ce
-  - GameObject: {fileID: 989742671}
-    Guid: cbf3799f-290e-3248-0000-c01f000060ce
-  - GameObject: {fileID: 1883437486}
-    Guid: 642a4c04-11f5-98cd-0000-c01f000060ce
-  - GameObject: {fileID: 488796725}
-    Guid: eb66a4a4-44cc-9886-f6ac-a9e5000060ce
-  - GameObject: {fileID: 1230583223}
-    Guid: eb66a4a1-980c-10b7-da45-a8e7000060ce
-  - GameObject: {fileID: 514056777}
-    Guid: eb66a4a0-37fd-1716-0eac-a9e5000060ce
-  - GameObject: {fileID: 1119009797}
-    Guid: f3cc60f8-516d-311d-c345-a8e7000060ce
-  - GameObject: {fileID: 1260507538}
-    Guid: 66609135-433b-2a44-49fa-b9e4000060ce
-  - GameObject: {fileID: 908684565}
-    Guid: dbc2bec9-2da9-19df-49fa-b9e4cf2876b1
-  - GameObject: {fileID: 1000305941}
-    Guid: eb66a4a7-d9a4-217e-0000-c0d2000060ce
-  - GameObject: {fileID: 1369283571}
-    Guid: eb66a4a6-cb6a-1099-0000-c0d2000060ce
-  - GameObject: {fileID: 678931004}
-    Guid: 9673d593-8d21-33cd-0000-c0d2b4c88ad1
-  - GameObject: {fileID: 1070978791}
-    Guid: c3b91c9a-a880-2bed-0000-c0d2000060ce
-  - GameObject: {fileID: 990447233}
-    Guid: 391b4a2e-f554-37a2-0aac-a9e5c35a95b1
-  - GameObject: {fileID: 571222481}
-    Guid: 7e6a3364-754d-a458-0000-c01f000060ce
-  - GameObject: {fileID: 70966905}
-    Guid: 7e6a3385-754d-a482-0a91-4ee3000060ce
-  - GameObject: {fileID: 1953370699}
-    Guid: 66609177-32b9-8c36-0a91-4ee36ff067ce
-  - GameObject: {fileID: 416684570}
-    Guid: 7e6a33a6-5c72-8c1e-0a91-4ee36ff067ce
-  - GameObject: {fileID: 1863141024}
-    Guid: 391b4a70-e46f-8ad4-3719-86d18b025dce
-  - GameObject: {fileID: 1964747461}
-    Guid: c6871a12-754d-a497-0a91-4ee3000060ce
-  - GameObject: {fileID: 177225330}
-    Guid: 2111a7ff-754d-a618-0000-c01f000060ce
-  - GameObject: {fileID: 1407161030}
-    Guid: 23dfa556-d340-5717-0000-c01fa5aacace
-  - GameObject: {fileID: 1531101991}
-    Guid: 9673d5b4-2c62-59db-0000-c01fcdcc64d0
-  - GameObject: {fileID: 700209504}
-    Guid: dbc2be24-68b2-23e3-0000-c01f130eba2f
-  - GameObject: {fileID: 1776364633}
-    Guid: c3b91cbb-4225-67e6-0000-c01f000060ce
-  - GameObject: {fileID: 1029060823}
-    Guid: 2111a820-7cc8-9d72-4703-bcdd000060ce
-  - GameObject: {fileID: 1723437454}
-    Guid: c3b91cdc-7680-1a71-4703-bcdd000060ce
-  - GameObject: {fileID: 1651740736}
-    Guid: dbc2bf0b-03ae-9ce2-4703-bcdd000060ce
-  - GameObject: {fileID: 759293321}
-    Guid: 391b4989-56ff-9040-4703-bcddb00307cb
-  - GameObject: {fileID: 2116011507}
-    Guid: f3cc6053-3d40-8e9e-4703-bcddb00307cb
-  - GameObject: {fileID: 1819042908}
-    Guid: 9673d4ee-31d5-bf4c-a5a7-d3e8b00307cb
-  - GameObject: {fileID: 1512305179}
-    Guid: 2111a841-70ce-9760-22a0-29dc000060ce
-  - GameObject: {fileID: 107429436}
-    Guid: 9673d5d5-ca47-9c87-4703-bcdd000060ce
-  - GameObject: {fileID: 830838294}
-    Guid: f3cc613a-2e4f-93dc-4703-bcdd000060ce
-  - GameObject: {fileID: 752566132}
-    Guid: 23dfa577-ddbd-63bd-0000-c01f000060ce
-  - GameObject: {fileID: 1825354230}
-    Guid: d4e17c65-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1962829301}
-    Guid: 9359699e-7c65-0541-0000-c01f000060ce
-  - GameObject: {fileID: 61213737}
-    Guid: a4a0831f-7c65-0541-0000-c01f000060ce
-  - GameObject: {fileID: 1093978052}
-    Guid: 38d3ccdc-7c65-0541-0000-c01f000060ce
-  - GameObject: {fileID: 1302781586}
-    Guid: d692e225-7c65-0541-0000-c01f000060ce
-  - GameObject: {fileID: 1511818930}
-    Guid: 5d77f99b-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 410087039}
-    Guid: 279f44ef-f99b-8cd7-7a09-bdda000060ce
-  - GameObject: {fileID: 832575517}
-    Guid: f0fb80d2-f99b-8cd7-0000-c01f000060ce
-  - GameObject: {fileID: 1944744572}
-    Guid: bbfb8899-f99b-8cd7-0000-c01f000060ce
-  - GameObject: {fileID: 2002399191}
-    Guid: aeafbc22-4146-684d-8e86-af20000060ce
-  - GameObject: {fileID: 1497986698}
-    Guid: 17225718-c673-88a4-0000-c01f000060ce
-  - GameObject: {fileID: 1576685882}
-    Guid: f4279e1e-0000-0000-0000-c01f000060ce
-  - GameObject: {fileID: 1549255292}
-    Guid: 586e7579-be6e-4781-0000-c01f0000a02d
-  - GameObject: {fileID: 117778187}
-    Guid: 1116416d-2737-191f-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 249814428}
-    Guid: acec21b4-6cce-286c-0000-c01f000060ce
-  - GameObject: {fileID: 148089079}
-    Guid: 586e757f-8ded-4714-0000-c01f0000a02d
-  - GameObject: {fileID: 178926715}
-    Guid: b218d199-9832-cd68-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 1183448271}
-    Guid: acec21b4-433f-5f15-0000-c01f000060ce
-  - GameObject: {fileID: 1013402147}
-    Guid: 3b30275d-6200-4678-0000-c01f0000a02d
-  - GameObject: {fileID: 1980669631}
-    Guid: 1116416d-a17d-3ab7-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 1670770522}
-    Guid: acec21b4-ea84-0bc4-0000-c01f000060ce
-  - GameObject: {fileID: 779783621}
-    Guid: 3b302823-ea0f-460c-0000-c01f0000a02d
-  - GameObject: {fileID: 485148980}
-    Guid: b218d199-61cc-efaa-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 529617892}
-    Guid: acec21b4-bac1-7dd7-0000-c01f000060ce
-  - GameObject: {fileID: 1053715861}
-    Guid: 5339c98c-3b2b-41ba-0000-c01f0000a02d
-  - GameObject: {fileID: 1741339929}
-    Guid: 1116416d-4ec7-0c73-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 271743299}
-    Guid: acec21b4-053e-3d00-0000-c01f000060ce
-  - GameObject: {fileID: 679559151}
-    Guid: 5339ca52-8eac-4227-0000-c01f0000a02d
-  - GameObject: {fileID: 1750479204}
-    Guid: b218d199-e49e-c3cb-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 1812160917}
-    Guid: acec21b4-3f93-51b6-0000-c01f000060ce
-  - GameObject: {fileID: 2076731508}
-    Guid: 2326852e-8d14-4259-0000-c01f0000a02d
-  - GameObject: {fileID: 2037857301}
-    Guid: 1116416d-645a-3eae-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 863433965}
-    Guid: acec21b4-2fa3-0fdd-0000-c01f000060ce
-  - GameObject: {fileID: 1158302402}
-    Guid: 232685f4-bda3-42c6-0000-c01f0000a02d
-  - GameObject: {fileID: 1741471289}
-    Guid: b218d199-d7f7-f3cd-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 1982307731}
-    Guid: acec21b4-0cfa-61b0-0000-c01f000060ce
-  - GameObject: {fileID: 258948258}
-    Guid: adc4579a-2d89-4a75-0000-c01f0000a02d
-  - GameObject: {fileID: 17071118}
-    Guid: 1116416d-d633-c160-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 763858857}
-    Guid: acec21b4-9dca-f013-0000-c01f000060ce
-  - GameObject: {fileID: 578513245}
-    Guid: d65015ee-810a-4ae9-0000-c01f0000a02d
-  - GameObject: {fileID: 1770843433}
-    Guid: b218d199-3484-4f27-aa91-4ee33e9b2bc3
-  - GameObject: {fileID: 98904398}
-    Guid: acec21b4-ef89-dd5a-0000-c01f000060ce
-  - GameObject: {fileID: 709757219}
-    Guid: b6c74c88-0000-a91c-0000-c01f9499b9cc
-  - GameObject: {fileID: 1922508128}
-    Guid: 82b12f6f-d51c-cca2-8d86-afa0000060ce
-  - GameObject: {fileID: 537498010}
-    Guid: 3ec7c33e-9e92-af54-0000-c01fba42c4cc
-  - GameObject: {fileID: 1579207935}
-    Guid: 2a7c5744-7cfe-20dc-0000-c01fcacb58cc
-  - GameObject: {fileID: 310880416}
-    Guid: 13a1f603-0f72-b058-0000-c01fd7f244cb
-  - GameObject: {fileID: 342414487}
-    Guid: 481659db-23b6-905b-0000-c01fd7f244cb
-  - GameObject: {fileID: 182354208}
-    Guid: 3ba06530-73c2-8f37-0000-c01fba42c4cc
-  - GameObject: {fileID: 1342410002}
-    Guid: ce0bb3b2-7cfe-12dc-0000-c01fd7f244cb
-  - GameObject: {fileID: 630489005}
-    Guid: 2b643f17-7cfe-12dc-0000-c01fd7f244cb
-  - GameObject: {fileID: 1565031440}
-    Guid: 0c6967d9-7cfe-20dc-0000-c01f000060ce
-  - GameObject: {fileID: 1796019291}
-    Guid: 1116416d-4002-29b3-0000-c01f000060ce
-  - GameObject: {fileID: 1641148205}
-    Guid: d39db464-016f-e905-1707-b123000060ce
-  - GameObject: {fileID: 1724272014}
-    Guid: ddd345ad-016f-e905-0000-c01f000060ce
-  - GameObject: {fileID: 997273529}
-    Guid: e856219e-016f-e905-0000-c01f000060ce
-  - GameObject: {fileID: 329418325}
-    Guid: 1116416d-3f7c-99f5-0000-c01fe72d17cb
-  - GameObject: {fileID: 2023010246}
-    Guid: c86c79e5-1a6e-cc73-0000-c01f000060ce
-  - GameObject: {fileID: 154025773}
-    Guid: 52db6c23-638b-1e27-0000-c01f000060ce
-  - GameObject: {fileID: 2055355370}
-    Guid: d7fb4be6-0fa8-9d5c-0000-c01f000060ce
-  - GameObject: {fileID: 366886413}
-    Guid: 6a490d37-be05-4a5c-8541-6433410ee37a
 --- !u!4 &40380457
 Transform:
   m_ObjectHideFlags: 0
@@ -1411,6 +1102,46 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1365839119}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!21 &58645582
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: UI/RoundedCorners/RoundedCorners
+  m_Shader: {fileID: 4800000, guid: 0bd2ec5d73751e34a814274a454bec41, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _ColorMask: 15
+    - _Stencil: 0
+    - _StencilComp: 8
+    - _StencilOp: 0
+    - _StencilReadMask: 255
+    - _StencilWriteMask: 255
+    - _UseUIAlphaClip: 0
+    m_Colors:
+    - _WidthHeightRadius: {r: 645.21, g: 75, b: 24, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &58983813
 GameObject:
   m_ObjectHideFlags: 0
@@ -3242,7 +2973,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GameCode.Spirits.Runtime.SpiritManager
   initialSpirits:
-  - {fileID: 11400000, guid: a3bb08f90416c3c44a8743cc6ff691b4, type: 2}
+  - {fileID: 11400000, guid: f938beed6412c374bafb8f8cd4b24321, type: 2}
 --- !u!1 &70966905
 GameObject:
   m_ObjectHideFlags: 0
@@ -6887,7 +6618,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.Image
-  m_Material: {fileID: 1244739523}
+  m_Material: {fileID: 58645582}
   m_Color: {r: 0, g: 0, b: 0, a: 0.5882353}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
@@ -309336,46 +309067,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 1365839119}
   m_LocalEulerAnglesHint: {x: 0, y: 180, z: 0}
---- !u!21 &1244739523
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: UI/RoundedCorners/RoundedCorners
-  m_Shader: {fileID: 4800000, guid: 0bd2ec5d73751e34a814274a454bec41, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _ColorMask: 15
-    - _Stencil: 0
-    - _StencilComp: 8
-    - _StencilOp: 0
-    - _StencilReadMask: 255
-    - _StencilWriteMask: 255
-    - _UseUIAlphaClip: 0
-    m_Colors:
-    - _WidthHeightRadius: {r: 645.21, g: 75, b: 24, a: 0}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1260507538
 GameObject:
   m_ObjectHideFlags: 0

@@ -8779,6 +8779,7 @@ GameObject:
   - component: {fileID: 3102931243236289929}
   - component: {fileID: 8056221993976448287}
   - component: {fileID: 1396605918701582702}
+  - component: {fileID: 8261722882101130298}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -9322,6 +9323,21 @@ MonoBehaviour:
   m_EditorClassIdentifier: FPMovement::FPMovement.MovementAudioController
   profile: {fileID: 11400000, guid: 45681c0d9901b7b449c1582c50641404, type: 2}
   enableFootsteps: 1
+--- !u!114 &8261722882101130298
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5730434039850921700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 14049acb8677cf849bb9180ea958f06e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Nanodogs.Tooklit::Nanodogs.UniversalScripts.NanoPlayerInteractor
+  interactKey: {fileID: 1781555164194001046, guid: 2bca15a9a6c5ca347b15b72d00156e18, type: 3}
+  interactDistance: 3
+  cam: {fileID: 8104122852250511054}
 --- !u!1 &5806470806392474601
 GameObject:
   m_ObjectHideFlags: 0
